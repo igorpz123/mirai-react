@@ -1,8 +1,13 @@
-import React from 'react';
+// src/components/ProtectedRoute.tsx
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import type { ReactNode } from 'react';
 
-const ProtectedRoute = ({ children }) => {
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -13,8 +18,9 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-};
-
-export default ProtectedRoute;
-
+  return isAuthenticated ? (
+    <>{children}</>
+  ) : (
+    <Navigate to="/login" replace />
+  );
+}

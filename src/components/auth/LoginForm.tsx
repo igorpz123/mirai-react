@@ -1,51 +1,63 @@
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useAuth } from '../../contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+// src/components/LoginForm.tsx
+import { useState } from 'react'
+import type { JSX } from 'react'
+import { useForm } from 'react-hook-form'
+import type { SubmitHandler } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useAuth } from '../../contexts/AuthContext'
+import { Button } from '../ui/button'
+import { Input } from '../ui/input'
+import { Label } from '../ui/label'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '../ui/card'
+import { Alert, AlertDescription } from '../ui/alert'
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 
+// Schema de validação com Zod
 const loginSchema = z.object({
   email: z.string().email('Email inválido').min(1, 'Email é obrigatório'),
   password: z.string().min(1, 'Senha é obrigatória')
-});
+})
 
-const LoginForm = () => {
-  const { login, loginDemo } = useAuth();
-  const [showPassword, setShowPassword] = useState(false);
-  const [loginError, setLoginError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+// Tipo inferido do schema
+type LoginFormData = z.infer<typeof loginSchema>
+
+export default function LoginForm(): JSX.Element {
+  const { login, loginDemo } = useAuth()
+  const [showPassword, setShowPassword] = useState<boolean>(false)
+  const [loginError, setLoginError] = useState<string>('')
+  const [isLoading, setIsLoading] = useState<boolean>(false)
 
   const {
     register,
     handleSubmit,
     formState: { errors }
-  } = useForm({
+  } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema)
-  });
+  })
 
-  const onSubmit = async (data) => {
-    setIsLoading(true);
-    setLoginError('');
+  const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
+    setIsLoading(true)
+    setLoginError('')
 
-    const result = await login(data.email, data.password);
-    
+    const result = await login(data.email, data.password)
     if (!result.success) {
-      setLoginError(result.error);
+      setLoginError(result.error ?? 'Erro desconhecido')
     }
-    
-    setIsLoading(false);
-  };
 
-  const handleDemoLogin = () => {
-    setLoginError('');
-    loginDemo();
-  };
+    setIsLoading(false)
+  }
+
+  const handleDemoLogin = (): void => {
+    setLoginError('')
+    loginDemo()
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
@@ -53,7 +65,9 @@ const LoginForm = () => {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-2xl font-bold text-primary-foreground">M</span>
+              <span className="text-2xl font-bold text-primary-foreground">
+                M
+              </span>
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">MIRAI</CardTitle>
@@ -68,7 +82,7 @@ const LoginForm = () => {
                 <AlertDescription>{loginError}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -82,7 +96,9 @@ const LoginForm = () => {
                 />
               </div>
               {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
@@ -102,7 +118,7 @@ const LoginForm = () => {
                   variant="ghost"
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword((v) => !v)}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -112,7 +128,9 @@ const LoginForm = () => {
                 </Button>
               </div>
               {errors.password && (
-                <p className="text-sm text-destructive">{errors.password.message}</p>
+                <p className="text-sm text-destructive">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
@@ -131,17 +149,20 @@ const LoginForm = () => {
               </div>
             </div>
 
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full" 
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
               onClick={handleDemoLogin}
             >
               Entrar como Demo
             </Button>
 
             <div className="text-center">
-              <a href="#" className="text-sm text-muted-foreground hover:text-primary">
+              <a
+                href="#"
+                className="text-sm text-muted-foreground hover:text-primary"
+              >
                 Esqueceu a senha?
               </a>
             </div>
@@ -149,8 +170,5 @@ const LoginForm = () => {
         </CardContent>
       </Card>
     </div>
-  );
-};
-
-export default LoginForm;
-
+  )
+}
