@@ -100,15 +100,11 @@ const data = {
       icon: FileSliders,
       items: [
         {
-          title: "Introduction",
+          title: "Usuários",
           url: "#",
         },
         {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
+          title: "Unidades",
           url: "#",
         },
         {
