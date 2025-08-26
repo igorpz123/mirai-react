@@ -36,6 +36,7 @@
     "body-parser": "^2.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "lucide-react": "^0.541.0",
