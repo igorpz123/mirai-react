@@ -1,21 +1,19 @@
 import * as React from "react"
 import {
   AudioWaveform,
-  BookOpen,
-  Bot,
+  ClipboardCheck,
+  FileSliders,
   Command,
-  Frame,
   GalleryVerticalEnd,
-  Map,
-  PieChart,
-  Settings2,
-  SquareTerminal,
+  User,
+  Wallet,
+  HardHat,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
-import { NavProjects } from "@/components/layout/nav-projects"
+import { NavUserInfo } from "@/components/layout/nav-user-info"
 import { NavUser } from "@/components/layout/nav-user"
-import { TeamSwitcher } from "@/components/layout/team-switcher"
+import { UnitSwitcher } from "@/components/layout/unit-switcher"
 import {
   Sidebar,
   SidebarContent,
@@ -31,7 +29,7 @@ const data = {
     email: "m@example.com",
     avatar: "/avatars/shadcn.jpg",
   },
-  teams: [
+  unidades: [
     {
       name: "Acme Inc",
       logo: GalleryVerticalEnd,
@@ -50,48 +48,56 @@ const data = {
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Técnico",
       url: "#",
-      icon: SquareTerminal,
+      icon: HardHat,
       isActive: true,
       items: [
         {
-          title: "History",
+          title: "Dashboard",
           url: "#",
         },
         {
-          title: "Starred",
+          title: "Fluxograma",
           url: "#",
         },
         {
-          title: "Settings",
+          title: "Mapas",
+          url: "#",
+        },
+        {
+          title: "Agenda",
           url: "#",
         },
       ],
     },
     {
-      title: "Models",
+      title: "Comercial",
       url: "#",
-      icon: Bot,
+      icon: Wallet,
       items: [
         {
-          title: "Genesis",
+          title: "Dashboard",
           url: "#",
         },
         {
-          title: "Explorer",
+          title: "CRM",
           url: "#",
         },
         {
-          title: "Quantum",
+          title: "Livro de Registros",
+          url: "#",
+        },
+        {
+          title: "Cursos",
           url: "#",
         },
       ],
     },
     {
-      title: "Documentation",
+      title: "Administração",
       url: "#",
-      icon: BookOpen,
+      icon: FileSliders,
       items: [
         {
           title: "Introduction",
@@ -111,45 +117,17 @@ const data = {
         },
       ],
     },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
-    },
   ],
-  projects: [
+  userInfo: [
     {
-      name: "Design Engineering",
+      name: "Tarefas",
       url: "#",
-      icon: Frame,
+      icon: ClipboardCheck,
     },
     {
-      name: "Sales & Marketing",
+      name: "Dados",
       url: "#",
-      icon: PieChart,
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: Map,
+      icon: User,
     },
   ],
 }
@@ -158,11 +136,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <UnitSwitcher units={data.unidades} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        <NavUserInfo users={data.userInfo} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
