@@ -4,7 +4,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import { SidebarProvider, useSidebar, SidebarInset } from "@/components/ui/sidebar";
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import TechnicalDashboard from './pages/TechnicalDashboard';
 import './App.css';
 
 // Separa a lógica que utiliza o hook, garantindo que ela será renderizada
@@ -31,7 +31,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           >
-            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="dashboard" element={<TechnicalDashboard />} />
           </Route>
         </Routes>
       </Router>

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import type { ReactElement } from 'react'
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { DataTable } from "@/components/data-table"
-import { SectionCards } from "@/components/section-cards"
+import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
 import data from "./data.json"
 
@@ -24,7 +24,7 @@ import data from "./data.json"
 //   status: 'progress' | 'pendente' | string
 // }
 
-export default function Dashboard(): ReactElement {
+export default function TechnicalDashboard(): ReactElement {
   // const { user } = useAuth()
   // const [metrics, setMetrics] = useState<DashboardMetrics>({
   //   tarefasAndamento: 0,
@@ -110,7 +110,7 @@ export default function Dashboard(): ReactElement {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards />
+              <TechnicalDashboardCards />
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive />
               </div>
