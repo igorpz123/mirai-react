@@ -1,8 +1,8 @@
 // src/pages/Dashboard.tsx
 import { useState, useEffect } from 'react'
 import type { ReactElement } from 'react'
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable } from "@/components/data-table"
+import { ChartAreaInteractive } from "@/components/technical-chart-tasks"
+import { DataTable } from "@/components/technical-task-table"
 import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
 import data from "./data.json"
