@@ -3,11 +3,26 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface Unidade {
+  id: number;
+  nome: string;
+}
+
+export interface Setor {
+  id: number;
+  nome: string;
+}
+
 export interface User {
   id: number;
   email: string;
   nome: string;
   sobrenome: string;
+  cargo: string;
+  cargoId: number;
+  fotoUrl?: string;
+  unidades?: Unidade[];
+  setores?: Setor[];
   // adicione outros campos se necessário
 }
 

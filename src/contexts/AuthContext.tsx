@@ -24,14 +24,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (token) {
       try {
-        // decodifica o payload do JWT para obter as infos do usuário
-        const decoded = jwtDecode<User>(token)
+        // Decodifica o payload do JWT para obter as informações do usuário,
+        // incluindo unidades e setores se presentes.
+        const decoded = jwtDecode<User>(token);
         setUser({
           id: decoded.id,
           email: decoded.email,
           nome: decoded.nome,
-          sobrenome: decoded.sobrenome
-        })
+          sobrenome: decoded.sobrenome,
+          // Se o token não contiver unidades ou setores, coloca arrays vazios
+          unidades: decoded.unidades || [],
+          setores: decoded.setores || [],
+          cargoId: decoded.cargoId,
+          cargo: decoded.cargo,
+          fotoUrl: decoded.fotoUrl,
+        });
       } catch (err) {
         console.error('Falha ao decodificar token:', err)
         // token inválido? força logout
@@ -48,7 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     })
     localStorage.setItem('token', newToken)
     setToken(newToken)
-    setUser(newUser)
+    // setUser(newUser)
   }
 
   const signOut = () => {
@@ -64,8 +71,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         signIn,
         signOut,
-        // agora só depende do token; 
-        // ou se preferir manter user, use (!!token && !!user)
         isAuthenticated: !!token
       }}
     >
