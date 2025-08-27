@@ -3,11 +3,26 @@ export interface LoginCredentials {
   password: string;
 }
 
+export interface Unidade {
+  id: number;
+  nome: string;
+}
+
+export interface Setor {
+  id: number;
+  nome: string;
+}
+
 export interface User {
   id: number;
   email: string;
   nome: string;
   sobrenome: string;
+  cargo: string;
+  cargoId: number;
+  fotoUrl?: string;
+  unidades?: Unidade[];
+  setores?: Setor[];
   // adicione outros campos se necessário
 }
 
@@ -16,7 +31,8 @@ export interface AuthResponse {
   user: User;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://psychic-yodel-p9jw56vx476f6wj4-5000.app.github.dev/api';
 
 export async function loginRequest(credentials: LoginCredentials): Promise<AuthResponse> {
   const res = await fetch(`${API_URL}/auth/login`, {

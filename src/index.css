@@ -128,8 +128,7 @@ h1 {
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --success: oklch(0.93 0.08 156);
-  --success-foreground: oklch(0.45 0.11 151);
+  --success: oklch(88.509% 0.21293 150.661);
   --alert: oklch(0.92 0.12 96);
   --alert-foreground: oklch(0.47 0.12 46);
   --border: oklch(1 0 0 / 10%);
@@ -157,4 +156,12 @@ h1 {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.button-success {
+  @apply text-success bg-success/10 hover:bg-success/20 cursor-pointer;
+}
+
+.button-primary {
+  @apply text-primary bg-primary/15 hover:bg-primary/25 cursor-pointer;
 }

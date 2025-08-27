@@ -54,9 +54,9 @@ export function CommandMenu() {
                     <CommandEmpty>No results found.</CommandEmpty>
                     <CommandGroup heading="Sugestões">
                         {/* 3. Adicione o onSelect para navegar */}
-                        <CommandItem onSelect={() => runCommand(() => navigate('/projetos'))}>
+                        <CommandItem onSelect={() => runCommand(() => navigate('/nova-tarefa'))}>
                             <BrickWall className="mr-2 h-4 w-4" />
-                            <span>Projetos</span>
+                            <span>Nova Tarefa</span>
                         </CommandItem>
                         <CommandItem onSelect={() => runCommand(() => navigate('/materiais'))}>
                             <Cuboid className="mr-2 h-4 w-4" />

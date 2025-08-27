@@ -29,7 +29,6 @@ import {
   IconGripVertical,
   IconLayoutColumns,
   IconLoader,
-  IconPlus,
   IconTrendingUp,
 } from "@tabler/icons-react"
 import {
@@ -108,10 +107,8 @@ import {
 
 export const schema = z.object({
   id: z.number(),
-  // header: z.string(),
-  empresa: z.string(),
-  // type: z.string(),
-  finalidade: z.string(),
+  header: z.string(),
+  type: z.string(),
   status: z.string(),
   // target: z.string(),
   prazo: z.string(),
@@ -173,8 +170,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "header",
-    header: "Header",
+    accessorKey: "empresa",
+    header: "Empresa",
     cell: ({ row }) => {
       return <TableCellViewer item={row.original} />
     },
@@ -473,10 +470,6 @@ export function DataTable({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button variant="outline" size="sm">
-            <IconPlus />
-            <span className="hidden lg:inline">Add Section</span>
-          </Button>
         </div>
       </div>
       <TabsContent
@@ -729,7 +722,7 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
               <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.empresa} />
+              <Input id="header" defaultValue={item.header} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
