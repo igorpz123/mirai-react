@@ -107,8 +107,8 @@ import {
 
 export const schema = z.object({
   id: z.number(),
-  header: z.string(),
-  type: z.string(),
+  empresa: z.string(),
+  finalidade: z.string(),
   status: z.string(),
   // target: z.string(),
   prazo: z.string(),
@@ -721,8 +721,8 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
           )}
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.header} />
+              <Label htmlFor="empresa">Empresa</Label>
+              <Input id="empresa" defaultValue={item.empresa} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
