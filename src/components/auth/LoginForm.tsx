@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import type { SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '@/hooks/use-auth'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
@@ -21,42 +22,38 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 
 // Schema de validação com Zod
 const loginSchema = z.object({
-  email: z.string().email('Email inválido').min(1, 'Email é obrigatório'),
-  password: z.string().min(1, 'Senha é obrigatória')
+  email: z.string().email('Email inválido').nonempty('Email é obrigatório'),
+  password: z.string().nonempty('Senha é obrigatória')
 })
-
-// Tipo inferido do schema
 type LoginFormData = z.infer<typeof loginSchema>
 
 export default function LoginForm(): JSX.Element {
-  const { login, loginDemo } = useAuth()
-  const [showPassword, setShowPassword] = useState<boolean>(false)
-  const [loginError, setLoginError] = useState<string>('')
-  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const { signIn } = useAuth()
+  const navigate = useNavigate()
+  const [loginError, setLoginError] = useState('')  
+  const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
     handleSubmit,
-    formState: { errors }
+    formState: { errors, isSubmitting }
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema)
   })
 
-  const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
-    setIsLoading(true)
-    setLoginError('')
-
-    const result = await login(data.email, data.password)
-    if (!result.success) {
-      setLoginError(result.error ?? 'Erro desconhecido')
+  const onSubmit: SubmitHandler<LoginFormData> = async ({ email, password }) => {
+    try {
+      setLoginError('')
+      await signIn(email, password)
+      navigate('/dashboard')
+    } catch (err: any) {
+      setLoginError(err.message || 'Erro ao fazer login')
     }
-
-    setIsLoading(false)
   }
 
-  const handleDemoLogin = (): void => {
-    setLoginError('')
-    loginDemo()
+  const handleDemoLogin = () => {
+    // insira aqui as credenciais demo
+    onSubmit({ email: 'demo@exemplo.com', password: 'demopassword' })
   }
 
   return (
@@ -75,6 +72,7 @@ export default function LoginForm(): JSX.Element {
             Entre com suas credenciais para acessar o sistema
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             {loginError && (
@@ -83,6 +81,7 @@ export default function LoginForm(): JSX.Element {
               </Alert>
             )}
 
+            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -102,6 +101,7 @@ export default function LoginForm(): JSX.Element {
               )}
             </div>
 
+            {/* Senha */}
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
@@ -134,10 +134,12 @@ export default function LoginForm(): JSX.Element {
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Entrando...' : 'Entrar'}
+            {/* Botão de submit */}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? 'Entrando...' : 'Entrar'}
             </Button>
 
+            {/* Separador */}
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t" />
@@ -149,6 +151,7 @@ export default function LoginForm(): JSX.Element {
               </div>
             </div>
 
+            {/* Login Demo */}
             <Button
               type="button"
               variant="outline"

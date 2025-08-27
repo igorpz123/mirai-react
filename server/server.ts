@@ -3,6 +3,7 @@ import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import routes from './routes/router'
+import authRoutes from './routes/auth';
 
 const app = express()
 
@@ -13,6 +14,7 @@ app.use(bodyParser.urlencoded({ extended: true }))
 
 // Rotas principais
 app.use('/api', routes)
+app.use('/api/auth', authRoutes);
 
 // Tratamento de erros
 app.use(
