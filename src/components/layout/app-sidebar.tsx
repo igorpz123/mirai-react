@@ -30,7 +30,7 @@ const navMainData = [
     icon: HardHat,
     isActive: true,
     items: [
-      { title: "Dashboard", url: "#" },
+      { title: "Dashboard", url: "/dashboard" },
       { title: "Fluxograma", url: "#" },
       { title: "Mapas", url: "#" },
       { title: "Agenda", url: "#" },
