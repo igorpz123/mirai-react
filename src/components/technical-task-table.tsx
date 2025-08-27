@@ -108,7 +108,7 @@ import {
 
 export const schema = z.object({
   id: z.number(),
-  header: z.string(),
+  empresa: z.string(),
   type: z.string(),
   status: z.string(),
   target: z.string(),
@@ -169,8 +169,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "header",
-    header: "Header",
+    accessorKey: "empresa",
+    header: "Empresa",
     cell: ({ row }) => {
       return <TableCellViewer item={row.original} />
     },
@@ -209,7 +209,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         onSubmit={(e) => {
           e.preventDefault()
           toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
+            loading: `Saving ${row.original.empresa}`,
             success: "Done",
             error: "Error",
           })
@@ -234,7 +234,7 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         onSubmit={(e) => {
           e.preventDefault()
           toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.header}`,
+            loading: `Saving ${row.original.empresa}`,
             success: "Done",
             error: "Error",
           })
@@ -654,12 +654,12 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
     <Drawer direction={isMobile ? "bottom" : "right"}>
       <DrawerTrigger asChild>
         <Button variant="link" className="text-foreground w-fit px-0 text-left">
-          {item.header}
+          {item.empresa}
         </Button>
       </DrawerTrigger>
       <DrawerContent>
         <DrawerHeader className="gap-1">
-          <DrawerTitle>{item.header}</DrawerTitle>
+          <DrawerTitle>{item.empresa}</DrawerTitle>
           <DrawerDescription>
             Showing total visitors for the last 6 months
           </DrawerDescription>
@@ -724,8 +724,8 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
           )}
           <form className="flex flex-col gap-4">
             <div className="flex flex-col gap-3">
-              <Label htmlFor="header">Header</Label>
-              <Input id="header" defaultValue={item.header} />
+              <Label htmlFor="empresa">Empresa</Label>
+              <Input id="empresa" defaultValue={item.empresa} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
