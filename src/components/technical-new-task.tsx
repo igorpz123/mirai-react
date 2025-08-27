@@ -1,8 +1,8 @@
-// NewTaskForm.tsx
 "use client";
 
 import React, { useState } from "react";
 import type { ChangeEvent } from "react";
+import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -97,7 +97,6 @@ export const NewTaskForm: React.FC = () => {
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    // Se trocar a unidade, reseta a empresa para forçar nova seleção
     if (name === "unidade") {
       setFormData((prev) => ({ ...prev, unidade: value, empresa: "" }));
     } else {
@@ -112,164 +111,172 @@ export const NewTaskForm: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    // Aqui você pode integrar com sua API para submeter o formulário
     console.log("Dados do formulário:", formData, selectedFiles);
-    // Exemplo: enviar formData e arquivos via um endpoint
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h2 className="text-2xl font-bold mb-4">Criar Nova Tarefa</h2>
-
-      {step === 1 && (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="unidade" className="mb-2">Unidade</Label>
-            <Select onValueChange={(value) => handleSelectChange("unidade", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma unidade" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockUnidades.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+    <div className="w-full">
+      <SiteHeader title='Criar Nova Tarefa' />
+      <div className="p-6 max-w-4xl mx-auto mt-4 bg-card rounded-lg shadow">
+        {step === 1 && (
+          <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex flex-col items-end">
+              <div>
+                <Label htmlFor="unidade" className="mb-2 text-left">Unidade</Label>
+                <Select value={formData.unidade} onValueChange={(value) => handleSelectChange("unidade", value)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione uma unidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mockUnidades.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex flex-col items-start">
+              <div>
+                <Label htmlFor="empresa" className="mb-2">Empresa</Label>
+                <Select
+                  value={formData.empresa}
+                  onValueChange={(value) => handleSelectChange("empresa", value)}
+                  disabled={!formData.unidade}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={formData.unidade ? "Selecione uma empresa" : "Selecione a unidade primeiro"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.unidade && mockEmpresas[formData.unidade]?.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="empresa" className="mb-2">Empresa</Label>
-            <Select
-              onValueChange={(value) => handleSelectChange("empresa", value)}
-              disabled={!formData.unidade}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={formData.unidade ? "Selecione uma empresa" : "Selecione a unidade primeiro"} />
-              </SelectTrigger>
-              <SelectContent>
-                {formData.unidade && mockEmpresas[formData.unidade]?.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="setorResponsavel" className="mb-2">Setor Responsável</Label>
-            <Select onValueChange={(value) => handleSelectChange("setorResponsavel", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um setor" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockSetores.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="usuarioResponsavel" className="mb-2">Usuário Responsável (opcional)</Label>
-            <Select onValueChange={(value) => handleSelectChange("usuarioResponsavel", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione um usuário" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockUsuarios.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="finalidade" className="mb-2">Finalidade</Label>
-            <Select onValueChange={(value) => handleSelectChange("finalidade", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a finalidade" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockFinalidades.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="prazo" className="mb-2">Prazo</Label>
-            <Input
-              type="date"
-              name="prazo"
-              value={formData.prazo}
-              onChange={handleChange}
-              className="w-full"
-            />
-          </div>
-          <div>
-            <Label htmlFor="prioridade" className="mb-2">Prioridade</Label>
-            <Select onValueChange={(value) => handleSelectChange("prioridade", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a prioridade" />
-              </SelectTrigger>
-              <SelectContent>
-                {mockPrioridades.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="arquivos" className="mb-2">Upload de Arquivos</Label>
-            <Input
-              type="file"
-              name="arquivos"
-              multiple
-              onChange={handleFileChange}
-              className="w-full"
-            />
-          </div>
-          <div>
-            <Label htmlFor="observacoes" className="mb-2">Observações</Label>
-            <Textarea
-              name="observacoes"
-              placeholder="Digite suas observações..."
-              value={formData.observacoes}
-              onChange={handleChange}
-              className="w-full"
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="flex justify-between mt-6">
-        {step > 1 && (
-          <Button variant="outline" onClick={handleBack}>
-            Voltar
-          </Button>
         )}
-        {step < 3 ? (
-          <Button onClick={handleNext}>Próximo</Button>
-        ) : (
-          <Button onClick={handleSubmit}>Enviar</Button>
+
+        {step === 2 && (
+          <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="setorResponsavel" className="mb-2">Setor</Label>
+              <Select value={formData.setorResponsavel}
+                onValueChange={(value) => handleSelectChange("setorResponsavel", value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockSetores.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="usuarioResponsavel" className="mb-2">Responsável (opcional)</Label>
+              <Select value={formData.usuarioResponsavel}
+                onValueChange={(value) => handleSelectChange("usuarioResponsavel", value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione um usuário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockUsuarios.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full">
+              <Label htmlFor="finalidade" className="mb-2">Finalidade</Label>
+              <Select value={formData.finalidade}
+                onValueChange={(value) => handleSelectChange("finalidade", value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione a finalidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockFinalidades.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="prazo" className="mb-2">Prazo</Label>
+              <Input
+                type="date"
+                name="prazo"
+                value={formData.prazo}
+                onChange={handleChange}
+                className="w-auto"
+              />
+            </div>
+            <div>
+              <Label htmlFor="prioridade" className="mb-2">Prioridade</Label>
+              <Select value={formData.prioridade}
+                onValueChange={(value) => handleSelectChange("prioridade", value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione a prioridade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {mockPrioridades.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         )}
+
+        {step === 3 && (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="arquivos" className="mb-2">Upload de Arquivos</Label>
+              <Input
+                type="file"
+                name="arquivos"
+                multiple
+                onChange={handleFileChange}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <Label htmlFor="observacoes" className="mb-2">Observações</Label>
+              <Textarea
+                name="observacoes"
+                placeholder="Digite suas observações..."
+                value={formData.observacoes}
+                onChange={handleChange}
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-between mt-6">
+          {step > 1 && (
+            <Button className="cursor-pointer" variant="outline" onClick={handleBack}>
+              Voltar
+            </Button>
+          )}
+          {step < 3 ? (
+            <Button className="button-primary" onClick={handleNext}>Próximo</Button>
+          ) : (
+            <Button className="button-success" onClick={handleSubmit}>Enviar</Button>
+          )}
+        </div>
       </div>
     </div>
   );
