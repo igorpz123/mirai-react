@@ -1,14 +1,16 @@
 // src/components/ProtectedRoute.tsx
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/hooks/use-auth'
 import type { ReactNode } from 'react';
+import { useState } from 'react'
 
 interface ProtectedRouteProps {
   children: ReactNode;
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated } = useAuth();
+  const [loading, setLoading] = useState<boolean>(true)
 
   if (loading) {
     return (
