@@ -30,6 +30,7 @@ import {
   IconGripVertical,
   IconLayoutColumns,
   IconLoader,
+  IconProgress,
 } from "@tabler/icons-react"
 import {
   flexRender,
@@ -161,29 +162,30 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "finalidade",
-    header: "Finalidade",
-    cell: ({ row }) => (
-      <div className="w-32">
-        <Badge variant="outline" className="text-muted-foreground px-1.5">
-          {row.original.finalidade}
-        </Badge>
-      </div>
-    ),
-  },
-  {
     accessorKey: "status",
     header: "Status",
-    cell: ({ row }) => (
-      <Badge variant="outline" className="text-muted-foreground px-1.5">
-        {row.original.status === "Done" ? (
-          <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-        ) : (
-          <IconLoader />
-        )}
-        {row.original.status}
-      </Badge>
-    ),
+    cell: ({ row }) => {
+      const status = row.original.status;
+      let badgeClass = "";
+      let icon = null;
+
+      if (status === "Finalizado") {
+        badgeClass = "button-success";
+        icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />;
+      } else if (status === "Em Andamento") {
+        badgeClass = "button-primary";
+        icon = <IconProgress />;
+      } else {
+        icon = <IconLoader className="animate-spin" />;
+      }
+
+      return (
+        <Badge variant="outline" className={badgeClass}>
+          {icon}
+          {status}
+        </Badge>
+      );
+    },
   },
   {
     accessorKey: "prazo",

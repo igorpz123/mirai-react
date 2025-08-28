@@ -6,6 +6,7 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 //Páginas do Setor Técnico
 import TechnicalDashboard from './pages/TechnicalDashboard';
+import TechnicalFluxograma from './pages/TechnicalFluxograma';
 import NewTaskForm from './components/technical-task-new';
 
 //Páginas do Setor Comercial
@@ -39,6 +40,7 @@ function AppContent() {
             }
           >
             <Route path="dashboard" element={<TechnicalDashboard />} />
+            <Route path="fluxograma" element={<TechnicalFluxograma />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
           </Route>
         </Routes>

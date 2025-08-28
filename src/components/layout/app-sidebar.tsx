@@ -31,7 +31,7 @@ const navMainData = [
     isActive: true,
     items: [
       { title: "Dashboard", url: "/dashboard" },
-      { title: "Fluxograma", url: "#" },
+      { title: "Fluxograma", url: "/fluxograma" },
       { title: "Mapas", url: "#" },
       { title: "Agenda", url: "#" },
     ],
