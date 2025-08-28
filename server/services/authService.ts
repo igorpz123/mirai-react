@@ -56,24 +56,38 @@ export async function authenticateUser(
       u.cargo_id     AS cargoId,
       c.nome         AS cargo,
       u.foto_url     AS fotoUrl,
-      JSON_ARRAYAGG(
-        DISTINCT JSON_OBJECT(
-          'id', uu.unidade_id,
-          'nome', un.nome
-        )
+      CONCAT(
+        '[',
+        GROUP_CONCAT(
+          DISTINCT CONCAT(
+            '{"id":', uu.unidade_id,
+            ',"nome":"', REPLACE(un.nome, '"', '\\"'), '"}'
+          )
+          ORDER BY uu.unidade_id
+          SEPARATOR ','
+        ),
+        ']'
       ) AS unidades,
-      JSON_ARRAYAGG(
-        DISTINCT JSON_OBJECT(
-          'id', us.setor_id,
-          'nome', ss.nome
-        )
+
+      -- Monta a array JSON de setores
+      CONCAT(
+        '[',
+        GROUP_CONCAT(
+          DISTINCT CONCAT(
+            '{"id":', us.setor_id,
+            ',"nome":"', REPLACE(ss.nome, '"', '\\"'), '"}'
+          )
+          ORDER BY us.setor_id
+          SEPARATOR ','
+        ),
+        ']'
       ) AS setores
-      FROM usuarios u
+        FROM usuarios u
       LEFT JOIN cargos c            ON u.cargo_id    = c.id
       LEFT JOIN usuario_unidades uu ON uu.usuario_id  = u.id
       LEFT JOIN unidades un         ON uu.unidade_id  = un.id
       LEFT JOIN usuario_setores  us ON us.usuario_id  = u.id
-      LEFT JOIN setores ss         ON us.setor_id     = ss.id
+      LEFT JOIN setor ss         ON us.setor_id     = ss.id
       WHERE u.email = ?
         AND u.status = 'ativo'
       GROUP BY

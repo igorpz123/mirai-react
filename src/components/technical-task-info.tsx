@@ -9,16 +9,37 @@ import {
     SheetFooter,
     SheetHeader,
     SheetTitle,
-    SheetTrigger,
 } from "@/components/ui/sheet"
 
-export function TaskInfo({ action, id, unidade }: { action: string, id?: string, unidade?: string }) {
+export function TaskInfo({
+    open,
+    onOpenChange,
+    id,
+    unidade,
+    empresa,
+    finalidade,
+    prazo,
+    status,
+    prioridade,
+    setor,
+    responsavel,
+}: {
+    open: boolean
+    onOpenChange: (open: boolean) => void
+    id: string
+    unidade: string
+    empresa?: string
+    finalidade?: string
+    prazo?: string
+    status?: string
+    prioridade?: string
+    setor?: string
+    responsavel?: string
+}) {
     return (
-        <Sheet>
-            <SheetTrigger asChild>
-                <Button variant="outline">{action}</Button>
-            </SheetTrigger>
-            <SheetContent className="md:w-1/3 sm:w-full" side="right">
+        <Sheet open={open} onOpenChange={onOpenChange}>
+            {/* tor­namos o children o gatilho do sheet */}
+            <SheetContent className="md:w-1/2 sm:w-full" side="right">
                 <SheetHeader>
                     <SheetTitle>Tarefa {id} | Unidade {unidade} </SheetTitle>
                     <SheetDescription>
@@ -29,35 +50,35 @@ export function TaskInfo({ action, id, unidade }: { action: string, id?: string,
                     <div className="grid grid-cols-2 gap-3">
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-empresa">Empresa</Label>
-                            <Input disabled id="task-info-empresa" defaultValue="Empresa ABC" />
+                            <Input disabled id="task-info-empresa" defaultValue={empresa} />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-finalidade">Finalidade</Label>
-                            <Input disabled id="task-info-finalidade" defaultValue="Renovação" />
+                            <Input disabled id="task-info-finalidade" defaultValue={finalidade} />
                         </div>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-prazo">Prazo</Label>
-                            <Input disabled id="task-info-prazo" defaultValue="10/04/2025" />
+                            <Input disabled id="task-info-prazo" defaultValue={prazo} />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-status">Status</Label>
-                            <Input disabled id="task-info-status" defaultValue="Pendente" />
+                            <Input disabled id="task-info-status" defaultValue={status} />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-prioridade">Prioridade</Label>
-                            <Input disabled id="task-info-prioridade" defaultValue="Alta" />
+                            <Input disabled id="task-info-prioridade" defaultValue={prioridade} />
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-setor">Setor</Label>
-                            <Input disabled id="task-info-setor" defaultValue="" />
+                            <Input disabled id="task-info-setor" defaultValue={setor} />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-usuario">Responsável</Label>
-                            <Input disabled id="task-info-usuario" defaultValue="Renovação" />
+                            <Input disabled id="task-info-usuario" defaultValue={responsavel} />
                         </div>
                     </div>
                     <div className="grid gap-3">
@@ -70,9 +91,8 @@ export function TaskInfo({ action, id, unidade }: { action: string, id?: string,
                     </div>
                 </div>
                 <SheetFooter>
-                    <Button className="button-success" type="submit">Salvar Alterações</Button>
                     <SheetClose asChild>
-                        <Button variant="outline">Fechar</Button>
+                        <Button variant="outline" className="cursor-pointer">Fechar</Button>
                     </SheetClose>
                 </SheetFooter>
             </SheetContent>

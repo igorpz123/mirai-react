@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useState } from "react"
 import {
   closestCenter,
   DndContext,
@@ -41,7 +42,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import type { 
+import type {
   ColumnDef,
   ColumnFiltersState,
   Row,
@@ -104,16 +105,18 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import { TaskInfo } from "@/components/technical-task-info";
 
 export const schema = z.object({
   id: z.number(),
   empresa: z.string(),
+  unidade: z.string(),
   finalidade: z.string(),
   status: z.string(),
-  // target: z.string(),
+  prioridade: z.string(),
+  setor: z.string(),
   prazo: z.string(),
   limit: z.string(),
-  // reviewer: z.string(),
   responsavel: z.string(),
 })
 
@@ -178,8 +181,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "type",
-    header: "Section Type",
+    accessorKey: "finalidade",
+    header: "Finalidade",
     cell: ({ row }) => (
       <div className="w-32">
         <Badge variant="outline" className="text-muted-foreground px-1.5">
@@ -203,8 +206,8 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     ),
   },
   {
-    accessorKey: "target",
-    header: () => <div className="w-full text-right">Target</div>,
+    accessorKey: "prazo",
+    header: () => <div className="w-full text-right">Prazo</div>,
     cell: ({ row }) => (
       <form
         onSubmit={(e) => {
@@ -216,13 +219,13 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
           })
         }}
       >
-        <Label htmlFor={`${row.original.id}-target`} className="sr-only">
-          Target
+        <Label htmlFor={`${row.original.id}-prazo`} className="sr-only">
+          Prazo
         </Label>
         <Input
           className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
           defaultValue={row.original.prazo}
-          id={`${row.original.id}-target`}
+          id={`${row.original.id}-prazo`}
         />
       </form>
     ),
@@ -253,10 +256,10 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     ),
   },
   {
-    accessorKey: "reviewer",
-    header: "Reviewer",
+    accessorKey: "responsavel",
+    header: "Responsável",
     cell: ({ row }) => {
-      const isAssigned = row.original.responsavel !== "Assign reviewer"
+      const isAssigned = row.original.responsavel !== "Designar responsável"
 
       if (isAssigned) {
         return row.original.responsavel
@@ -264,16 +267,16 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
 
       return (
         <>
-          <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-            Reviewer
+          <Label htmlFor={`${row.original.id}-responsavel`} className="sr-only">
+            Responsável
           </Label>
           <Select>
             <SelectTrigger
               className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
               size="sm"
-              id={`${row.original.id}-reviewer`}
+              id={`${row.original.id}-responsavel`}
             >
-              <SelectValue placeholder="Assign reviewer" />
+              <SelectValue placeholder="Designar Responsável" />
             </SelectTrigger>
             <SelectContent align="end">
               <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
@@ -288,27 +291,67 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
   },
   {
     id: "actions",
-    cell: () => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-            size="icon"
-          >
-            <IconDotsVertical />
-            <span className="sr-only">Open menu</span>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem>Edit</DropdownMenuItem>
-          <DropdownMenuItem>Make a copy</DropdownMenuItem>
-          <DropdownMenuItem>Favorite</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
+    cell: ({ row }) => {
+      const [sheetOpen, setSheetOpen] = useState(false)
+      const {
+        id,
+        unidade,
+        empresa,
+        finalidade,
+        prazo,
+        status,
+        prioridade,
+        setor,
+        responsavel,
+      } = row.original
+
+      return (
+        <>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="data-[state=open]:bg-muted text-muted-foreground"
+              >
+                <IconDotsVertical />
+                <span className="sr-only">Abrir menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end" className="w-32">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation()    // evita bubbling
+                  setSheetOpen(true)     // abre nosso sheet controlado
+                }}
+              >
+                Visualizar
+              </DropdownMenuItem>
+              <DropdownMenuItem>Editar</DropdownMenuItem>
+              <DropdownMenuItem>Favoritar</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Renderizamos o Sheet fora do DropdownMenu */}
+          <TaskInfo
+            open={sheetOpen}
+            onOpenChange={setSheetOpen}
+            id={String(id)}
+            unidade={unidade}
+            empresa={empresa}
+            finalidade={finalidade}
+            prazo={prazo}
+            status={status}
+            prioridade={prioridade}
+            setor={setor}
+            responsavel={responsavel}
+          />
+        </>
+      )
+    },
   },
 ]
 
@@ -441,8 +484,8 @@ export function DataTable({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
                 <IconLayoutColumns />
-                <span className="hidden lg:inline">Customize Columns</span>
-                <span className="lg:hidden">Columns</span>
+                <span className="hidden lg:inline">Customizar colunas</span>
+                <span className="lg:hidden">Colunas</span>
                 <IconChevronDown />
               </Button>
             </DropdownMenuTrigger>
@@ -494,9 +537,9 @@ export function DataTable({
                           {header.isPlaceholder
                             ? null
                             : flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
                         </TableHead>
                       )
                     })}
@@ -687,14 +730,6 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
                     content={<ChartTooltipContent indicator="dot" />}
                   />
                   <Area
-                    dataKey="mobile"
-                    type="natural"
-                    fill="var(--color-mobile)"
-                    fillOpacity={0.6}
-                    stroke="var(--color-mobile)"
-                    stackId="a"
-                  />
-                  <Area
                     dataKey="desktop"
                     type="natural"
                     fill="var(--color-desktop)"
@@ -726,10 +761,10 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="type">Type</Label>
+                <Label htmlFor="finalidade">Finalidade</Label>
                 <Select defaultValue={item.finalidade}>
-                  <SelectTrigger id="type" className="w-full">
-                    <SelectValue placeholder="Select a type" />
+                  <SelectTrigger id="finalidade" className="w-full">
+                    <SelectValue placeholder="Selecione a Finalidade" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Table of Contents">
@@ -767,8 +802,8 @@ function TableCellViewer({ item }: { item: z.infer<typeof schema> }) {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-3">
-                <Label htmlFor="target">Target</Label>
-                <Input id="target" defaultValue={item.prazo} />
+                <Label htmlFor="prazo">Prazo</Label>
+                <Input id="prazo" defaultValue={item.prazo} />
               </div>
               <div className="flex flex-col gap-3">
                 <Label htmlFor="limit">Limit</Label>

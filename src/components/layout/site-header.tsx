@@ -2,7 +2,6 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ModeToggle } from "./mode-toggle";
 import { CommandMenu } from "../app-search";
-import { TaskInfo } from "../technical-task-info";
 
 export function SiteHeader({ title }: { title: string }) {
   return (
@@ -15,7 +14,6 @@ export function SiteHeader({ title }: { title: string }) {
         />
         <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-2">
-          <TaskInfo action="Detalhes da Tarefa" id="10" unidade="São Lourenço do Oeste" />
           <CommandMenu />
           <ModeToggle />
         </div>

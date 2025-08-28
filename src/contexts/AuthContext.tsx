@@ -1,79 +1,63 @@
 // src/contexts/AuthContext.tsx
-import { createContext, useState, useEffect } from 'react'
-import type { ReactNode } from 'react'
-import { loginRequest } from '../services/auth'
-import type { AuthResponse, User } from '../services/auth'
-import { jwtDecode } from 'jwt-decode'
+import { createContext, useState } from "react"
+import type { ReactNode } from "react"
+import { loginRequest } from "../services/auth"
+import type { AuthResponse, User } from "../services/auth"
+import { jwtDecode } from "jwt-decode"
 
 interface AuthContextData {
   token: string | null
   user: User | null
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => void
-  isAuthenticated: boolean
 }
 
-export const AuthContext = createContext<AuthContextData>({} as AuthContextData)
+export const AuthContext = createContext<AuthContextData>({} as any)
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem('token')
-  )
-  const [user, setUser] = useState<User | null>(null)
+  // 1) lê token do localStorage
+  const storedToken = localStorage.getItem("token")
 
-  useEffect(() => {
-    if (token) {
-      try {
-        // Decodifica o payload do JWT para obter as informações do usuário,
-        // incluindo unidades e setores se presentes.
-        const decoded = jwtDecode<User>(token);
-        setUser({
-          id: decoded.id,
-          email: decoded.email,
-          nome: decoded.nome,
-          sobrenome: decoded.sobrenome,
-          // Se o token não contiver unidades ou setores, coloca arrays vazios
-          unidades: decoded.unidades || [],
-          setores: decoded.setores || [],
-          cargoId: decoded.cargoId,
-          cargo: decoded.cargo,
-          fotoUrl: decoded.fotoUrl,
-        });
-      } catch (err) {
-        console.error('Falha ao decodificar token:', err)
-        // token inválido? força logout
-        setToken(null)
-        localStorage.removeItem('token')
+  // 2) inicializa user decodificando o token, se existir
+  const [token, setToken] = useState<string | null>(storedToken)
+  const [user, setUser] = useState<User | null>(() => {
+    if (!storedToken) return null
+    try {
+      const payload = jwtDecode<any>(storedToken)
+      return {
+        id:       payload.id,
+        email:    payload.email,
+        nome:     payload.nome,
+        sobrenome: payload.sobrenome,
+        cargoId:  payload.cargoId,
+        cargo:    payload.cargo,
+        fotoUrl:  payload.fotoUrl,
+        unidades: payload.unidades  || [],
+        setores:  payload.setores   || [],
       }
+    } catch {
+      return null
     }
-  }, [token])
+  })
 
+  // 3) ao logar, salvamos token e usuário vindos do backend
   const signIn = async (email: string, password: string) => {
-    const { token: newToken, user: newUser }: AuthResponse = await loginRequest({
-      email,
-      password
-    })
-    localStorage.setItem('token', newToken)
+    const { token: newToken, user: newUser }: AuthResponse =
+      await loginRequest({ email, password })
+
+    localStorage.setItem("token", newToken)
     setToken(newToken)
-    // setUser(newUser)
+    setUser(newUser)
   }
 
   const signOut = () => {
-    localStorage.removeItem('token')
+    localStorage.removeItem("token")
     setToken(null)
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider
-      value={{
-        token,
-        user,
-        signIn,
-        signOut,
-        isAuthenticated: !!token
-      }}
-    >
+    <AuthContext.Provider value={{ token, user, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )
