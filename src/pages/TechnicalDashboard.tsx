@@ -7,22 +7,25 @@ import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
 import data from "./data.json"
 
-// // Tipagem das métricas do dashboard
-// interface DashboardMetrics {
-//   tarefasAndamento: number
-//   tarefasPendentes: number
-//   tarefasAtrasadas: number
-//   comissao: number
-// }
+// Tipagem das métricas do dashboard
+interface DashboardMetrics {
+   tarefasAndamento: number
+   tarefasPendentes: number
+   tarefasAtrasadas: number
+   tarefasConcluidas: number
+}
 
-// // Tipagem de cada tarefa recomendada
-// interface RecommendedTask {
-//   id: number
-//   empresa_nome: string
-//   setor_nome: string
-//   prazo: string
-//   status: 'progress' | 'pendente' | string
-// }
+interface Task {
+  id: number
+  unidade: string
+  empresa: string
+  finalidade: string
+  status: 'progress' | 'pendente' | string
+  prazo: string
+  responsavel: string
+  prioridade: 'alta' | 'media' | 'baixa' | string
+  setor: string
+}
 
 export default function TechnicalDashboard(): ReactElement {
   // const { user } = useAuth()
@@ -76,25 +79,19 @@ export default function TechnicalDashboard(): ReactElement {
   //   fetchDashboardData()
   // }, [])
 
-  // const formatCurrency = (value: number): string =>
-  //   new Intl.NumberFormat('pt-BR', {
-  //     style: 'currency',
-  //     currency: 'BRL'
-  //   }).format(value)
+  const formatDate = (dateString: string): string =>
+    new Date(dateString).toLocaleDateString('pt-BR')
 
-  // const formatDate = (dateString: string): string =>
-  //   new Date(dateString).toLocaleDateString('pt-BR')
-
-  // const getStatusText = (status: string): string => {
-  //   switch (status) {
-  //     case 'progress':
-  //       return 'Em Andamento'
-  //     case 'pendente':
-  //       return 'Pendente'
-  //     default:
-  //       return status
-  //   }
-  // }
+  const getStatusText = (status: string): string => {
+    switch (status) {
+      case 'progress':
+        return 'Em Andamento'
+      case 'pendente':
+        return 'Pendente'
+      default:
+        return status
+    }
+  }
 
   // if (loading) {
   //   return (
