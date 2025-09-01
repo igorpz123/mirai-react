@@ -7,9 +7,12 @@ import {
   Wallet,
   HardHat,
   GalleryVerticalEnd,
+  Calendar,
 } from "lucide-react"
 
-import { NavMain } from "@/components/layout/nav-main"
+import { NavTechnical } from "@/components/layout/nav-technical"
+import { NavComercial } from "./nav-comercial"
+import { NavAdmin } from "./nav-admin"
 import { NavUserInfo } from "@/components/layout/nav-user-info"
 import { NavUser } from "@/components/layout/nav-user"
 import { UnitSwitcher } from "@/components/layout/unit-switcher"
@@ -22,11 +25,20 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuth } from '@/hooks/use-auth'
 
-
-const navMainData = [
+const NavTechnicalData = [
   {
-    title: "Técnico",
-    url: "#",
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "Agenda",
+    url: "/agenda",
+    icon: Calendar,
+  },
+  {
+    title: "Fluxograma",
+    url: "/fluxograma",
     icon: HardHat,
     isActive: true,
     items: [
@@ -36,28 +48,35 @@ const navMainData = [
       { title: "Agenda", url: "#" },
     ],
   },
-  {
-    title: "Comercial",
-    url: "#",
-    icon: Wallet,
-    items: [
-      { title: "Dashboard", url: "#" },
-      { title: "CRM", url: "#" },
-      { title: "Livro de Registros", url: "#" },
-      { title: "Cursos", url: "#" },
-    ],
-  },
-  {
-    title: "Administração",
-    url: "#",
-    icon: FileSliders,
-    items: [
-      { title: "Usuários", url: "#" },
-      { title: "Unidades", url: "#" },
-      { title: "Changelog", url: "#" },
-    ],
-  },
 ];
+
+const navComercialData = [
+  { title: "Dashboard", url: "/comercial/dashboard", icon: ClipboardCheck },
+  {
+    title: "CRM", url: "/crm", icon: Wallet, items: [
+      { title: "Criar proposta", url: "comercial/crm/criar-proposta" },
+    ]
+  },
+  { title: "Cursos", url: "/cursos", icon: Calendar },
+  { title: "Livro de Registros", url: "/livro-de-registros", icon: FileSliders },
+];
+
+const navComercialDataOutside = [
+  {
+    title: "CRM", url: "/crm", icon: Wallet, items: [
+      { title: "Visualizar", url: "comercial/crm/" },
+      { title: "Criar proposta", url: "comercial/crm/criar-proposta" },
+    ]
+  },
+  { title: "Cursos", url: "/cursos", icon: Calendar },
+];
+
+const navAdminData = [
+  { title: "Dashboard", url: "/admin/dashboard", icon: ClipboardCheck },
+  { title: "Usuários", url: "/admin/usuarios", icon: User },
+  { title: "Unidades", url: "/admin/unidades", icon: GalleryVerticalEnd },
+  { title: "Changelog", url: "/admin/changelog", icon: FileSliders },
+]
 
 const userInfoData = [
   { name: "Tarefas", url: "#", icon: ClipboardCheck },
@@ -66,6 +85,9 @@ const userInfoData = [
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user, signOut } = useAuth();
+
+  const isAdmin = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 3; // Ajuste conforme a lógica do seu sistema
+  const isComercial = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 13; // Ajuste conforme a lógica do seu sistema
 
   const units =
     user?.unidades?.map(unit => ({
@@ -80,13 +102,21 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <UnitSwitcher units={units} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainData} />
+        <NavTechnical items={NavTechnicalData} />
+        {isComercial ? (
+          <NavComercial items={navComercialData} />
+        ) : (
+          <NavComercial items={navComercialDataOutside} />
+        )}
+        {isAdmin ? (
+          <NavAdmin items={navAdminData} />
+        ) : null}
         <NavUserInfo users={userInfoData} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (
           <NavUser
-            user={{ nome: user.nome, email: user.email, avatar: user.fotoUrl }}
+            user={{ nome: user.nome, email: user.email, avatar: user.fotoUrl, cargoId: user.cargoId, cargo: user.cargo }}
             onSignOut={signOut}
           />
         ) : null}

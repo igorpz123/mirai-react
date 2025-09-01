@@ -1,7 +1,6 @@
 // components/layout/nav-user.tsx
 "use client"
 
-import React from "react";
 import { useNavigate } from "react-router-dom";
 import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -26,6 +25,8 @@ interface NavUserProps {
     nome: string;
     email: string;
     avatar?: string;
+    cargoId?: number;
+    cargo?: string;
   };
   onSignOut: () => void;
 }
