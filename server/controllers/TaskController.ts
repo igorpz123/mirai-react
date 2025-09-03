@@ -191,13 +191,16 @@ export const getTaskByResponsavel = async (req: Request<{ responsavel_id: string
 };
 
 export const getTaskByUnidade = async (
-  req: Request<{}, {}, {}, { unidades_id: string | string[] }>,
+  req: Request<{ unidade_id: string }>, // Mudança aqui
   res: Response
 ): Promise<void> => {
   try {
-    let { unidades_id } = req.query;
-    if (typeof unidades_id === 'string') {
-      unidades_id = unidades_id.split(',');
+    // Pegar o ID da rota ao invés de query
+    const { unidade_id } = req.params;
+    
+    if (!unidade_id) {
+      res.status(400).json({ message: 'ID da unidade é obrigatório' });
+      return;
     }
 
     const [rows] = await pool.query<TaskRow[]>(
@@ -228,14 +231,26 @@ export const getTaskByUnidade = async (
         AND tsk.status <> 'Automático'
       ORDER BY tsk.prazo ASC
       `,
-      [unidades_id]
+      [unidade_id]
     );
 
-    if (rows.length) {
-      res.status(200).json(rows);
-    } else {
-      res.status(404).json({ message: 'Nenhuma tarefa encontrada para estas unidades' });
-    }
+    // Formatar a resposta no padrão esperado
+    const response = {
+      tasks: rows.map(row => ({
+        id: row.tarefa_id,
+        empresa: row.empresa_nome,
+        unidade: row.unidade_nome,
+        finalidade: row.finalidade,
+        status: row.status,
+        prioridade: row.prioridade,
+        setor: row.setor_nome,
+        prazo: row.prazo,
+        responsavel: row.responsavel_nome || 'Não atribuído',
+      })),
+      total: rows.length
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Erro ao buscar tarefas por unidade:', error);
     res.status(500).json({ message: 'Erro ao buscar tarefas' });

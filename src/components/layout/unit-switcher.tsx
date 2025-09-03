@@ -1,3 +1,4 @@
+// src/components/layout/unit-switcher.tsx
 import * as React from "react"
 import { ChevronsUpDown } from "lucide-react"
 
@@ -17,20 +18,38 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar"
 
+interface Unit {
+  id: number
+  name: string
+  logo: React.ElementType
+  plan: string
+}
+
+interface UnitSwitcherProps {
+  units: Unit[]
+  unitId: number | null
+  onUnitChange: (id: number) => void
+}
+
 export function UnitSwitcher({
   units,
-}: {
-  units: {
-    name: string
-    logo: React.ElementType
-    plan: string
-  }[]
-}) {
+  unitId,
+  onUnitChange,
+}: UnitSwitcherProps) {
   const { isMobile } = useSidebar()
-  const [activeTeam, setActiveTeam] = React.useState(units[0])
+  
+  // Encontra a unidade ativa baseada no unitId do contexto
+  const activeUnit = React.useMemo(() => {
+    if (!unitId) return units[0] // Fallback para a primeira unidade
+    return units.find(unit => unit.id === unitId) || units[0]
+  }, [unitId, units])
 
-  if (!activeTeam) {
+  if (!activeUnit || units.length === 0) {
     return null
+  }
+
+  const handleUnitSelect = (unit: Unit) => {
+    onUnitChange(unit.id)
   }
 
   return (
@@ -43,17 +62,17 @@ export function UnitSwitcher({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <activeTeam.logo className="size-4" />
+                <activeUnit.logo className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{activeTeam.name}</span>
-                <span className="truncate text-xs">{activeTeam.plan}</span>
+                <span className="truncate font-medium">{activeUnit.name}</span>
+                <span className="truncate text-xs">{activeUnit.plan}</span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
             align="start"
             side={isMobile ? "bottom" : "right"}
             sideOffset={4}
@@ -63,9 +82,11 @@ export function UnitSwitcher({
             </DropdownMenuLabel>
             {units.map((unit, index) => (
               <DropdownMenuItem
-                key={unit.name}
-                onClick={() => setActiveTeam(unit)}
-                className="gap-2 p-2"
+                key={unit.id}
+                onClick={() => handleUnitSelect(unit)}
+                className={`gap-2 p-2 ${
+                  unit.id === unitId ? 'bg-sidebar-accent' : ''
+                }`}
               >
                 <div className="flex size-6 items-center justify-center rounded-md border">
                   <unit.logo className="size-3.5 shrink-0" />

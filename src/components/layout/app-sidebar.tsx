@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useUnit } from '../../contexts/UnitContext';
 
 import {
   ClipboardCheck,
@@ -24,6 +25,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useAuth } from '@/hooks/use-auth'
+import { id } from "zod/v4/locales";
 
 const NavTechnicalData = [
   {
@@ -85,12 +87,14 @@ const userInfoData = [
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user, signOut } = useAuth();
+  const { unitId, setUnitId } = useUnit();
 
   const isAdmin = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 3; // Ajuste conforme a lógica do seu sistema
   const isComercial = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 13; // Ajuste conforme a lógica do seu sistema
 
   const units =
     user?.unidades?.map(unit => ({
+      id: unit.id,
       name: unit.nome,
       logo: GalleryVerticalEnd, // ou algum outro ícone padrão; se o backend fornecer isso, adapte
       plan: "Plano padrão",       // ou outro plano (você pode incluir essa informação no payload também)
@@ -99,7 +103,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <UnitSwitcher units={units} />
+        <UnitSwitcher 
+          units={units}
+          unitId={unitId}
+          onUnitChange={setUnitId}
+        />
       </SidebarHeader>
       <SidebarContent>
         <NavTechnical items={NavTechnicalData} />

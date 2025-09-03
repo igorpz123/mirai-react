@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { UnitProvider } from './contexts/UnitContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { SidebarProvider, useSidebar, SidebarInset } from "@/components/ui/sidebar";
 import Layout from './components/layout/Layout';
@@ -52,9 +53,11 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <SidebarProvider>
-        <AppContent />
-      </SidebarProvider>
+      <UnitProvider>
+        <SidebarProvider>
+          <AppContent />
+        </SidebarProvider>
+      </UnitProvider>
     </AuthProvider>
   );
 }

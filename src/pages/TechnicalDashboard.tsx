@@ -1,11 +1,13 @@
 // src/pages/Dashboard.tsx
 import { useState, useEffect } from 'react'
+import { useUnit } from '@/contexts/UnitContext';
+import { useUnitTasks } from '@/hooks/use-tasks-units';
+import { Skeleton } from '@/components/ui/skeleton'
 import type { ReactElement } from 'react'
 import { ChartAreaInteractive } from "@/components/technical-chart-tasks"
-import { DataTable } from "@/components/technical-task-table"
+import { TechnicalTaskTable } from "@/components/technical-task-table"
 import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
-import data from "./data.json"
 
 // Tipagem das métricas do dashboard
 interface DashboardMetrics {
@@ -28,57 +30,10 @@ interface Task {
 }
 
 export default function TechnicalDashboard(): ReactElement {
-  // const { user } = useAuth()
-  // const [metrics, setMetrics] = useState<DashboardMetrics>({
-  //   tarefasAndamento: 0,
-  //   tarefasPendentes: 0,
-  //   tarefasAtrasadas: 0,
-  //   comissao: 0
-  // })
-  // const [recommendedTasks, setRecommendedTasks] = useState<RecommendedTask[]>([])
-  // const [loading, setLoading] = useState<boolean>(true)
 
-  // useEffect(() => {
-  //   const fetchDashboardData = async (): Promise<void> => {
-  //     try {
-  //       setLoading(true)
-  //       const metricsData = await dashboardAPI.getMetrics()
-  //       setMetrics(metricsData)
-  //       const tasksData = await dashboardAPI.getRecommendedTasks()
-  //       setRecommendedTasks(tasksData)
-  //     } catch (error) {
-  //       console.error('Erro ao carregar dados do dashboard:', error)
-  //       // Fallback em caso de erro
-  //       setMetrics({
-  //         tarefasAndamento: 5,
-  //         tarefasPendentes: 12,
-  //         tarefasAtrasadas: 3,
-  //         comissao: 2450.75
-  //       })
-  //       setRecommendedTasks([
-  //         {
-  //           id: 1,
-  //           empresa_nome: 'Empresa ABC',
-  //           setor_nome: 'Vendas',
-  //           prazo: '2024-01-15',
-  //           status: 'progress'
-  //         },
-  //         {
-  //           id: 2,
-  //           empresa_nome: 'Empresa XYZ',
-  //           setor_nome: 'Marketing',
-  //           prazo: '2024-01-20',
-  //           status: 'pendente'
-  //         }
-  //       ])
-  //     } finally {
-  //       setLoading(false)
-  //     }
-  //   }
-
-  //   fetchDashboardData()
-  // }, [])
-
+  const { unitId } = useUnit();
+  const { tasks, total, loading, error, refetchTasks } = useUnitTasks(unitId);
+  
   const formatDate = (dateString: string): string =>
     new Date(dateString).toLocaleDateString('pt-BR')
 
@@ -111,7 +66,7 @@ export default function TechnicalDashboard(): ReactElement {
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive />
               </div>
-              <DataTable data={data} />
+              <TechnicalTaskTable tasks={tasks} onRefresh={refetchTasks} />
             </div>
           </div>
         </div>

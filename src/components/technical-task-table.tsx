@@ -1,5 +1,6 @@
 import * as React from "react"
 import { useState } from "react"
+import type { Task } from "../services/tasks"
 import {
   closestCenter,
   DndContext,
@@ -87,6 +88,26 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { TaskInfo } from "@/components/technical-task-info";
+
+interface TableTask {
+  id: number
+  empresa: string
+  unidade: string
+  finalidade: string
+  status: string
+  prioridade: string
+  setor: string
+  prazo: string
+  limit: string
+  responsavel: string
+}
+
+interface TechnicalTaskTableProps {
+  tasks: Task[]
+  onRefresh?: () => void
+  onTaskUpdate?: (taskId: string, updates: Partial<Task>) => Promise<void>
+  onTasksReorder?: (taskIds: string[]) => Promise<void>
+}
 
 export const schema = z.object({
   id: z.number(),
@@ -362,12 +383,30 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   )
 }
 
-export function DataTable({
-  data: initialData,
-}: {
-  data: z.infer<typeof schema>[]
-}) {
-  const [data, setData] = React.useState(() => initialData)
+
+export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
+  tasks,
+  onRefresh,
+  onTaskUpdate,
+  onTasksReorder
+}) => {
+  const tableData = React.useMemo<TableTask[]>(() =>
+    tasks.map(task => ({
+      id: typeof task.id === 'string' ? parseInt(task.id) : task.id,
+      empresa: task.empresa || 'N/A',
+      unidade: task.unidade || 'N/A',
+      finalidade: task.finalidade || 'Sem finalidade',
+      status: task.status || 'pending',
+      prioridade: task.prioridade || 'medium',
+      setor: task.setor || 'Geral',
+      prazo: task.prazo || '',
+      limit: task.prazo || '',
+      responsavel: task.responsavel || 'Não atribuído'
+    })),
+    [tasks]
+  )
+  // CORREÇÃO 1: Usar tasks das props ao invés de initialData
+  const [data, setData] = React.useState<TableTask[]>(tableData)
   const [rowSelection, setRowSelection] = React.useState({})
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({})
@@ -385,6 +424,10 @@ export function DataTable({
     useSensor(TouchSensor, {}),
     useSensor(KeyboardSensor, {})
   )
+
+  React.useEffect(() => {
+    setData(tableData)
+  }, [tableData])
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],
@@ -416,16 +459,25 @@ export function DataTable({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (active && over && active.id !== over.id) {
-      setData((data) => {
-        const oldIndex = dataIds.indexOf(active.id)
-        const newIndex = dataIds.indexOf(over.id)
-        return arrayMove(data, oldIndex, newIndex)
-      })
-    }
-  }
+  const handleDragEnd = React.useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event
+      if (active && over && active.id !== over.id) {
+        setData((currentData) => {
+          const oldIndex = dataIds.indexOf(active.id)
+          const newIndex = dataIds.indexOf(over.id)
+          return arrayMove(currentData, oldIndex, newIndex)
+        })
+
+        // Chama o callback se fornecido
+        if (onTasksReorder) {
+          const newOrder = arrayMove(dataIds, dataIds.indexOf(active.id), dataIds.indexOf(over.id))
+          await onTasksReorder(newOrder.map(id => id.toString()))
+        }
+      }
+    },
+    [dataIds, onTasksReorder]
+  )
 
   return (
     <Tabs
