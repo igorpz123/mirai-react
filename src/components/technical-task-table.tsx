@@ -122,6 +122,22 @@ export const schema = z.object({
   responsavel: z.string(),
 })
 
+const formatDate = (dateString: string): string =>
+  new Date(dateString).toLocaleDateString('pt-BR')
+
+const getStatusText = (status: string): string => {
+  switch (status) {
+    case 'progress':
+      return 'Em Andamento'
+    case 'concluída':
+      return 'Concluída'
+    case 'pendente':
+      return 'Pendente'
+    default:
+      return status
+  }
+}
+
 // Create a separate component for the drag handle
 function DragHandle({ id }: { id: number }) {
   const { attributes, listeners } = useSortable({
@@ -187,13 +203,14 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     header: "Status",
     cell: ({ row }) => {
       const status = row.original.status;
+      const statusText = getStatusText(row.original.status);
       let badgeClass = "";
       let icon = null;
 
-      if (status === "Finalizado") {
+      if (status === "concluída") {
         badgeClass = "button-success";
         icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />;
-      } else if (status === "Em Andamento") {
+      } else if (status === "progress") {
         badgeClass = "button-primary";
         icon = <IconProgress />;
       } else {
@@ -203,66 +220,34 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
       return (
         <Badge variant="outline" className={badgeClass}>
           {icon}
-          {status}
+          {statusText}
         </Badge>
       );
     },
   },
   {
     accessorKey: "prazo",
-    header: () => <div className="w-full text-right">Prazo</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.empresa}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-prazo`} className="sr-only">
-          Prazo
-        </Label>
-        <Input
-          className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-          defaultValue={row.original.prazo}
-          id={`${row.original.id}-prazo`}
-        />
-      </form>
-    ),
+    header: () => <div className="w-full text-left">Prazo</div>,
+    cell: ({ row }) => {
+      return (
+        <span className="pl-2">{formatDate(row.original.prazo)}</span>
+      )
+    },
   },
   {
-    accessorKey: "limit",
-    header: () => <div className="w-full text-right">Limit</div>,
-    cell: ({ row }) => (
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          toast.promise(new Promise((resolve) => setTimeout(resolve, 1000)), {
-            loading: `Saving ${row.original.empresa}`,
-            success: "Done",
-            error: "Error",
-          })
-        }}
-      >
-        <Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-          Limit
-        </Label>
-        <Input
-          className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-          defaultValue={row.original.limit}
-          id={`${row.original.id}-limit`}
-        />
-      </form>
-    ),
+    accessorKey: "finalidade",
+    header: () => <div className="w-full text-left">Finalidade</div>,
+    cell: ({ row }) => {
+      return (
+        <span className="pl-2">{row.original.finalidade}</span>
+      )
+    },
   },
   {
     accessorKey: "responsavel",
     header: "Responsável",
     cell: ({ row }) => {
-      const isAssigned = row.original.responsavel !== "Designar responsável"
+      const isAssigned = row.original.responsavel !== "Não atribuído"
 
       if (isAssigned) {
         return row.original.responsavel
@@ -606,8 +591,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
         </div>
         <div className="flex items-center justify-between px-4">
           <div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
+            {table.getFilteredSelectedRowModel().rows.length} de{" "}
+            {table.getFilteredRowModel().rows.length} linhas selecionadas.
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
@@ -635,7 +620,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
               </Select>
             </div>
             <div className="flex w-fit items-center justify-center text-sm font-medium">
-              Page {table.getState().pagination.pageIndex + 1} of{" "}
+              Página {table.getState().pagination.pageIndex + 1} de{" "}
               {table.getPageCount()}
             </div>
             <div className="ml-auto flex items-center gap-2 lg:ml-0">

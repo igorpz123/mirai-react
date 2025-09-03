@@ -11,10 +11,10 @@ import { SiteHeader } from "@/components/layout/site-header"
 
 // Tipagem das métricas do dashboard
 interface DashboardMetrics {
-   tarefasAndamento: number
-   tarefasPendentes: number
-   tarefasAtrasadas: number
-   tarefasConcluidas: number
+  tarefasAndamento: number
+  tarefasPendentes: number
+  tarefasAtrasadas: number
+  tarefasConcluidas: number
 }
 
 interface Task {
@@ -33,20 +33,6 @@ export default function TechnicalDashboard(): ReactElement {
 
   const { unitId } = useUnit();
   const { tasks, total, loading, error, refetchTasks } = useUnitTasks(unitId);
-  
-  const formatDate = (dateString: string): string =>
-    new Date(dateString).toLocaleDateString('pt-BR')
-
-  const getStatusText = (status: string): string => {
-    switch (status) {
-      case 'progress':
-        return 'Em Andamento'
-      case 'pendente':
-        return 'Pendente'
-      default:
-        return status
-    }
-  }
 
   // if (loading) {
   //   return (
@@ -59,17 +45,17 @@ export default function TechnicalDashboard(): ReactElement {
   return (
     <div className="w-full">
       <SiteHeader title='Dashboard | Setor Técnico' />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <TechnicalDashboardCards />
-              <div className="px-4 lg:px-6">
-                <ChartAreaInteractive />
-              </div>
-              <TechnicalTaskTable tasks={tasks} onRefresh={refetchTasks} />
+      <div className="flex flex-1 flex-col">
+        <div className="@container/main flex flex-1 flex-col gap-2">
+          <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <TechnicalDashboardCards />
+            <div className="px-4 lg:px-6">
+              <ChartAreaInteractive />
             </div>
+            <TechnicalTaskTable tasks={tasks} onRefresh={refetchTasks} />
           </div>
         </div>
+      </div>
     </div>
   )
 }
