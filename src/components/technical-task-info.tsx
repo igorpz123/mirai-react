@@ -60,7 +60,7 @@ export function TaskInfo({
                     <div className="grid grid-cols-3 gap-3">
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-prazo">Prazo</Label>
-                            <Input disabled id="task-info-prazo" defaultValue={prazo} />
+                            <span className="font-light">{prazo}</span>
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-status">Status</Label>

@@ -432,3 +432,35 @@ export const newTask = async (
     res.status(500).json({ message: 'Erro ao criar tarefa' });
   }
 };
+
+export const updateTaskResponsible = async (
+  req: Request<{ tarefa_id: string }, {}, { usuarioId: number }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { tarefa_id } = req.params;
+    const { usuarioId } = req.body;
+
+    if (!tarefa_id) {
+      res.status(400).json({ message: 'ID da tarefa é obrigatório' });
+      return;
+    }
+
+    if (typeof usuarioId !== 'number' || Number.isNaN(usuarioId)) {
+      res.status(400).json({ message: 'usuarioId inválido' });
+      return;
+    }
+
+    const updateQuery = `UPDATE tarefas SET responsavel_id = ? WHERE id = ?`;
+    const [result] = await pool.query<OkPacket>(updateQuery, [usuarioId, tarefa_id]);
+
+    if (result.affectedRows && result.affectedRows > 0) {
+      res.status(200).json({ message: 'Responsável atualizado com sucesso' });
+    } else {
+      res.status(404).json({ message: 'Tarefa não encontrada' });
+    }
+  } catch (error) {
+    console.error('Erro ao atualizar responsável da tarefa:', error);
+    res.status(500).json({ message: 'Erro ao atualizar responsável da tarefa' });
+  }
+};

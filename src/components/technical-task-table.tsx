@@ -1,6 +1,9 @@
 import * as React from "react"
 import { useState } from "react"
 import type { Task } from "../services/tasks"
+import { getUsersByDepartmentAndUnit, updateUserResponsibleForTask, getUsersByUnitId, getAllUsers } from '@/services/users';
+import type { User } from '@/services/users';
+import { useUnit } from '@/contexts/UnitContext';
 import {
   closestCenter,
   DndContext,
@@ -50,7 +53,6 @@ import type {
   SortingState,
   VisibilityState,
 } from "@tanstack/react-table"
-import { toast } from "sonner"
 import { z } from "zod"
 
 import { Badge } from "@/components/ui/badge"
@@ -64,7 +66,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   Select,
@@ -97,6 +98,8 @@ interface TableTask {
   status: string
   prioridade: string
   setor: string
+  setorId?: number
+  unidadeId?: number
   prazo: string
   limit: string
   responsavel: string
@@ -158,190 +161,7 @@ function DragHandle({ id }: { id: number }) {
   )
 }
 
-const columns: ColumnDef<z.infer<typeof schema>>[] = [
-  {
-    id: "drag",
-    header: () => null,
-    cell: ({ row }) => <DragHandle id={row.original.id} />,
-  },
-  {
-    id: "select",
-    header: ({ table }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={
-            table.getIsAllPageRowsSelected() ||
-            (table.getIsSomePageRowsSelected() && "indeterminate")
-          }
-          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label="Select all"
-        />
-      </div>
-    ),
-    cell: ({ row }) => (
-      <div className="flex items-center justify-center">
-        <Checkbox
-          checked={row.getIsSelected()}
-          onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label="Select row"
-        />
-      </div>
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "empresa",
-    header: "Empresa",
-    cell: ({ row }) => {
-      return <span className="font-medium pl-2">{row.original.empresa}</span>
-    },
-    enableHiding: false,
-  },
-  {
-    accessorKey: "status",
-    header: "Status",
-    cell: ({ row }) => {
-      const status = row.original.status;
-      const statusText = getStatusText(row.original.status);
-      let badgeClass = "";
-      let icon = null;
-
-      if (status === "concluída") {
-        badgeClass = "button-success";
-        icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />;
-      } else if (status === "progress") {
-        badgeClass = "button-primary";
-        icon = <IconProgress />;
-      } else {
-        icon = <IconLoader className="animate-spin" />;
-      }
-
-      return (
-        <Badge variant="outline" className={badgeClass}>
-          {icon}
-          {statusText}
-        </Badge>
-      );
-    },
-  },
-  {
-    accessorKey: "prazo",
-    header: () => <div className="w-full text-left">Prazo</div>,
-    cell: ({ row }) => {
-      return (
-        <span className="pl-2">{formatDate(row.original.prazo)}</span>
-      )
-    },
-  },
-  {
-    accessorKey: "finalidade",
-    header: () => <div className="w-full text-left">Finalidade</div>,
-    cell: ({ row }) => {
-      return (
-        <span className="pl-2">{row.original.finalidade}</span>
-      )
-    },
-  },
-  {
-    accessorKey: "responsavel",
-    header: "Responsável",
-    cell: ({ row }) => {
-      const isAssigned = row.original.responsavel !== "Não atribuído"
-
-      if (isAssigned) {
-        return row.original.responsavel
-      }
-
-      return (
-        <>
-          <Label htmlFor={`${row.original.id}-responsavel`} className="sr-only">
-            Responsável
-          </Label>
-          <Select>
-            <SelectTrigger
-              className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
-              size="sm"
-              id={`${row.original.id}-responsavel`}
-            >
-              <SelectValue placeholder="Designar Responsável" />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
-              <SelectItem value="Jamik Tashpulatov">
-                Jamik Tashpulatov
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </>
-      )
-    },
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => {
-      const [sheetOpen, setSheetOpen] = useState(false)
-      const {
-        id,
-        unidade,
-        empresa,
-        finalidade,
-        prazo,
-        status,
-        prioridade,
-        setor,
-        responsavel,
-      } = row.original
-
-      return (
-        <>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="data-[state=open]:bg-muted text-muted-foreground"
-              >
-                <IconDotsVertical />
-                <span className="sr-only">Abrir menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="w-32">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation()    // evita bubbling
-                  setSheetOpen(true)     // abre nosso sheet controlado
-                }}
-              >
-                Visualizar
-              </DropdownMenuItem>
-              <DropdownMenuItem>Editar</DropdownMenuItem>
-              <DropdownMenuItem>Favoritar</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Renderizamos o Sheet fora do DropdownMenu */}
-          <TaskInfo
-            open={sheetOpen}
-            onOpenChange={setSheetOpen}
-            id={String(id)}
-            unidade={unidade}
-            empresa={empresa}
-            finalidade={finalidade}
-            prazo={prazo}
-            status={status}
-            prioridade={prioridade}
-            setor={setor}
-            responsavel={responsavel}
-          />
-        </>
-      )
-    },
-  },
-]
+// columns moved inside component so we can access component props/state
 
 function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   const { transform, transition, setNodeRef, isDragging } = useSortable({
@@ -368,13 +188,154 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
   )
 }
 
-
 export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   tasks,
   onRefresh,
   onTaskUpdate,
-  onTasksReorder
+  onTasksReorder,
 }) => {
+  const { unitId } = useUnit();
+
+  function ResponsibleSelect({ task }: { task: TableTask }) {
+    const [users, setUsers] = React.useState<User[] | null>(null)
+    const [loadingUsers, setLoadingUsers] = React.useState(false)
+    const [errorUsers, setErrorUsers] = React.useState<string | null>(null)
+  const [debugEndpoint, setDebugEndpoint] = React.useState<string | null>(null)
+  const [lastRawData, setLastRawData] = React.useState<any | null>(null)
+  const [assigning, setAssigning] = React.useState(false)
+
+    React.useEffect(() => {
+      let mounted = true
+  let endpointUsed = ''
+      async function fetchUsers() {
+        setLoadingUsers(true)
+        setErrorUsers(null)
+        try {
+          // tenta buscar por setor e unidade quando possível
+          if (task.setorId && task.unidadeId) {
+            endpointUsed = `${task.unidadeId}/setor/${task.setorId}`
+            const res = await getUsersByDepartmentAndUnit(task.setorId, task.unidadeId)
+            if (!mounted) return
+            setLastRawData(res)
+            setUsers(res.users || [])
+          } else if (task.unidadeId || unitId) {
+            const uid = task.unidadeId || unitId || 0
+            if (uid > 0) {
+              endpointUsed = `unidade/${uid}`
+              const res = await getUsersByUnitId(uid)
+              if (!mounted) return
+              setLastRawData(res)
+              let list = res.users || []
+              // if we have setor name but not setorId, filter by setor name
+              if (task.setor) {
+                const setorName = task.setor.toString().toLowerCase()
+                list = (list as any[]).filter((u: any) => {
+                  const candidates = [u.setor_nomes, u.setorNomes, u.setores, u.setor, u.setor_nome]
+                  return candidates.some((c: any) => typeof c === 'string' && c.toLowerCase().includes(setorName))
+                })
+              }
+              setUsers(list)
+            } else {
+              endpointUsed = `all`
+              const res = await getAllUsers()
+              if (!mounted) return
+              setLastRawData(res)
+              setUsers(res.users || [])
+            }
+          } else {
+            endpointUsed = `all`
+            const res = await getAllUsers()
+            if (!mounted) return
+            setLastRawData(res)
+            setUsers(res.users || [])
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : 'Erro ao carregar usuários'
+          setErrorUsers(msg)
+          setUsers([])
+        } finally {
+          if (mounted) setLoadingUsers(false)
+          // debug
+          console.debug('[ResponsibleSelect] fetched users', { taskId: task.id, endpoint: endpointUsed, count: (users || []).length, raw: lastRawData })
+          if (mounted) setDebugEndpoint(endpointUsed)
+        }
+      }
+
+      fetchUsers()
+
+      return () => {
+        mounted = false
+      }
+    }, [task.setorId, task.unidadeId, unitId])
+
+    const handleAssign = async (userIdValue: string) => {
+      const userId = Number(userIdValue)
+      // ignore placeholder/invalid selections
+      if (userIdValue === '__none') return
+      if (!userId || Number.isNaN(userId)) return
+
+      const selectedUser = users?.find(u => u.id === userId)
+
+      try {
+        setAssigning(true)
+        await updateUserResponsibleForTask(task.id, userId)
+
+        // Atualiza UI local imediatamente
+        setData(prev => prev.map(d => d.id === task.id ? { ...d, responsavel: selectedUser ? selectedUser.nome : d.responsavel } : d))
+
+        // chama callback externo se houver
+        if (onRefresh) onRefresh()
+        if (onTaskUpdate) {
+          // notifies parent if it wants to persist changes locally
+          onTaskUpdate(String(task.id), { responsavel: selectedUser ? selectedUser.nome : undefined } as Partial<Task>)
+        }
+      } catch (err) {
+        console.error('Erro ao atribuir responsável:', err)
+      } finally {
+        setAssigning(false)
+      }
+    }
+
+    if (loadingUsers) {
+      return <span>Carregando...</span>
+    }
+
+    if (errorUsers) {
+      return <span className="text-destructive">{errorUsers}</span>
+    }
+
+    return (
+      <Select onValueChange={handleAssign}>
+        <SelectTrigger
+          disabled={assigning}
+          className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
+          size="sm"
+          id={`${task.id}-responsavel`}
+        >
+          <SelectValue placeholder={assigning ? 'Atribuindo...' : 'Designar Responsável'} />
+        </SelectTrigger>
+        <SelectContent align="end">
+          {users && users.length > 0 ? (
+            users.map((u) => (
+              <SelectItem key={u.id} value={`${u.id}`}>
+                {u.nome}
+              </SelectItem>
+            ))
+          ) : (
+            <>
+              <SelectItem value="__none" disabled>Nenhum usuário</SelectItem>
+              {debugEndpoint ? (
+                <div className="px-2 py-1 text-xs text-muted-foreground">Origem: {debugEndpoint}</div>
+              ) : null}
+              {lastRawData ? (
+                <pre className="text-xs max-h-40 overflow-auto bg-muted p-2 rounded mt-1">{JSON.stringify(lastRawData, null, 2)}</pre>
+              ) : null}
+            </>
+          )}
+        </SelectContent>
+      </Select>
+    )
+  }
   const tableData = React.useMemo<TableTask[]>(() =>
     tasks.map(task => ({
       id: typeof task.id === 'string' ? parseInt(task.id) : task.id,
@@ -384,6 +345,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       status: task.status || 'pending',
       prioridade: task.prioridade || 'medium',
       setor: task.setor || 'Geral',
+      setorId: (task as any).setorId || undefined,
+      unidadeId: (task as any).unidadeId || undefined,
       prazo: task.prazo || '',
       limit: task.prazo || '',
       responsavel: task.responsavel || 'Não atribuído'
@@ -413,6 +376,178 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   React.useEffect(() => {
     setData(tableData)
   }, [tableData])
+
+  const columns: ColumnDef<z.infer<typeof schema>>[] = [
+    {
+      id: "drag",
+      header: () => null,
+      cell: ({ row }) => <DragHandle id={row.original.id} />,
+    },
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Select all"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="flex items-center justify-center">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
+    {
+      accessorKey: "empresa",
+      header: "Empresa",
+      cell: ({ row }) => {
+        return <span className="font-medium pl-2">{row.original.empresa}</span>
+      },
+      enableHiding: false,
+    },
+    {
+      accessorKey: "finalidade",
+      header: () => <div className="w-full text-left">Finalidade</div>,
+      cell: ({ row }) => {
+        return (
+          <span className="pl-2">{row.original.finalidade}</span>
+        )
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.original.status;
+        const statusText = getStatusText(row.original.status);
+        let badgeClass = "";
+        let icon = null;
+
+        if (status === "concluída") {
+          badgeClass = "button-success";
+          icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />;
+        } else if (status === "progress") {
+          badgeClass = "button-primary";
+          icon = <IconProgress />;
+        } else {
+          icon = <IconLoader className="animate-spin" />;
+        }
+
+        return (
+          <Badge variant="outline" className={badgeClass}>
+            {icon}
+            {statusText}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "prazo",
+      header: () => <div className="w-full text-left">Prazo</div>,
+      cell: ({ row }) => {
+        return (
+          <span className="pl-2">{formatDate(row.original.prazo)}</span>
+        )
+      },
+    },
+    {
+      accessorKey: "responsavel",
+      header: "Responsável",
+      cell: ({ row }) => {
+        const isAssigned = row.original.responsavel !== "Não atribuído"
+
+        if (isAssigned) {
+          return row.original.responsavel
+        }
+
+        return (
+          <>
+            <Label htmlFor={`${row.original.id}-responsavel`} className="sr-only">
+              Responsável
+            </Label>
+            <ResponsibleSelect task={row.original} />
+          </>
+        )
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const [sheetOpen, setSheetOpen] = useState(false)
+        const {
+          id,
+          unidade,
+          empresa,
+          finalidade,
+          prioridade,
+          setor,
+          responsavel,
+        } = row.original
+
+        const statusText = getStatusText(row.original.status);
+        const prazo = formatDate(row.original.prazo);
+
+        return (
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="data-[state=open]:bg-muted text-muted-foreground"
+                >
+                  <IconDotsVertical />
+                  <span className="sr-only">Abrir menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-32">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation()    // evita bubbling
+                    setSheetOpen(true)     // abre nosso sheet controlado
+                  }}
+                >
+                  Visualizar
+                </DropdownMenuItem>
+                <DropdownMenuItem>Editar</DropdownMenuItem>
+                <DropdownMenuItem>Favoritar</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Renderizamos o Sheet fora do DropdownMenu */}
+            <TaskInfo
+              open={sheetOpen}
+              onOpenChange={setSheetOpen}
+              id={String(id)}
+              unidade={unidade}
+              empresa={empresa}
+              finalidade={finalidade}
+              prazo={prazo}
+              status={statusText}
+              prioridade={prioridade}
+              setor={setor}
+              responsavel={responsavel}
+            />
+          </>
+        )
+      },
+    },
+  ]
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],

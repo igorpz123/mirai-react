@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import { useUnit } from '@/contexts/UnitContext';
 import { useUnitTasks } from '@/hooks/use-tasks-units';
-import { Skeleton } from '@/components/ui/skeleton'
 import type { ReactElement } from 'react'
 import { ChartAreaInteractive } from "@/components/technical-chart-tasks"
 import { TechnicalTaskTable } from "@/components/technical-task-table"
@@ -17,22 +16,10 @@ interface DashboardMetrics {
   tarefasConcluidas: number
 }
 
-interface Task {
-  id: number
-  unidade: string
-  empresa: string
-  finalidade: string
-  status: 'progress' | 'pendente' | string
-  prazo: string
-  responsavel: string
-  prioridade: 'alta' | 'media' | 'baixa' | string
-  setor: string
-}
-
 export default function TechnicalDashboard(): ReactElement {
 
   const { unitId } = useUnit();
-  const { tasks, total, loading, error, refetchTasks } = useUnitTasks(unitId);
+  const { tasks, loading, error, refetchTasks } = useUnitTasks(unitId);
 
   // if (loading) {
   //   return (

@@ -1,6 +1,7 @@
 // src/controllers/UserController.ts
 import { Request, Response } from 'express'
 import pool from '../config/db'
+import * as UserService from '../services/userService'
 
 // Estrutura básica de um usuário retornado pelas queries
 interface UserRecord {
@@ -109,8 +110,9 @@ export const getUserByUnidade = async (
   res: Response
 ): Promise<void> => {
   try {
-    let unidades = req.query.unidades_id
-    if (typeof unidades === 'string') {
+    // aceitar tanto params quanto query (rota definida como /unidade/:unidade_id)
+    let unidades: any = req.params.unidade_id || req.query.unidades_id
+    if (typeof unidades === 'string' && unidades.includes(',')) {
       unidades = unidades.split(',')
     }
     const [rows] = (await pool.query(
@@ -248,6 +250,24 @@ export const getUserByUnidadeSetor = async (
     res.status(500).json({ message: 'Erro ao buscar usuários' })
   }
 }
+
+export const getUsersByDepartmentAndUnit = async (req: Request, res: Response) => {
+  try {
+    // aceitar parâmetros via rota (/unidade/:unidade_id/setor/:setor_id) ou query
+    const departmentId = req.params.setor_id || req.query.departmentId
+    const unitId = req.params.unidade_id || req.query.unitId
+
+    const users = await UserService.getUsersByDepartmentAndUnit(
+      Number(departmentId),
+      Number(unitId)
+    );
+
+    res.json(users);
+  } catch (error) {
+    console.error('Erro ao buscar usuários:', error);
+    res.status(500).json({ message: 'Erro ao buscar usuários' });
+  }
+};
 
 /**
  * Buscar usuários por cargo (query: cargo_id)

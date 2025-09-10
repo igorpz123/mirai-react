@@ -9,7 +9,8 @@ import {
   getTaskByUnidadeSetor,
   getArquivosByTarefa,
   getTaskHistory,
-  newTask
+  newTask,
+  updateTaskResponsible
 } from '../controllers/TaskController'
 
 const router: Router = Router()
@@ -40,5 +41,8 @@ router.get('/historico/:tarefa_id', getTaskHistory)
 
 // Criar nova tarefa
 router.post('/', newTask)
+
+// Atualizar responsável pela tarefa
+router.patch('/:tarefa_id/responsavel', updateTaskResponsible)
 
 export default router
