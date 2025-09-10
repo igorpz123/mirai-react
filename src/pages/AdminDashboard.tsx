@@ -16,7 +16,7 @@ interface DashboardMetrics {
   tarefasConcluidas: number
 }
 
-export default function TechnicalDashboard(): ReactElement {
+export default function AdminDashboard(): ReactElement {
 
   const { unitId } = useUnit();
   const { tasks, loading, error, refetchTasks } = useUnitTasks(unitId);

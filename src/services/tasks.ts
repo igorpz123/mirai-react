@@ -166,3 +166,28 @@ export async function deleteTask(taskId: number): Promise<{ message: string }> {
 
     return res.json();
 }
+
+export interface TaskStatsResponse {
+    totalByStatus: Record<string, number>;
+    trendByStatus: Record<string, { current: number; previous: number; percent: number }>;
+    overdue: { current: number; previous: number; percent: number };
+}
+
+export async function getTaskStatsByUnit(unitId: number): Promise<TaskStatsResponse> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/unidade/${unitId}/stats`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao buscar estatísticas de tarefas');
+    }
+
+    return res.json();
+}

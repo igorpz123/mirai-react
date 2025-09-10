@@ -7,6 +7,7 @@ import {
   getTaskByResponsavel,
   getTaskByUnidade,
   getTaskByUnidadeSetor,
+  getTaskStatsByUnidade,
   getArquivosByTarefa,
   getTaskHistory,
   newTask,
@@ -29,6 +30,9 @@ router.get('/responsavel/:responsavel_id', getTaskByResponsavel)
 
 // Coletar tarefas por unidade
 router.get('/unidade/:unidade_id', getTaskByUnidade)
+
+// Estatísticas por unidade (contagens e tendências)
+router.get('/unidade/:unidade_id/stats', getTaskStatsByUnidade)
 
 // Coletar tarefas por unidade e setor
 router.get('/unidade/:unidade_id/setor/:setor_id', getTaskByUnidadeSetor)

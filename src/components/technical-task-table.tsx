@@ -85,8 +85,6 @@ import {
 import {
   Tabs,
   TabsContent,
-  TabsList,
-  TabsTrigger,
 } from "@/components/ui/tabs"
 import { TaskInfo } from "@/components/technical-task-info";
 

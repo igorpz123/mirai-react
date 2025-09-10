@@ -6,7 +6,7 @@ import { SidebarProvider, useSidebar, SidebarInset } from "@/components/ui/sideb
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 //Páginas do Setor Técnico
-import TechnicalDashboard from './pages/TechnicalDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import TechnicalFluxograma from './pages/TechnicalFluxograma';
 import NewTaskForm from './components/technical-task-new';
 
@@ -40,7 +40,7 @@ function AppContent() {
               </ProtectedRoute>
             }
           >
-            <Route path="dashboard" element={<TechnicalDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="fluxograma" element={<TechnicalFluxograma />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
           </Route>
