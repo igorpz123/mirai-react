@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useUnit } from '@/contexts/UnitContext';
 import { useUnitTasks } from '@/hooks/use-tasks-units';
-import { useCompletedByUnit } from '@/hooks/use-completed-by-unit';
+import { useCompletedByUnit } from '@/hooks/use-tasks-completed-by-unit';
 import type { ReactElement } from 'react'
 import { ChartAreaInteractive } from "@/components/technical-chart-tasks"
 import { TechnicalTaskTable } from "@/components/technical-task-table"
