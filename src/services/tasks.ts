@@ -191,3 +191,27 @@ export async function getTaskStatsByUnit(unitId: number): Promise<TaskStatsRespo
 
     return res.json();
 }
+
+export interface CompletedByDay {
+    date: string | null;
+    concluidas: number;
+}
+
+export async function getCompletedTasksByDay(unitId: number): Promise<CompletedByDay[]> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/unidade/${unitId}/completadas-dia`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao buscar tarefas concluídas por dia');
+    }
+
+    return res.json();
+}

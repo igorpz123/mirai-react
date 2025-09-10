@@ -8,6 +8,7 @@ import {
   getTaskByUnidade,
   getTaskByUnidadeSetor,
   getTaskStatsByUnidade,
+  getCompletedTasksByDayByUnidade,
   getArquivosByTarefa,
   getTaskHistory,
   newTask,
@@ -33,6 +34,9 @@ router.get('/unidade/:unidade_id', getTaskByUnidade)
 
 // Estatísticas por unidade (contagens e tendências)
 router.get('/unidade/:unidade_id/stats', getTaskStatsByUnidade)
+
+// Tarefas concluídas por dia (por unidade)
+router.get('/unidade/:unidade_id/completadas-dia', getCompletedTasksByDayByUnidade)
 
 // Coletar tarefas por unidade e setor
 router.get('/unidade/:unidade_id/setor/:setor_id', getTaskByUnidadeSetor)

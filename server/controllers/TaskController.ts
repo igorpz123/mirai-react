@@ -542,3 +542,36 @@ export const getTaskStatsByUnidade = async (
     res.status(500).json({ message: 'Erro ao calcular estatísticas de tarefas' });
   }
 };
+
+export const getCompletedTasksByDayByUnidade = async (
+  req: Request<{ unidade_id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { unidade_id } = req.params;
+
+    if (!unidade_id) {
+      res.status(400).json({ message: 'ID da unidade é obrigatório' });
+      return;
+    }
+
+    // Agrupa tarefas com status 'concluída' por data_alteracao (apenas data)
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `
+      SELECT DATE(data_alteracao) as date, COUNT(*) as concluidas
+      FROM tarefas
+      WHERE unidade_id IN (?) AND status = 'concluída'
+      GROUP BY DATE(data_alteracao)
+      ORDER BY DATE(data_alteracao) ASC
+      `,
+      [unidade_id]
+    );
+
+    const result = (rows as any[]).map(r => ({ date: r.date ? r.date.toISOString().slice(0,10) : null, concluidas: Number(r.concluidas) || 0 }));
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Erro ao buscar tarefas concluídas por dia:', error);
+    res.status(500).json({ message: 'Erro ao buscar tarefas concluídas por dia' });
+  }
+};
