@@ -555,19 +555,32 @@ export const getCompletedTasksByDayByUnidade = async (
       return;
     }
 
-    // Agrupa tarefas com status 'concluída' por data_alteracao (apenas data)
+    // Agrupa eventos de conclusão no histórico por data_alteracao (apenas data)
+    // Considera ações: concluir_usuario, concluir_setor, concluir_arquivar
     const [rows] = await pool.query<RowDataPacket[]>(
       `
-      SELECT DATE(data_alteracao) as date, COUNT(*) as concluidas
-      FROM tarefas
-      WHERE unidade_id IN (?) AND status = 'concluída'
-      GROUP BY DATE(data_alteracao)
-      ORDER BY DATE(data_alteracao) ASC
+      SELECT DATE(h.data_alteracao) AS date, COUNT(*) AS concluidas
+      FROM historico_alteracoes h
+      JOIN tarefas t ON t.id = h.tarefa_id
+      WHERE t.unidade_id IN (?)
+        AND h.acao IN ('concluir_usuario','concluir_setor','concluir_arquivar')
+      GROUP BY DATE(h.data_alteracao)
+      ORDER BY DATE(h.data_alteracao) ASC
       `,
       [unidade_id]
     );
 
-    const result = (rows as any[]).map(r => ({ date: r.date ? r.date.toISOString().slice(0,10) : null, concluidas: Number(r.concluidas) || 0 }));
+    const result = (rows as any[]).map(r => {
+      let dateStr: string | null = null;
+      if (r.date) {
+        if (r.date instanceof Date) {
+          dateStr = r.date.toISOString().slice(0,10);
+        } else {
+          dateStr = String(r.date).slice(0,10);
+        }
+      }
+      return { date: dateStr, concluidas: Number(r.concluidas) || 0 };
+    });
 
     res.status(200).json(result);
   } catch (error) {

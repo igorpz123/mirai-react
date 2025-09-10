@@ -150,10 +150,19 @@ const chartConfig = {
     }
   }, [isMobile])
 
+  // use the latest date from the data as the reference (fallback to today)
+  const referenceDate = (() => {
+    const dates = chartData.map((it) => it.date).filter(Boolean) as string[]
+    if (dates.length === 0) return new Date()
+    return dates.reduce((acc, d) => {
+      const nd = new Date(d)
+      return nd > acc ? nd : acc
+    }, new Date(dates[0]))
+  })()
+
   const filteredData = chartData.filter((item) => {
     if (!item.date) return false
     const date = new Date(item.date)
-    const referenceDate = new Date("2024-06-30")
     let daysToSubtract = 90
     if (timeRange === "30d") {
       daysToSubtract = 30
