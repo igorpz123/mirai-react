@@ -1,5 +1,6 @@
 "use client"
 
+import { Link } from "react-router-dom";
 import { ChevronRight, type LucideIcon } from "lucide-react"
 
 import {
@@ -58,9 +59,9 @@ export function NavComercial({ items }: { items: NavItem[] }) {
                       {item.items?.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild>
-                            <a href={subItem.url}>
+                            <Link to={subItem.url}>
                               <span>{subItem.title}</span>
-                            </a>
+                            </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
@@ -73,9 +74,11 @@ export function NavComercial({ items }: { items: NavItem[] }) {
             // Render sem collapsable se não houver subitens
             return (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton tooltip={item.title} className="cursor-pointer">
-                  {item.icon && <item.icon />}
-                  <span>{item.title}</span>
+                <SidebarMenuButton asChild tooltip={item.title} className="cursor-pointer">
+                  <Link to={item.url}>
+                    {item.icon && <item.icon />}
+                    <span>{item.title}</span>
+                  </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )
