@@ -373,6 +373,30 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     useSensor(KeyboardSensor, {})
   )
 
+  // View selector state: controls which 'finalidade' is shown
+  const [selectedView, setSelectedView] = React.useState<string>('outline')
+
+  // Compute available finalidades from the computed tableData (includes defaults)
+  const uniqueFinalidades = React.useMemo(() => {
+    const source = tableData || []
+    const list = source
+      .map(t => (t.finalidade ?? '').toString().trim())
+      .filter(Boolean)
+    return Array.from(new Set(list))
+  }, [tableData])
+
+  // If selectedView becomes invalid (e.g. tasks changed), reset to 'outline'
+  React.useEffect(() => {
+    if (selectedView !== 'outline' && !uniqueFinalidades.includes(selectedView)) {
+      setSelectedView('outline')
+    }
+  }, [uniqueFinalidades, selectedView])
+
+  // Debug info to help when no finalidades appear
+  React.useEffect(() => {
+    console.debug('[TechnicalTaskTable] tasks count', { tasksLength: tasks?.length, tableDataLength: tableData?.length, uniqueFinalidades })
+  }, [tasks, tableData, uniqueFinalidades])
+
   React.useEffect(() => {
     setData(tableData)
   }, [tableData])
@@ -554,8 +578,14 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     [data]
   )
 
+  // displayedData is derived from current data and selectedView
+  const displayedData = React.useMemo(() => {
+    if (selectedView === 'outline') return data
+    return data.filter(d => d.finalidade === selectedView)
+  }, [data, selectedView])
+
   const table = useReactTable({
-    data,
+    data: displayedData,
     columns,
     state: {
       sorting,
@@ -608,7 +638,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
         <Label htmlFor="view-selector" className="sr-only">
           View
         </Label>
-        <Select defaultValue="outline">
+        <Select value={selectedView} onValueChange={(v) => setSelectedView(v)}>
           <SelectTrigger
             className="flex w-fit @4xl/main:hidden"
             size="sm"
@@ -617,22 +647,16 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
             <SelectValue placeholder="Select a view" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="outline">Outline</SelectItem>
-            <SelectItem value="past-performance">Past Performance</SelectItem>
-            <SelectItem value="key-personnel">Key Personnel</SelectItem>
-            <SelectItem value="focus-documents">Focus Documents</SelectItem>
+            <SelectItem value="outline">Todas as finalidades</SelectItem>
+            {uniqueFinalidades.map((f) => (
+              <SelectItem key={f} value={f}>{f}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-          <TabsTrigger value="outline">Outline</TabsTrigger>
-          <TabsTrigger value="past-performance">
-            Past Performance <Badge variant="secondary">3</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="key-personnel">
-            Key Personnel <Badge variant="secondary">2</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="focus-documents">Focus Documents</TabsTrigger>
-        </TabsList>
+        {/* Debug / hint: show when there are no finalidades detected */}
+        {uniqueFinalidades.length === 0 ? (
+          <div className="ml-3 text-xs text-muted-foreground">Nenhuma finalidade encontrada (verifique o conteúdo de <code>tasks</code> ou abra o console para depuração)</div>
+        ) : null}
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
