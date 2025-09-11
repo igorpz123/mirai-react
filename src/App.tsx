@@ -7,6 +7,8 @@ import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 //Páginas do Setor Técnico
 import TechnicalFluxogramaSetor from './pages/TechnicalFluxograma';
+import TechnicalAgenda from './pages/TechnicalAgenda';
+import TechnicalAgendaUser from './pages/TechnicalAgendaUser';
 import NewTaskForm from './components/technical-task-new';
 import TecnicoDashboard from '@/pages/TechnicalDashboard';
 
@@ -45,6 +47,8 @@ function AppContent() {
             <Route path="admin/dashboard" element={<AdminDashboard />} />
             <Route path="comercial/dashboard" element={<ComercialDashboard />} />
             <Route path="technical/fluxograma/setor/:setorSlug" element={<TechnicalFluxogramaSetor />} />
+            <Route path="technical/agenda" element={<TechnicalAgenda />} />
+            <Route path="technical/agenda/:usuarioId" element={<TechnicalAgendaUser />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
           </Route>
         </Routes>

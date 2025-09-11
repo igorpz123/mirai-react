@@ -188,20 +188,32 @@ export const getTaskByResponsavel = async (req: Request<{ responsavel_id: string
       FROM tarefas tsk
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
-      JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
+      LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
       JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
-      WHERE emp.tecnico_responsavel = ?
+      WHERE tsk.responsavel_id = ?
       ORDER BY tsk.prazo ASC
       `,
       [responsavel_id]
     );
 
-    if (rows.length) {
-      res.status(200).json(rows);
-    } else {
-      res.status(404).json({ message: 'Nenhuma tarefa encontrada para este responsável' });
-    }
+    // normalize response to { tasks, total } like other endpoints
+    const response = {
+      tasks: (rows || []).map(row => ({
+        id: row.tarefa_id,
+        empresa: row.empresa_nome,
+        unidade: row.unidade_nome,
+        finalidade: row.finalidade,
+        status: row.status,
+        prioridade: row.prioridade,
+        setor: row.setor_nome,
+        prazo: row.prazo,
+        responsavel: row.responsavel_nome || 'Não atribuído',
+      })),
+      total: (rows || []).length,
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Erro ao buscar tarefas por responsável:', error);
     res.status(500).json({ message: 'Erro ao buscar tarefas' });

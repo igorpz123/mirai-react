@@ -235,6 +235,25 @@ export async function getTasksByUserId(userId: number): Promise<TasksResponse> {
     return res.json();
 }
 
+export async function getTasksByResponsavel(userId: number): Promise<TasksResponse> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/responsavel/${userId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao buscar tarefas do usuário');
+    }
+
+    return res.json();
+}
+
 export async function getTaskStatsByUser(userId: number): Promise<TaskStatsResponse> {
     const token = localStorage.getItem('token');
 
