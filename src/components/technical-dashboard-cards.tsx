@@ -1,6 +1,5 @@
 import { IconTrendingDown, IconTrendingUp } from "@tabler/icons-react"
-import { useEffect, useState } from 'react'
-
+import type { ReactElement } from "react"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -10,36 +9,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { useUnit } from '@/contexts/UnitContext'
-import { getTaskStatsByUnit } from '@/services/tasks'
 
-export function TechnicalDashboardCards() {
-  const { unitId } = useUnit()
-  const [stats, setStats] = useState<any | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+type TechnicalDashboardCardsProps = {
+  stats?: any | null
+  loading?: boolean
+  error?: string | null
+}
 
-  useEffect(() => {
-    let mounted = true
-    async function fetchStats() {
-      if (!unitId) return
-      setLoading(true)
-      setError(null)
-      try {
-        const res = await getTaskStatsByUnit(unitId)
-        if (!mounted) return
-        setStats(res)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Erro ao carregar estatísticas'
-        setError(msg)
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-    fetchStats()
-    return () => { mounted = false }
-  }, [unitId])
-
+export function TechnicalDashboardCards({
+  stats = null,
+  loading = false,
+  error = null,
+}: TechnicalDashboardCardsProps): ReactElement {
   const getCount = (status: string) => stats?.totalByStatus?.[status] ?? 0
   const getTrend = (status: string) => stats?.trendByStatus?.[status]?.percent ?? 0
 
