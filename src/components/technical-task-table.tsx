@@ -701,10 +701,6 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
             </SelectContent>
           </Select>
         </div>
-        {/* Debug / hint: show when there are no finalidades detected */}
-        {uniqueFinalidades.length === 0 ? (
-          <div className="ml-3 text-xs text-muted-foreground">Nenhuma finalidade encontrada (verifique o conteúdo de <code>tasks</code> ou abra o console para depuração)</div>
-        ) : null}
         <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -68,7 +68,16 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
 
   const fluxogramaItems = (user?.setores ?? []).map((setor: any) => ({
     title: setor.nome,
-    url: `/fluxograma/setor/${setor.id}`,
+    // build a URL-friendly slug from the setor name
+    url: `/technical/fluxograma/setor/${encodeURIComponent(
+      (setor.nome || '')
+        .toString()
+        .toLowerCase()
+        .normalize('NFKD')
+        .replace(/\p{Diacritic}/gu, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+    )}`,
   }));
 
   const NavTechnicalData = [
