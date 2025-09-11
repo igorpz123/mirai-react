@@ -6,14 +6,15 @@ import { SidebarProvider, useSidebar, SidebarInset } from "@/components/ui/sideb
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 //Páginas do Setor Técnico
-import AdminDashboard from './pages/AdminDashboard';
 import TechnicalFluxograma from './pages/TechnicalFluxograma';
 import NewTaskForm from './components/technical-task-new';
+import TecnicoDashboard from '@/pages/TecnicoDashboard';
 
 //Páginas do Setor Comercial
+import ComercialDashboard from '@/pages/ComercialDashboard';
 
 //Página de Administração
-
+import AdminDashboard from './pages/AdminDashboard';
 import './App.css';
 
 // Separa a lógica que utiliza o hook, garantindo que ela será renderizada
@@ -31,7 +32,7 @@ function AppContent() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<HomeRedirect />} />
           <Route
             path="/*"
             element={
@@ -40,7 +41,9 @@ function AppContent() {
               </ProtectedRoute>
             }
           >
-            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="dashboard" element={<TecnicoDashboard />} />
+            <Route path="admin/dashboard" element={<AdminDashboard />} />
+            <Route path="comercial/dashboard" element={<ComercialDashboard />} />
             <Route path="fluxograma" element={<TechnicalFluxograma />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
           </Route>
@@ -48,6 +51,28 @@ function AppContent() {
       </Router>
     </SidebarInset>
   );
+}
+
+// Redireciona o usuário logado para a dashboard correta com base no cargoId.
+function HomeRedirect() {
+  // Importing the hook inside the component to avoid top-level hook usage issues
+  const { user } = require('./hooks/use-auth').useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const cargoId = user.cargoId;
+
+  if (cargoId === 1 || cargoId === 2 || cargoId === 3) {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  if (cargoId === 13) {
+    return <Navigate to="/comercial/dashboard" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
 }
 
 function App() {
