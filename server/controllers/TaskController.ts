@@ -588,3 +588,124 @@ export const getCompletedTasksByDayByUnidade = async (
     res.status(500).json({ message: 'Erro ao buscar tarefas concluídas por dia' });
   }
 };
+
+export const getTaskStatsByUsuario = async (
+  req: Request<{ usuario_id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { usuario_id } = req.params;
+
+    if (!usuario_id) {
+      res.status(400).json({ message: 'ID do usuário é obrigatório' });
+      return;
+    }
+
+    // overall counts by status (filter by responsavel_id)
+    const [rowsAll] = await pool.query<RowDataPacket[]>(
+      `SELECT status, COUNT(*) as cnt FROM tarefas WHERE responsavel_id = ? GROUP BY status`,
+      [usuario_id]
+    );
+
+    const totalByStatus: Record<string, number> = {};
+    (rowsAll as any[]).forEach(r => {
+      totalByStatus[r.status] = Number(r.cnt) || 0;
+    });
+
+    // compute trends: compare last 30 days vs previous 30 days
+    const now = new Date();
+    const currStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const prevStart = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+    const currStartStr = currStart.toISOString().slice(0, 19).replace('T', ' ');
+    const prevStartStr = prevStart.toISOString().slice(0, 19).replace('T', ' ');
+    const nowStr = now.toISOString().slice(0, 19).replace('T', ' ');
+    const prevEndStr = currStartStr;
+
+    const [rowsCurr] = await pool.query<RowDataPacket[]>(
+      `SELECT status, COUNT(*) as cnt FROM tarefas WHERE responsavel_id = ? AND created_at >= ? AND created_at < ? GROUP BY status`,
+      [usuario_id, currStartStr, nowStr]
+    );
+
+    const [rowsPrev] = await pool.query<RowDataPacket[]>(
+      `SELECT status, COUNT(*) as cnt FROM tarefas WHERE responsavel_id = ? AND created_at >= ? AND created_at < ? GROUP BY status`,
+      [usuario_id, prevStartStr, prevEndStr]
+    );
+
+    const currMap: Record<string, number> = {};
+    const prevMap: Record<string, number> = {};
+    (rowsCurr as any[]).forEach(r => { currMap[r.status] = Number(r.cnt) || 0 });
+    (rowsPrev as any[]).forEach(r => { prevMap[r.status] = Number(r.cnt) || 0 });
+
+    const trendByStatus: Record<string, { current: number; previous: number; percent: number }> = {};
+    const allStatuses = Array.from(new Set([ ...Object.keys(totalByStatus), ...Object.keys(currMap), ...Object.keys(prevMap) ]));
+    allStatuses.forEach(s => {
+      const c = currMap[s] || 0;
+      const p = prevMap[s] || 0;
+      const percent = p === 0 ? (c === 0 ? 0 : 100) : Math.round(((c - p) / p) * 10000) / 100;
+      trendByStatus[s] = { current: c, previous: p, percent };
+    });
+
+    // overdue count (prazo < now and not concluded)
+    const [rowsOverdue] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as cnt FROM tarefas WHERE responsavel_id = ? AND prazo < ? AND status <> 'concluída'`,
+      [usuario_id, nowStr]
+    );
+    const overdueCurrent = Number((rowsOverdue as any[])[0]?.cnt || 0);
+
+    const [rowsPrevOverdue] = await pool.query<RowDataPacket[]>(
+      `SELECT COUNT(*) as cnt FROM tarefas WHERE responsavel_id = ? AND created_at >= ? AND created_at < ? AND prazo < ? AND status <> 'concluída'`,
+      [usuario_id, prevStartStr, prevEndStr, prevEndStr]
+    );
+    const overduePrev = Number((rowsPrevOverdue as any[])[0]?.cnt || 0);
+    const overduePercent = overduePrev === 0 ? (overdueCurrent === 0 ? 0 : 100) : Math.round(((overdueCurrent - overduePrev) / overduePrev) * 10000) / 100;
+
+    res.status(200).json({ totalByStatus, trendByStatus, overdue: { current: overdueCurrent, previous: overduePrev, percent: overduePercent } });
+  } catch (error) {
+    console.error('Erro ao calcular estatísticas de tarefas (usuario):', error);
+    res.status(500).json({ message: 'Erro ao calcular estatísticas de tarefas' });
+  }
+};
+
+export const getCompletedTasksByDayByUsuario = async (
+  req: Request<{ usuario_id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { usuario_id } = req.params;
+
+    if (!usuario_id) {
+      res.status(400).json({ message: 'ID do usuário é obrigatório' });
+      return;
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `
+      SELECT DATE(h.data_alteracao) AS date, COUNT(*) AS concluidas
+      FROM historico_alteracoes h
+      JOIN tarefas t ON t.id = h.tarefa_id
+      WHERE t.responsavel_id = ?
+        AND h.acao IN ('concluir_usuario','concluir_setor','concluir_arquivar')
+      GROUP BY DATE(h.data_alteracao)
+      ORDER BY DATE(h.data_alteracao) ASC
+      `,
+      [usuario_id]
+    );
+
+    const result = (rows as any[]).map(r => {
+      let dateStr: string | null = null;
+      if (r.date) {
+        if (r.date instanceof Date) {
+          dateStr = r.date.toISOString().slice(0,10);
+        } else {
+          dateStr = String(r.date).slice(0,10);
+        }
+      }
+      return { date: dateStr, concluidas: Number(r.concluidas) || 0 };
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Erro ao buscar tarefas concluídas por dia (usuario):', error);
+    res.status(500).json({ message: 'Erro ao buscar tarefas concluídas por dia' });
+  }
+};

@@ -8,7 +8,7 @@ import Login from './pages/Login';
 //Páginas do Setor Técnico
 import TechnicalFluxograma from './pages/TechnicalFluxograma';
 import NewTaskForm from './components/technical-task-new';
-import TecnicoDashboard from '@/pages/TecnicoDashboard';
+import TecnicoDashboard from '@/pages/TechnicalDashboard';
 
 //Páginas do Setor Comercial
 import ComercialDashboard from '@/pages/ComercialDashboard';
@@ -41,10 +41,10 @@ function AppContent() {
               </ProtectedRoute>
             }
           >
-            <Route path="dashboard" element={<TecnicoDashboard />} />
+            <Route path="technical/dashboard" element={<TecnicoDashboard />} />
             <Route path="admin/dashboard" element={<AdminDashboard />} />
             <Route path="comercial/dashboard" element={<ComercialDashboard />} />
-            <Route path="fluxograma" element={<TechnicalFluxograma />} />
+            <Route path="technical/fluxograma" element={<TechnicalFluxograma />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
           </Route>
         </Routes>
@@ -72,7 +72,7 @@ function HomeRedirect() {
     return <Navigate to="/comercial/dashboard" replace />;
   }
 
-  return <Navigate to="/dashboard" replace />;
+  return <Navigate to="/technical/dashboard" replace />;
 }
 
 function App() {

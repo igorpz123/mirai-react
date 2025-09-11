@@ -74,17 +74,17 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const NavTechnicalData = [
     {
       title: "Dashboard",
-      url: "/dashboard",
+      url: "/technical/dashboard",
       icon: ClipboardCheck,
     },
     {
       title: "Agenda",
-      url: "/agenda",
+      url: "/technical/agenda",
       icon: Calendar,
     },
     {
       title: "Fluxograma",
-      url: "/fluxograma",
+      url: "/technical/fluxograma",
       icon: HardHat,
       isActive: true,
       items: fluxogramaItems.length

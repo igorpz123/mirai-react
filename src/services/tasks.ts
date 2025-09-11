@@ -215,3 +215,60 @@ export async function getCompletedTasksByDay(unitId: number): Promise<CompletedB
 
     return res.json();
 }
+
+export async function getTasksByUserId(userId: number): Promise<TasksResponse> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/usuario/${userId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao buscar tarefas do usuário');
+    }
+
+    return res.json();
+}
+
+export async function getTaskStatsByUser(userId: number): Promise<TaskStatsResponse> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/usuario/${userId}/stats`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao buscar estatísticas de tarefas do usuário');
+    }
+
+    return res.json();
+}
+
+export async function getCompletedTasksByDayByUser(userId: number): Promise<CompletedByDay[]> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/usuario/${userId}/completadas-dia`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Erro ao buscar tarefas concluídas por dia do usuário');
+    }
+
+    return res.json();
+}

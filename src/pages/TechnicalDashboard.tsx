@@ -1,20 +1,21 @@
-// src/pages/Dashboard.tsx
 import { useState, useEffect } from 'react'
-import { useUnit } from '@/contexts/UnitContext';
-import { useUnitTasks } from '@/hooks/use-tasks-units';
-import { useCompletedByUnit } from '@/hooks/use-tasks-completed-by-unit';
+import { useAuth } from '@/hooks/use-auth'
+import { useUserTasks } from '@/hooks/use-tasks-user'
+import { useCompletedByUser } from '@/hooks/use-tasks-completed-by-user'
 import type { ReactElement } from 'react'
 import { ChartAreaInteractive } from "@/components/technical-chart-tasks"
 import { TechnicalTaskTable } from "@/components/technical-task-table"
 import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
-import { getTaskStatsByUnit } from '@/services/tasks'
+import { getTaskStatsByUser } from '@/services/tasks'
 
-export default function AdminDashboard(): ReactElement {
+export default function TechnicalDashboard(): ReactElement {
 
-  const { unitId } = useUnit();
-  const { tasks, loading: _loading, error: _error, refetchTasks } = useUnitTasks(unitId);
-  const { data: completedByDay, loading: _loadingCompleted } = useCompletedByUnit(unitId);
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
+  const { tasks, loading: _loading, error: _error, refetchTasks } = useUserTasks(userId);
+  const { data: completedByDay, loading: _loadingCompleted } = useCompletedByUser(userId);
 
   const [stats, setStats] = useState<any | null>(null)
   const [loadingStats, setLoadingStats] = useState(false)
@@ -23,14 +24,14 @@ export default function AdminDashboard(): ReactElement {
   useEffect(() => {
     let mounted = true
     async function fetchStats() {
-      if (!unitId) {
+      if (!userId) {
         if (mounted) setStats(null)
         return
       }
       setLoadingStats(true)
       setErrorStats(null)
       try {
-        const res = await getTaskStatsByUnit(unitId)
+        const res = await getTaskStatsByUser(userId)
         if (!mounted) return
         setStats(res)
       } catch (err) {
@@ -42,11 +43,11 @@ export default function AdminDashboard(): ReactElement {
     }
     fetchStats()
     return () => { mounted = false }
-  }, [unitId])
+  }, [userId])
 
   return (
     <div className="w-full">
-      <SiteHeader title='Dashboard | Administrativo' />
+      <SiteHeader title='Meu Dashboard' />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
