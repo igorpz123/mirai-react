@@ -26,31 +26,6 @@ import {
 } from "@/components/ui/sidebar"
 import { useAuth } from '@/hooks/use-auth'
 
-const NavTechnicalData = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: ClipboardCheck,
-  },
-  {
-    title: "Agenda",
-    url: "/agenda",
-    icon: Calendar,
-  },
-  {
-    title: "Fluxograma",
-    url: "/fluxograma",
-    icon: HardHat,
-    isActive: true,
-    items: [
-      { title: "Dashboard", url: "/dashboard" },
-      { title: "Fluxograma", url: "/fluxograma" },
-      { title: "Mapas", url: "#" },
-      { title: "Agenda", url: "#" },
-    ],
-  },
-];
-
 const navComercialData = [
   { title: "Dashboard", url: "/comercial/dashboard", icon: ClipboardCheck },
   {
@@ -91,6 +66,35 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const isAdmin = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 3; // Ajuste conforme a lógica do seu sistema
   const isComercial = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 13; // Ajuste conforme a lógica do seu sistema
 
+  const fluxogramaItems = (user?.setores ?? []).map((setor: any) => ({
+    title: setor.nome,
+    url: `/fluxograma/setor/${setor.id}`,
+  }));
+
+  const NavTechnicalData = [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: ClipboardCheck,
+    },
+    {
+      title: "Agenda",
+      url: "/agenda",
+      icon: Calendar,
+    },
+    {
+      title: "Fluxograma",
+      url: "/fluxograma",
+      icon: HardHat,
+      isActive: true,
+      items: fluxogramaItems.length
+        ? fluxogramaItems
+        : [
+          { title: "Nenhum Setor Cadastrado", url: "#" },
+        ],
+    },
+  ];
+
   const units =
     user?.unidades?.map(unit => ({
       id: unit.id,
@@ -102,7 +106,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <UnitSwitcher 
+        <UnitSwitcher
           units={units}
           unitId={unitId}
           onUnitChange={setUnitId}
