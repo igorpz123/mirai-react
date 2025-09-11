@@ -2,6 +2,7 @@
 
 import { Link } from "react-router-dom";
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import { Badge } from '@/components/ui/badge'
 
 import {
   Collapsible,
@@ -27,6 +28,7 @@ interface NavItem {
   items?: {
     title: string;
     url: string;
+    badge?: number;
   }[];
 }
 
@@ -59,8 +61,11 @@ export function NavTechnical({ items }: { items: NavItem[] }) {
                       {item.items?.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild>
-                            <Link to={subItem.url}>
+                            <Link to={subItem.url} className="flex items-center gap-2">
                               <span>{subItem.title}</span>
+                              {typeof subItem.badge !== 'undefined' ? (
+                                <Badge variant="secondary" className="ml-2">{subItem.badge}</Badge>
+                              ) : null}
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

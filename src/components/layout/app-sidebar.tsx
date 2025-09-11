@@ -25,6 +25,8 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useAuth } from '@/hooks/use-auth'
+import { getTasksByUnitId } from '@/services/tasks'
+import { useEffect, useState } from 'react'
 
 const navComercialData = [
   { title: "Dashboard", url: "/comercial/dashboard", icon: ClipboardCheck },
@@ -80,6 +82,47 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     )}`,
   }));
 
+  // pending counts by slug
+  const [pendingCounts, setPendingCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    let mounted = true
+    async function fetchCounts() {
+      try {
+        const uid = user?.unidades?.[0]?.id
+        if (!uid) return
+        const res = await getTasksByUnitId(uid)
+        const all = res.tasks || []
+
+        const normalize = (v: any) =>
+          String(v || '')
+            .toLowerCase()
+            .normalize('NFKD')
+            .replace(/\p{Diacritic}/gu, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+
+        const counts: Record<string, number> = {}
+        all.forEach((t: any) => {
+          const s = t.setor || t.setorNome || t.setor_nome || ''
+          const slug = normalize(s)
+          const status = (t.status || '').toString()
+          const open = status === 'pendente' || status === 'progress' || status === 'pending' || status === 'open'
+          if (!slug) return
+          if (open) counts[slug] = (counts[slug] || 0) + 1
+        })
+
+        if (mounted) setPendingCounts(counts)
+      } catch (err) {
+        // ignore errors for sidebar counts
+        console.debug('Erro ao buscar contagem de tarefas para sidebar', err)
+      }
+    }
+
+    fetchCounts()
+    return () => { mounted = false }
+  }, [user])
+
   const NavTechnicalData = [
     {
       title: "Dashboard",
@@ -97,7 +140,20 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       icon: HardHat,
       isActive: true,
       items: fluxogramaItems.length
-        ? fluxogramaItems
+        ? // attach badge counts when available
+        fluxogramaItems.map((fi: any) => {
+          const name = fi.title || ''
+          // pendingCounts keys are normalized slugs
+          const normalized = (name || '')
+            .toString()
+            .toLowerCase()
+            .normalize('NFKD')
+            .replace(/\p{Diacritic}/gu, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+          const badge = pendingCounts[normalized]
+          return { ...fi, badge }
+        })
         : [
           { title: "Nenhum Setor Cadastrado", url: "#" },
         ],
