@@ -16,6 +16,7 @@ import {
   newTask,
   updateTaskResponsible
 } from '../controllers/TaskController'
+import { getEventsByResponsavel } from '../controllers/AgendaController'
 
 const router: Router = Router()
 
@@ -30,6 +31,9 @@ router.get('/usuario/:usuario_id', getTaskByUser)
 
 // Coletar tarefas pelo responsável da empresa
 router.get('/responsavel/:responsavel_id', getTaskByResponsavel)
+
+// Coletar eventos da agenda por responsável
+router.get('/agenda/responsavel/:responsavel_id', getEventsByResponsavel)
 
 // Coletar tarefas por unidade
 router.get('/unidade/:unidade_id', getTaskByUnidade)

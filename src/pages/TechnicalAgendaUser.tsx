@@ -3,6 +3,9 @@ import { SiteHeader } from '@/components/layout/site-header'
 import { useEffect, useMemo, useState } from 'react'
 import { getUserById } from '@/services/users'
 import { getTasksByResponsavel, type Task } from '@/services/tasks'
+import { exportTasksToPdf } from '@/services/export'
+import { getEventsByResponsavel } from '@/services/agenda'
+import TechnicalCalendar from '@/components/technical-calendar'
 import { TechnicalTaskTable } from '@/components/technical-task-table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,11 +17,14 @@ export default function TechnicalAgendaUser() {
 
   const [user, setUser] = useState<any | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
+    const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   // selected month (Date) - defaults to current month
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
+  const [fromDate, setFromDate] = useState<string | undefined>(undefined)
+  const [toDate, setToDate] = useState<string | undefined>(undefined)
 
   useEffect(() => {
     let mounted = true
@@ -42,6 +48,14 @@ export default function TechnicalAgendaUser() {
         const tResp = await getTasksByResponsavel(uid)
         if (!mounted) return
         setTasks(tResp.tasks || [])
+
+        try {
+          const evResp = await getEventsByResponsavel(uid)
+          if (!mounted) return
+          setEvents(evResp.events || [])
+        } catch (err) {
+          console.debug('Erro ao buscar eventos da agenda:', err)
+        }
       } catch (err) {
         if (!mounted) return
         setError(err instanceof Error ? err.message : String(err))
@@ -89,15 +103,15 @@ export default function TechnicalAgendaUser() {
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Button variant="ghost" size="sm" onClick={goPrev} aria-label="Mês anterior">
+              <div className="flex items-center gap-2 text-sm">
+                <Button variant="ghost" size="icon" onClick={goPrev} aria-label="Mês anterior">
                   <IconChevronLeft />
                 </Button>
                 <div className="flex items-center gap-2">
-                  <div className="text-lg font-semibold">{selectedMonth.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</div>
-                  <Badge variant="secondary">{tasksForMonth.length} tarefas</Badge>
+                  <div className="text-base font-medium">{selectedMonth.toLocaleString('pt-BR', { month: 'short', year: 'numeric' })}</div>
+                  <Badge variant="secondary" className="text-xs">{tasksForMonth.length} tarefas</Badge>
                 </div>
-                <Button variant="ghost" size="sm" onClick={goNext} aria-label="Próximo mês">
+                <Button variant="ghost" size="icon" onClick={goNext} aria-label="Próximo mês">
                   <IconChevronRight />
                 </Button>
               </div>
@@ -115,21 +129,68 @@ export default function TechnicalAgendaUser() {
                   className="border-input rounded-md px-2 py-1 text-sm"
                 />
               </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={fromDate || ''}
+                  onChange={(e) => setFromDate(e.target.value || undefined)}
+                  className="border-input rounded-md px-2 py-1 text-sm"
+                  aria-label="De"
+                />
+                <input
+                  type="date"
+                  value={toDate || ''}
+                  onChange={(e) => setToDate(e.target.value || undefined)}
+                  className="border-input rounded-md px-2 py-1 text-sm"
+                  aria-label="Até"
+                />
+                <Button size="sm" onClick={async () => {
+                  // build title and filter tasks according to date range
+                  const title = `${fromDate || ''}${fromDate && toDate ? ' — ' : ''}${toDate || ''}` || `Agenda ${user?.nome || usuarioId}`
+                  const filtered = tasks.filter(t => {
+                    if (!t.prazo) return false
+                    const d = new Date(t.prazo)
+                    if (isNaN(d.getTime())) return false
+                    if (fromDate && new Date(d) < new Date(fromDate)) return false
+                    if (toDate && new Date(d) > new Date(toDate)) return false
+                    return true
+                  })
+                  try {
+                    const blob = await exportTasksToPdf(filtered, { title, from: fromDate, to: toDate })
+                    const url = URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = `agenda-${user?.nome || usuarioId}-${fromDate || 'all'}-${toDate || 'all'}.pdf`
+                    a.click()
+                    URL.revokeObjectURL(url)
+                  } catch (err) {
+                    console.error('Erro ao exportar PDF', err)
+                    alert('Falha ao gerar PDF')
+                  }
+                }}>Exportar</Button>
+              </div>
             </div>
 
-            <div>
-              <TechnicalTaskTable tasks={tasksForMonth} onRefresh={async () => {
-                // refetch tasks
-                try {
-                  setLoading(true)
-                  const tResp = await getTasksByResponsavel(uid)
-                  setTasks(tResp.tasks || [])
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : String(err))
-                } finally {
-                  setLoading(false)
-                }
-              }} />
+            <div className="flex flex-col gap-4">
+              <div>
+                <TechnicalTaskTable tasks={tasksForMonth} onRefresh={async () => {
+                  // refetch tasks
+                  try {
+                    setLoading(true)
+                    const tResp = await getTasksByResponsavel(uid)
+                    setTasks(tResp.tasks || [])
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : String(err))
+                  } finally {
+                    setLoading(false)
+                  }
+                }} />
+              </div>
+
+              <div>
+                <TechnicalCalendar events={events} />
+              </div>
             </div>
           </>
         )}
