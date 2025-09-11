@@ -101,9 +101,15 @@ export const getTaskById = async (req: Request<{ tarefa_id: string }>, res: Resp
   }
 };
 
-export const getTaskByUser = async (req: Request<{ user_id: string }>, res: Response): Promise<void> => {
+export const getTaskByUser = async (req: Request<{ usuario_id: string }>, res: Response): Promise<void> => {
   try {
-    const { user_id } = req.params;
+    const { usuario_id } = req.params;
+
+    if (!usuario_id) {
+      res.status(400).json({ message: 'ID do usuário é obrigatório' });
+      return;
+    }
+
     const [rows] = await pool.query<TaskRow[]>(
       `
       SELECT 
@@ -125,21 +131,33 @@ export const getTaskByUser = async (req: Request<{ user_id: string }>, res: Resp
       FROM tarefas tsk
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
-      JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
+      LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
       JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.responsavel_id = ?
         AND tsk.status <> 'Automático'
       ORDER BY tsk.prazo ASC
       `,
-      [user_id]
+      [usuario_id]
     );
 
-    if (rows.length) {
-      res.status(200).json(rows);
-    } else {
-      res.status(404).json({ message: 'Nenhuma tarefa encontrada para este usuário' });
-    }
+    // Formatar a resposta no padrão esperado pelo frontend
+    const response = {
+      tasks: rows.map(row => ({
+        id: row.tarefa_id,
+        empresa: row.empresa_nome,
+        unidade: row.unidade_nome,
+        finalidade: row.finalidade,
+        status: row.status,
+        prioridade: row.prioridade,
+        setor: row.setor_nome,
+        prazo: row.prazo,
+        responsavel: row.responsavel_nome || 'Não atribuído',
+      })),
+      total: rows.length
+    };
+
+    res.status(200).json(response);
   } catch (error) {
     console.error('Erro ao buscar tarefas por usuário:', error);
     res.status(500).json({ message: 'Erro ao buscar tarefas' });

@@ -4,6 +4,7 @@ import type { Task } from "../services/tasks"
 import { getUsersByDepartmentAndUnit, updateUserResponsibleForTask, getUsersByUnitId, getAllUsers } from '@/services/users';
 import type { User } from '@/services/users';
 import { useUnit } from '@/contexts/UnitContext';
+import { useTheme } from '@/components/layout/theme-provider';
 import {
   closestCenter,
   DndContext,
@@ -374,14 +375,35 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   // View selector state: controls which 'finalidade' is shown
   const [selectedView, setSelectedView] = React.useState<string>('outline')
 
-  // Compute available finalidades from the computed tableData (includes defaults)
+  // Status filter state
+  const [selectedStatus, setSelectedStatus] = React.useState<string>('all')
+
+  // Compute available finalidades from the original tasks prop (more reliable)
   const uniqueFinalidades = React.useMemo(() => {
-    const source = tableData || []
+    const source = tasks || []
     const list = source
-      .map(t => (t.finalidade ?? '').toString().trim())
+      .map(t => ((t.finalidade ?? '') as string).toString().trim() || 'Sem finalidade')
       .filter(Boolean)
     return Array.from(new Set(list))
-  }, [tableData])
+  }, [tasks])
+
+  // determine effective theme (dark mode) to style native option elements
+  const { theme: chosenTheme } = useTheme()
+  const isDark = React.useMemo(() => {
+    if (typeof window === 'undefined') return false
+    if (chosenTheme === 'system') {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return chosenTheme === 'dark'
+  }, [chosenTheme])
+
+  const uniqueStatuses = React.useMemo(() => {
+    const source = data || tableData || []
+    const list = source
+      .map(t => (t.status ?? '').toString().trim())
+      .filter(Boolean)
+    return Array.from(new Set(list))
+  }, [data, tableData])
 
   // If selectedView becomes invalid (e.g. tasks changed), reset to 'outline'
   React.useEffect(() => {
@@ -389,6 +411,13 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       setSelectedView('outline')
     }
   }, [uniqueFinalidades, selectedView])
+
+  // If selectedStatus becomes invalid (e.g. tasks changed), reset to 'all'
+  React.useEffect(() => {
+    if (selectedStatus !== 'all' && !uniqueStatuses.includes(selectedStatus)) {
+      setSelectedStatus('all')
+    }
+  }, [uniqueStatuses, selectedStatus])
 
   // Debug info to help when no finalidades appear
   React.useEffect(() => {
@@ -576,11 +605,17 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     [data]
   )
 
-  // displayedData is derived from current data and selectedView
+  // displayedData is derived from current data and selectedView + selectedStatus
   const displayedData = React.useMemo(() => {
-    if (selectedView === 'outline') return data
-    return data.filter(d => d.finalidade === selectedView)
-  }, [data, selectedView])
+    let out = data || []
+    if (selectedView !== 'outline') {
+      out = out.filter(d => d.finalidade === selectedView)
+    }
+    if (selectedStatus && selectedStatus !== 'all') {
+      out = out.filter(d => (d.status ?? '').toString() === selectedStatus)
+    }
+    return out
+  }, [data, selectedView, selectedStatus])
 
   const table = useReactTable({
     data: displayedData,
@@ -636,21 +671,36 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
         <Label htmlFor="view-selector" className="sr-only">
           View
         </Label>
-        <Select value={selectedView} onValueChange={(v) => setSelectedView(v)}>
-          <SelectTrigger
-            className="flex w-fit @4xl/main:hidden"
-            size="sm"
-            id="view-selector"
-          >
-            <SelectValue placeholder="Select a view" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="outline">Todas as finalidades</SelectItem>
-            {uniqueFinalidades.map((f) => (
-              <SelectItem key={f} value={f}>{f}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          {/* Styled native select: visually matches the Radix SelectTrigger */}
+          <div className="relative">
+            <select
+              id="view-selector"
+              value={selectedView}
+              onChange={(e) => setSelectedView(e.target.value)}
+              className="appearance-none border-input flex w-fit items-center gap-2 rounded-md border bg-transparent px-3 py-2 text-sm pr-8"
+            >
+              <option value="outline" style={{ background: isDark ? '#0f1720' : undefined, color: isDark ? '#e6edf3' : undefined }}>Todas as finalidades</option>
+              {uniqueFinalidades.map((f) => (
+                <option key={f} value={f} style={{ background: isDark ? '#0f1720' : undefined, color: isDark ? '#e6edf3' : undefined }}>{f}</option>
+              ))}
+            </select>
+              <IconChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-4 pointer-events-none text-muted-foreground" />
+          </div>
+
+          {/* Status filter */}
+          <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v)}>
+            <SelectTrigger className="flex w-fit" size="sm" id="status-selector">
+              <SelectValue placeholder="Todos os status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {uniqueStatuses.map((s) => (
+                <SelectItem key={s} value={s}>{getStatusText(s)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         {/* Debug / hint: show when there are no finalidades detected */}
         {uniqueFinalidades.length === 0 ? (
           <div className="ml-3 text-xs text-muted-foreground">Nenhuma finalidade encontrada (verifique o conteúdo de <code>tasks</code> ou abra o console para depuração)</div>

@@ -2,7 +2,6 @@
 import type { ReactElement } from 'react'
 import { TechnicalTaskTable } from "@/components/technical-task-table"
 import { SiteHeader } from "@/components/layout/site-header"
-import data from "./data.json"
 
 export default function TechnicalFluxograma(): ReactElement {
 
