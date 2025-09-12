@@ -491,10 +491,13 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
           badgeClass = "button-success";
           icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />;
         } else if (status === "progress") {
-          badgeClass = "button-primary";
+          badgeClass = "text-blue-600 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer";
           icon = <IconProgress />;
-        } else {
+        } else if (status === "pendente") {
+          badgeClass = "button-primary";
           icon = <IconLoader className="animate-spin" />;
+        } else {
+          icon = null;
         }
 
         return (

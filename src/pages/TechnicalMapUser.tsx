@@ -321,14 +321,17 @@ export default function TechnicalMapUser() {
 
                             let badgeClass = ''
                             let icon = null
-                            if (status === 'concluída') {
-                              badgeClass = 'button-success'
-                              icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-                            } else if (status === 'progress') {
-                              badgeClass = 'button-primary'
-                              icon = <IconProgress />
+                            if (status === "concluída") {
+                              badgeClass = "button-success";
+                              icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />;
+                            } else if (status === "progress") {
+                              badgeClass = "text-blue-600 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer";
+                              icon = <IconProgress />;
+                            } else if (status === "pendente") {
+                              badgeClass = "button-primary";
+                              icon = <IconLoader className="animate-spin" />;
                             } else {
-                              icon = <IconLoader className="animate-spin" />
+                              icon = null;
                             }
 
                             return (

@@ -165,3 +165,7 @@ h1 {
 .button-primary {
   @apply text-primary bg-primary/15 hover:bg-primary/25 cursor-pointer;
 }
+
+.button-progress {
+  @apply text-secondary bg-secondary/15 hover:bg-secondary/25 cursor-pointer;
+}
