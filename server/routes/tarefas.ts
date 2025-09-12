@@ -15,7 +15,8 @@ import {
   getArquivosByTarefa,
   getTaskHistory,
   newTask,
-  updateTaskResponsible
+  updateTaskResponsible,
+  addTaskObservation
 } from '../controllers/TaskController'
 import { getEventsByResponsavel } from '../controllers/AgendaController'
 
@@ -65,6 +66,9 @@ router.get('/arquivos/:tarefa_id', getArquivosByTarefa)
 
 // Coletar histórico de uma tarefa
 router.get('/historico/:tarefa_id', getTaskHistory)
+
+// Adicionar observação ao histórico da tarefa
+router.post('/:tarefa_id/observacoes', addTaskObservation)
 
 // Criar nova tarefa
 router.post('/', newTask)

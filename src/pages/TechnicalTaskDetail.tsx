@@ -1,9 +1,11 @@
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTaskById, getTaskHistory } from '@/services/tasks'
+import { getTaskById, getTaskHistory, addTaskObservation } from '@/services/tasks'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import TaskStatusBadge from '@/components/task-status-badge'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function TechnicalTaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +15,9 @@ export default function TechnicalTaskDetail() {
   const [error, setError] = React.useState<string | null>(null)
   const [history, setHistory] = React.useState<any[] | null>(null)
   const [historyLoading, setHistoryLoading] = React.useState(false)
+  const [note, setNote] = React.useState('')
+  const [saving, setSaving] = React.useState(false)
+  const { user } = useAuth()
 
   React.useEffect(() => {
     if (!id) return
@@ -88,20 +93,60 @@ export default function TechnicalTaskDetail() {
       </div>
 
       <div className="space-y-2">
-        <div><strong>Finalidade:</strong> {task.finalidade}</div>
-        <div><strong>Prioridade:</strong> {task.prioridade}</div>
-        <div><strong>Status:</strong> {task.status}</div>
-  <div><strong>Prazo:</strong> {formatDateBR(task.prazo)}</div>
-        <div><strong>Empresa:</strong> {task.empresa_nome || task.empresa}</div>
-        <div><strong>Unidade:</strong> {task.unidade_nome || task.unidade}</div>
-        <div><strong>Setor:</strong> {task.setor_nome || task.setor}</div>
-        <div><strong>Responsável:</strong> {task.responsavel_nome || task.responsavel}</div>
-        {task.empresa_cnpj ? <div><strong>CNPJ:</strong> {task.empresa_cnpj}</div> : null}
-        {task.empresa_cidade ? <div><strong>Cidade:</strong> {task.empresa_cidade}</div> : null}
+        <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+          <div><strong>Unidade:</strong> {task.unidade_nome || task.unidade}</div>
+          <div><strong>Empresa:</strong> {task.empresa_nome || task.empresa}</div>
+          <div><strong>Finalidade:</strong> {task.finalidade}</div>
+        </div>
+        <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mt-4'>
+          <div><strong>Prioridade:</strong> {task.prioridade}</div>
+          <div><strong>Prazo:</strong> {formatDateBR(task.prazo)}</div>
+          <div><strong>Setor Responsável:</strong> {task.setor_nome || task.setor}</div>
+          <div><strong>Usuário Responsável:</strong> {task.responsavel_nome || task.responsavel}</div>
+        </div>
+      </div>
+
+      {/* Campo para adicionar observação */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-2">Adicionar observação</h2>
+        <div className="space-y-2">
+          <Textarea
+            placeholder="Escreva uma observação sobre esta tarefa..."
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={1000}
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              disabled={saving || !note.trim()}
+              onClick={async () => {
+                if (!id || !user?.id || !note.trim()) return
+                try {
+                  setSaving(true)
+                  await addTaskObservation(Number(id), Number(user.id), note.trim())
+                  setNote('')
+                  // refresh history
+                  setHistoryLoading(true)
+                  const data = await getTaskHistory(Number(id))
+                  setHistory(data)
+                } catch (err: any) {
+                  console.error(err)
+                  alert(err?.message || 'Erro ao salvar observação')
+                } finally {
+                  setSaving(false)
+                  setHistoryLoading(false)
+                }
+              }}
+            >
+              {saving ? 'Salvando...' : 'Salvar observação'}
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="mt-6">
-        <h2 className="text-lg font-semibold mb-2">Histórico</h2>
+  <h2 className="text-lg font-semibold mb-2">Histórico</h2>
         {historyLoading ? (
           <div>Carregando histórico...</div>
         ) : history && history.length ? (

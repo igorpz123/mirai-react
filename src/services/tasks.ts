@@ -329,3 +329,24 @@ export async function getTaskHistory(taskId: number): Promise<any[]> {
 
     return res.json();
 }
+
+export interface AddObservationResponse { id: number; message: string }
+
+export async function addTaskObservation(taskId: number, usuarioId: number, observacoes: string): Promise<AddObservationResponse> {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/tarefas/${taskId}/observacoes`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ usuario_id: usuarioId, observacoes }),
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Erro ao adicionar observação' }));
+        throw new Error(err.message || 'Erro ao adicionar observação');
+    }
+
+    return res.json();
+}

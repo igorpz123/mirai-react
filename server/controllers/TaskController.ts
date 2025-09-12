@@ -855,3 +855,40 @@ export const getTasksByEmpresa = async (req: Request<{ empresa_id: string }>, re
     res.status(500).json({ message: 'Erro ao buscar tarefas' })
   }
 }
+
+// Adiciona uma observação no histórico da tarefa
+export const addTaskObservation = async (
+  req: Request<{ tarefa_id: string }, {}, { usuario_id: number; observacoes: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { tarefa_id } = req.params;
+    const { usuario_id, observacoes } = req.body || {} as any;
+
+    if (!tarefa_id) {
+      res.status(400).json({ message: 'ID da tarefa é obrigatório' });
+      return;
+    }
+    if (!usuario_id || typeof usuario_id !== 'number') {
+      res.status(400).json({ message: 'usuario_id inválido' });
+      return;
+    }
+    if (!observacoes || typeof observacoes !== 'string' || !observacoes.trim()) {
+      res.status(400).json({ message: 'observações são obrigatórias' });
+      return;
+    }
+
+    const insertSql = `
+      INSERT INTO historico_alteracoes
+        (tarefa_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+      VALUES (?, ?, 'adicionar_observacao', NULL, NULL, ?, NOW())
+    `;
+
+    const [result] = await pool.query<OkPacket>(insertSql, [tarefa_id, usuario_id, observacoes.trim()]);
+
+    res.status(201).json({ message: 'Observação adicionada com sucesso', id: result.insertId });
+  } catch (error) {
+    console.error('Erro ao adicionar observação:', error);
+    res.status(500).json({ message: 'Erro ao adicionar observação' });
+  }
+};
