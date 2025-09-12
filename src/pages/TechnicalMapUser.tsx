@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/sheet'
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
