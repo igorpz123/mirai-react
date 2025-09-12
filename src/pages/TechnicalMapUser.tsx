@@ -355,11 +355,11 @@ export default function TechnicalMapUser() {
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent align="end" className="w-32">
-                              <Link to={`/technical/tarefa/${t.id}`} onClick={(e) => e.stopPropagation()}>
-                                <DropdownMenuItem className="cursor-pointer">
+                              <DropdownMenuItem asChild className="cursor-pointer" onSelect={() => setSheetOpen(false)}>
+                                <Link to={`/technical/tarefa/${t.id}`} onClick={() => setSheetOpen(false)}>
                                   Visualizar
-                                </DropdownMenuItem>
-                              </Link>
+                                </Link>
+                              </DropdownMenuItem>
                               <DropdownMenuItem className="cursor-pointer">Favoritar</DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>

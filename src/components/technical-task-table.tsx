@@ -554,11 +554,11 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
                 >
                   Resumo
                 </DropdownMenuItem>
-                <Link to={`/technical/tarefa/${id}`} onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenuItem className="cursor-pointer">
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link to={`/technical/tarefa/${id}`}>
                     Visualizar
-                  </DropdownMenuItem>
-                </Link>
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer">Favoritar</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>

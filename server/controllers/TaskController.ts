@@ -856,6 +856,9 @@ export const getTasksByEmpresa = async (req: Request<{ empresa_id: string }>, re
   }
 }
 
+// Adiciona uma observação ao histórico da tarefa
+// (mantida implementação única de addTaskObservation abaixo)
+
 // Adiciona uma observação no histórico da tarefa
 export const addTaskObservation = async (
   req: Request<{ tarefa_id: string }, {}, { usuario_id: number; observacoes: string }>,
