@@ -30,12 +30,9 @@ import {
   IconChevronRight,
   IconChevronsLeft,
   IconChevronsRight,
-  IconCircleCheckFilled,
   IconDotsVertical,
   IconGripVertical,
   IconLayoutColumns,
-  IconLoader,
-  IconProgress,
 } from "@tabler/icons-react"
 import {
   flexRender,
@@ -56,7 +53,8 @@ import type {
 } from "@tanstack/react-table"
 import { z } from "zod"
 
-import { Badge } from "@/components/ui/badge"
+// Badge now rendered via TaskStatusBadge component
+import TaskStatusBadge from '@/components/task-status-badge'
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -482,30 +480,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
-        const status = row.original.status;
-        const statusText = getStatusText(row.original.status);
-        let badgeClass = "";
-        let icon = null;
-
-        if (status === "concluída") {
-          badgeClass = "button-success";
-          icon = <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />;
-        } else if (status === "progress") {
-          badgeClass = "text-blue-600 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer";
-          icon = <IconProgress />;
-        } else if (status === "pendente") {
-          badgeClass = "button-primary";
-          icon = <IconLoader className="animate-spin" />;
-        } else {
-          icon = null;
-        }
-
-        return (
-          <Badge variant="outline" className={badgeClass}>
-            {icon}
-            {statusText}
-          </Badge>
-        );
+        const status = row.original.status
+        return <TaskStatusBadge status={status} />
       },
     },
     {

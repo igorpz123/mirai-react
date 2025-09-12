@@ -41,11 +41,11 @@ export const getAllTasks = async (_req: Request, res: Response): Promise<void> =
         str.nome AS setor_nome,
         und.nome AS unidade_nome
       FROM tarefas tsk
-      JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
-      JOIN empresas emp ON tsk.empresa_id = emp.id
-      LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
-      JOIN setor str ON tsk.setor_id = str.id
-      JOIN unidades und ON tsk.unidade_id = und.id
+  LEFT JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
+  LEFT JOIN empresas emp ON tsk.empresa_id = emp.id
+  LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
+  LEFT JOIN setor str ON tsk.setor_id = str.id
+  LEFT JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.status NOT IN ('Automático')
       ORDER BY tsk.prazo ASC
     `);
@@ -82,7 +82,7 @@ export const getTaskById = async (req: Request<{ tarefa_id: string }>, res: Resp
       FROM tarefas tsk
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
-      JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
+  LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
       JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.id = ?

@@ -1,11 +1,13 @@
 import React from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { getTaskById, getTaskHistory } from '@/services/tasks'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import TaskStatusBadge from '@/components/task-status-badge'
 
 export default function TechnicalTaskDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [task, setTask] = React.useState<any | null>(null)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
@@ -50,21 +52,46 @@ export default function TechnicalTaskDetail() {
   if (error) return <div className="text-destructive">{error}</div>
   if (!task) return <div>Nenhuma tarefa encontrada.</div>
 
+  // helpers
+
+  const formatDateBR = (value?: string) => {
+    if (!value) return '—'
+    try {
+      const d = new Date(value)
+      if (isNaN(d.getTime())) return '—'
+      return new Intl.DateTimeFormat('pt-BR').format(d)
+    } catch {
+      return '—'
+    }
+  }
+
   // render fields based on controller's row shape
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Tarefa #{task.tarefa_id || task.id}</h1>
-        <Link to="/">
-          <Button variant="outline">Voltar</Button>
-        </Link>
+        <h1 className="text-2xl font-semibold flex items-center gap-2">
+          Tarefa #{task.tarefa_id || task.id}
+          <TaskStatusBadge status={task.status} />
+        </h1>
+        <Button
+          variant="outline"
+          onClick={() => {
+            if (window.history.length > 1) {
+              navigate(-1)
+            } else {
+              navigate('/')
+            }
+          }}
+        >
+          Voltar
+        </Button>
       </div>
 
       <div className="space-y-2">
         <div><strong>Finalidade:</strong> {task.finalidade}</div>
         <div><strong>Prioridade:</strong> {task.prioridade}</div>
         <div><strong>Status:</strong> {task.status}</div>
-        <div><strong>Prazo:</strong> {task.prazo}</div>
+  <div><strong>Prazo:</strong> {formatDateBR(task.prazo)}</div>
         <div><strong>Empresa:</strong> {task.empresa_nome || task.empresa}</div>
         <div><strong>Unidade:</strong> {task.unidade_nome || task.unidade}</div>
         <div><strong>Setor:</strong> {task.setor_nome || task.setor}</div>

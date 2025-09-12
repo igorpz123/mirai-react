@@ -56,7 +56,7 @@ export const getCompaniesByResponsavelAndUnidade = async (req: Request<{ unidade
     }
 
     const [rows] = await pool.query<CompanyRow[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_id FROM empresas WHERE tecnico_responsavel = ? AND unidade_id = ? AND status = 'ativo'`,
+      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel FROM empresas WHERE tecnico_responsavel = ? AND unidade_responsavel = ? AND status = 'ativo'`,
       [responsavel_id, unidade_id]
     )
 
@@ -69,7 +69,7 @@ export const getCompaniesByResponsavelAndUnidade = async (req: Request<{ unidade
       contabilidade: r.contabilidade,
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
-      unidade_id: r.unidade_id,
+      unidade_id: r.unidade_responsavel,
     }))
 
     res.status(200).json({ companies, total: companies.length })
