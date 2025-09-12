@@ -310,3 +310,22 @@ export async function getCompletedTasksByDayByUser(userId: number): Promise<Comp
 
     return res.json();
 }
+
+export async function getTaskHistory(taskId: number): Promise<any[]> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/historico/${taskId}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Erro ao buscar histórico' }));
+        throw new Error(err.message || 'Erro ao buscar histórico');
+    }
+
+    return res.json();
+}

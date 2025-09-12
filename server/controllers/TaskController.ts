@@ -379,22 +379,76 @@ export const getTaskHistory = async (
     const [rows] = await pool.query<RowDataPacket[]>(
       `
       SELECT
-        h.alteracao,
+        h.id,
+        h.acao AS alteracao,
         h.observacoes,
         h.data_alteracao,
-        u.nome,
-        u.sobrenome,
-        u.foto_url
+        -- actor (quem fez a alteração)
+        u.id AS actor_id,
+        u.nome AS actor_nome,
+        u.sobrenome AS actor_sobrenome,
+        u.foto_url AS actor_foto,
+
+        -- anterior values (raw from JSON)
+        JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.status')) AS anterior_status,
+        JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.setor')) AS anterior_setor_id,
+        JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.usuario')) AS anterior_usuario_id,
+
+        -- novo values (raw from JSON)
+        JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.status')) AS novo_status,
+        JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.setor')) AS novo_setor_id,
+        JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.usuario')) AS novo_usuario_id,
+
+        -- resolved names for anterior/novo usuario and setor (if available)
+        u_ant.nome AS anterior_usuario_nome,
+        u_ant.sobrenome AS anterior_usuario_sobrenome,
+        s_ant.nome AS anterior_setor_nome,
+
+        u_new.nome AS novo_usuario_nome,
+        u_new.sobrenome AS novo_usuario_sobrenome,
+        s_new.nome AS novo_setor_nome
       FROM historico_alteracoes h
-      JOIN usuarios u ON h.usuario_id = u.id
-      WHERE tarefa_id = ?
+      LEFT JOIN usuarios u ON h.usuario_id = u.id
+      LEFT JOIN usuarios u_ant ON CAST(JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.usuario')) AS UNSIGNED) = u_ant.id
+      LEFT JOIN usuarios u_new ON CAST(JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.usuario')) AS UNSIGNED) = u_new.id
+      LEFT JOIN setor s_ant ON CAST(JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.setor')) AS UNSIGNED) = s_ant.id
+      LEFT JOIN setor s_new ON CAST(JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.setor')) AS UNSIGNED) = s_new.id
+      WHERE h.tarefa_id = ?
       ORDER BY h.data_alteracao DESC
       `,
       [tarefa_id]
     );
 
-    if (rows.length) {
-      res.status(200).json(rows);
+    if (rows && (rows as any[]).length) {
+      // map to a friendlier shape
+      const mapped = (rows as any[]).map(r => ({
+        id: r.id,
+        acao: r.alteracao,
+        observacoes: r.observacoes,
+        data_alteracao: r.data_alteracao,
+        actor: r.actor_id ? {
+          id: r.actor_id,
+          nome: r.actor_nome,
+          sobrenome: r.actor_sobrenome,
+          foto: r.actor_foto,
+        } : null,
+        anterior: {
+          status: r.anterior_status || null,
+          setor_id: r.anterior_setor_id ? Number(r.anterior_setor_id) : null,
+          setor_nome: r.anterior_setor_nome || null,
+          usuario_id: r.anterior_usuario_id ? Number(r.anterior_usuario_id) : null,
+          usuario_nome: r.anterior_usuario_nome ? `${r.anterior_usuario_nome} ${r.anterior_usuario_sobrenome || ''}`.trim() : null,
+        },
+        novo: {
+          status: r.novo_status || null,
+          setor_id: r.novo_setor_id ? Number(r.novo_setor_id) : null,
+          setor_nome: r.novo_setor_nome || null,
+          usuario_id: r.novo_usuario_id ? Number(r.novo_usuario_id) : null,
+          usuario_nome: r.novo_usuario_nome ? `${r.novo_usuario_nome} ${r.novo_usuario_sobrenome || ''}`.trim() : null,
+        }
+      }));
+
+      res.status(200).json(mapped);
     } else {
       res.status(404).json({ message: 'Nenhum histórico encontrado' });
     }
