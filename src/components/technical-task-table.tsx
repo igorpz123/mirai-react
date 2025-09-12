@@ -83,6 +83,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Tabs,
   TabsContent,
@@ -199,13 +200,13 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     const [users, setUsers] = React.useState<User[] | null>(null)
     const [loadingUsers, setLoadingUsers] = React.useState(false)
     const [errorUsers, setErrorUsers] = React.useState<string | null>(null)
-  const [debugEndpoint, setDebugEndpoint] = React.useState<string | null>(null)
-  const [lastRawData, setLastRawData] = React.useState<any | null>(null)
-  const [assigning, setAssigning] = React.useState(false)
+    const [debugEndpoint, setDebugEndpoint] = React.useState<string | null>(null)
+    const [lastRawData, setLastRawData] = React.useState<any | null>(null)
+    const [assigning, setAssigning] = React.useState(false)
 
     React.useEffect(() => {
       let mounted = true
-  let endpointUsed = ''
+      let endpointUsed = ''
       async function fetchUsers() {
         setLoadingUsers(true)
         setErrorUsers(null)
@@ -570,11 +571,16 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
                     e.stopPropagation()    // evita bubbling
                     setSheetOpen(true)     // abre nosso sheet controlado
                   }}
+                  className="cursor-pointer"
                 >
-                  Visualizar
+                  Resumo
                 </DropdownMenuItem>
-                <DropdownMenuItem>Editar</DropdownMenuItem>
-                <DropdownMenuItem>Favoritar</DropdownMenuItem>
+                <Link to={`/technical/tarefa/${id}`} onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem className="cursor-pointer">
+                    Visualizar
+                  </DropdownMenuItem>
+                </Link>
+                <DropdownMenuItem className="cursor-pointer">Favoritar</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>
               </DropdownMenuContent>
@@ -685,7 +691,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
                 <option key={f} value={f} style={{ background: isDark ? '#0f1720' : undefined, color: isDark ? '#e6edf3' : undefined }}>{f}</option>
               ))}
             </select>
-              <IconChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-4 pointer-events-none text-muted-foreground" />
+            <IconChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-4 pointer-events-none text-muted-foreground" />
           </div>
 
           {/* Status filter */}

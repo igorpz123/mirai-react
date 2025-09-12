@@ -27,6 +27,10 @@ router.get('/', getAllTasks)
 // Coletar tarefa por ID
 router.get('/:tarefa_id', getTaskById)
 
+// Alias path to match frontend route if requested
+// ex: /technical/tarefa/:tarefa_id -> simply delegate to getTaskById
+router.get('/technical/tarefa/:tarefa_id', getTaskById)
+
 // Coletar tarefas por usuário
 router.get('/usuario/:usuario_id', getTaskByUser)
 

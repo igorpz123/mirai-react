@@ -1,4 +1,5 @@
 import { useParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useEffect, useState } from 'react'
 import { getUserById } from '@/services/users'
@@ -13,9 +14,18 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 import { useAuth } from '@/hooks/use-auth'
 import { Badge } from '@/components/ui/badge'
-import { IconCircleCheckFilled, IconProgress, IconLoader } from '@tabler/icons-react'
+import { IconCircleCheckFilled, IconProgress, IconLoader, IconDotsVertical } from '@tabler/icons-react'
 
 export default function TechnicalMapUser() {
   const { usuarioId } = useParams()
@@ -272,6 +282,7 @@ export default function TechnicalMapUser() {
                       <th className="text-left p-2">Prazo</th>
                       <th className="text-left p-2">Responsável</th>
                       <th className="text-left p-2">Status</th>
+                      <th className="text-left">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -327,6 +338,31 @@ export default function TechnicalMapUser() {
                               </Badge>
                             )
                           })() : '—'}
+                        </td>
+                        <td>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="data-[state=open]:bg-muted text-muted-foreground"
+                              >
+                                <IconDotsVertical />
+                                <span className="sr-only">Abrir menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+
+                            <DropdownMenuContent align="end" className="w-32">
+                              <Link to={`/technical/tarefa/${t.id}`} onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenuItem className="cursor-pointer">
+                                  Visualizar
+                                </DropdownMenuItem>
+                              </Link>
+                              <DropdownMenuItem className="cursor-pointer">Favoritar</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}

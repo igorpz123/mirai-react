@@ -13,6 +13,7 @@ import NewTaskForm from './components/technical-task-new';
 import TecnicoDashboard from '@/pages/TechnicalDashboard';
 import TechnicalMap from '@/pages/TechnicalMap';
 import TechnicalMapUser from './pages/TechnicalMapUser';
+import TechnicalTaskDetail from './pages/TechnicalTaskDetail';
 
 //Páginas do Setor Comercial
 import ComercialDashboard from '@/pages/ComercialDashboard';
@@ -54,6 +55,7 @@ function AppContent() {
             <Route path="technical/agenda/:usuarioId" element={<TechnicalAgendaUser />} />
             <Route path="technical/mapa" element={<TechnicalMap />} />
             <Route path="technical/mapa/:usuarioId" element={<TechnicalMapUser />} />
+            <Route path="technical/tarefa/:id" element={<TechnicalTaskDetail />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
           </Route>
         </Routes>
