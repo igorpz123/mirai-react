@@ -31,7 +31,8 @@ export interface AuthResponse {
   user: User;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+// Prefer relative path to work with Vite dev proxy and Codespaces
+const API_URL = import.meta.env.VITE_API_URL || '/api'
 // const API_URL = import.meta.env.VITE_API_URL || 'https://psychic-yodel-p9jw56vx476f6wj4-5000.app.github.dev/api';
 
 export async function loginRequest(credentials: LoginCredentials): Promise<AuthResponse> {
