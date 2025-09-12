@@ -11,6 +11,8 @@ import TechnicalAgenda from './pages/TechnicalAgenda';
 import TechnicalAgendaUser from './pages/TechnicalAgendaUser';
 import NewTaskForm from './components/technical-task-new';
 import TecnicoDashboard from '@/pages/TechnicalDashboard';
+import TechnicalMap from '@/pages/TechnicalMap';
+import TechnicalMapUser from './pages/TechnicalMapUser';
 
 //Páginas do Setor Comercial
 import ComercialDashboard from '@/pages/ComercialDashboard';
@@ -18,6 +20,7 @@ import ComercialDashboard from '@/pages/ComercialDashboard';
 //Página de Administração
 import AdminDashboard from './pages/AdminDashboard';
 import './App.css';
+import { useAuth } from './hooks/use-auth';
 
 // Separa a lógica que utiliza o hook, garantindo que ela será renderizada
 // dentro do SidebarProvider.
@@ -49,6 +52,8 @@ function AppContent() {
             <Route path="technical/fluxograma/setor/:setorSlug" element={<TechnicalFluxogramaSetor />} />
             <Route path="technical/agenda" element={<TechnicalAgenda />} />
             <Route path="technical/agenda/:usuarioId" element={<TechnicalAgendaUser />} />
+            <Route path="technical/mapa" element={<TechnicalMap />} />
+            <Route path="technical/mapa/:usuarioId" element={<TechnicalMapUser />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
           </Route>
         </Routes>
@@ -59,8 +64,7 @@ function AppContent() {
 
 // Redireciona o usuário logado para a dashboard correta com base no cargoId.
 function HomeRedirect() {
-  // Importing the hook inside the component to avoid top-level hook usage issues
-  const { user } = require('./hooks/use-auth').useAuth();
+  const { user } = useAuth();
 
   if (!user) {
     return <Navigate to="/login" replace />;

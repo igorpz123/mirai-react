@@ -135,6 +135,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       icon: Calendar,
     },
     {
+      title: "Mapa",
+      url: "/technical/mapa",
+      icon: Calendar,
+    },
+    {
       title: "Fluxograma",
       url: "/technical/fluxograma",
       icon: HardHat,

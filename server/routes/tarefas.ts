@@ -4,6 +4,7 @@ import {
   getAllTasks,
   getTaskById,
   getTaskByUser,
+  getTasksByEmpresa,
   getTaskByResponsavel,
   getTaskByUnidade,
   getTaskByUnidadeSetor,
@@ -28,6 +29,9 @@ router.get('/:tarefa_id', getTaskById)
 
 // Coletar tarefas por usuário
 router.get('/usuario/:usuario_id', getTaskByUser)
+
+// Coletar tarefas por empresa
+router.get('/empresa/:empresa_id', getTasksByEmpresa)
 
 // Coletar tarefas pelo responsável da empresa
 router.get('/responsavel/:responsavel_id', getTaskByResponsavel)
