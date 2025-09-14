@@ -1,7 +1,7 @@
 // button-create.tsx
 "use client";
 
-import React from "react";
+// React import not needed with new JSX transform
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import {

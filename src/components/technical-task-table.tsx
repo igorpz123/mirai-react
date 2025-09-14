@@ -26,6 +26,8 @@ import {
 import { CSS } from "@dnd-kit/utilities"
 import {
   IconChevronDown,
+  IconSearch,
+  IconX,
   IconChevronLeft,
   IconChevronRight,
   IconChevronsLeft,
@@ -73,6 +75,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -374,6 +377,9 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   // View selector state: controls which 'finalidade' is shown
   const [selectedView, setSelectedView] = React.useState<string>('outline')
 
+  // Company search state
+  const [companyQuery, setCompanyQuery] = React.useState<string>('')
+
   // Status filter state
   const [selectedStatus, setSelectedStatus] = React.useState<string>('all')
 
@@ -599,8 +605,13 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     if (selectedStatus && selectedStatus !== 'all') {
       out = out.filter(d => (d.status ?? '').toString() === selectedStatus)
     }
+    // company filter (case-insensitive substring match)
+    const q = (companyQuery || '').toString().trim().toLowerCase()
+    if (q.length > 0) {
+      out = out.filter(d => (d.empresa || '').toString().toLowerCase().includes(q))
+    }
     return out
-  }, [data, selectedView, selectedStatus])
+  }, [data, selectedView, selectedStatus, companyQuery])
 
   const table = useReactTable({
     data: displayedData,
@@ -653,11 +664,37 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       className="w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="view-selector" className="sr-only">
-          View
+        <Label htmlFor="company-search" className="sr-only">
+          Buscar empresa
         </Label>
         <div className="flex items-center gap-2">
-          {/* Styled native select: visually matches the Radix SelectTrigger */}
+          {/* Only company search input on the left */}
+          <div className="relative flex items-center">
+            <Input
+              placeholder="Pesquisar empresa"
+              value={companyQuery}
+              onChange={(e) => setCompanyQuery(e.target.value)}
+              className="pr-8 w-44 text-sm"
+              id="company-search"
+            />
+            {companyQuery ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setCompanyQuery('')}
+                className="absolute right-1"
+                aria-label="Limpar pesquisa"
+              >
+                <IconX />
+              </Button>
+            ) : (
+              <IconSearch className="absolute right-2 text-muted-foreground size-4 pointer-events-none" />
+            )}
+          </div>
+        </div>
+
+        {/* Right-side controls: finalidade, status and column customizer */}
+        <div className="flex items-center gap-2">
           <div className="relative">
             <select
               id="view-selector"
@@ -673,7 +710,6 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
             <IconChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-4 pointer-events-none text-muted-foreground" />
           </div>
 
-          {/* Status filter */}
           <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v)}>
             <SelectTrigger className="flex w-fit" size="sm" id="status-selector">
               <SelectValue placeholder="Todos os status" />
@@ -685,8 +721,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex items-center gap-2">
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">

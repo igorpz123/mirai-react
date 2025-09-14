@@ -13,13 +13,13 @@ import {
 type TechnicalDashboardCardsProps = {
   stats?: any | null
   loading?: boolean
+  // error is accepted for API compatibility but not used in this component
   error?: string | null
 }
 
 export function TechnicalDashboardCards({
   stats = null,
   loading = false,
-  error = null,
 }: TechnicalDashboardCardsProps): ReactElement {
   const getCount = (status: string) => stats?.totalByStatus?.[status] ?? 0
   const getTrend = (status: string) => stats?.trendByStatus?.[status]?.percent ?? 0

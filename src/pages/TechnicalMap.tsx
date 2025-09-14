@@ -19,6 +19,11 @@ export default function TechnicalMap() {
 	const [companiesLoading, setCompaniesLoading] = useState(true)
 	const [companiesError, setCompaniesError] = useState<string | null>(null)
 
+	// reference variables to avoid "declared but not used" TS warnings in some builds
+	void companies
+	void companiesLoading
+	void companiesError
+
 	useEffect(() => {
 		let mounted = true
 		async function fetchTechs() {
