@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import type { ChangeEvent } from "react";
 import { createTask } from '@/services/tasks'
-import type { CreateTaskData } from '@/services/tasks'
 import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,6 +161,7 @@ export const NewTaskForm: React.FC = () => {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
   const { unitId } = useUnit()
+  const { user } = useAuth()
 
   const handleNext = () => {
     // Pode adicionar validação antes de avançar para a próxima step
@@ -266,10 +266,6 @@ export const NewTaskForm: React.FC = () => {
       setSubmitError(null)
       setSubmitSuccess(null)
       // basic validation
-      if (!formData.unidade) {
-        setSubmitError('Por favor selecione uma unidade')
-        return
-      }
       if (!formData.empresa) {
         setSubmitError('Por favor selecione uma empresa')
         return
@@ -281,28 +277,35 @@ export const NewTaskForm: React.FC = () => {
 
       setSubmitting(true)
       try {
-        // helper to extract numeric id if present
-        const parseId = (val?: string) => {
-          if (!val) return undefined
-          const m = String(val).match(/(\d+)/)
-          if (m) return Number(m[1])
-          const n = Number(val)
-          return Number.isFinite(n) ? n : undefined
+        // build payload matching server NewTaskBody
+        const empresa_id = formData.empresa ? Number(formData.empresa) : undefined
+        const finalidade_id = formData.finalidade && formData.finalidade !== 'outro' ? Number(formData.finalidade) : undefined
+        const setor_id = formData.setorResponsavel ? Number(formData.setorResponsavel) : undefined
+        const responsavel_id = formData.usuarioResponsavel ? Number(formData.usuarioResponsavel) : null
+        const unidade_id = unitId ? Number(unitId) : (formData.unidade ? Number(formData.unidade) : undefined)
+
+        if (!empresa_id) {
+          throw new Error('empresa_id ausente')
+        }
+        if (!unidade_id) {
+          throw new Error('unidade_id ausente')
         }
 
-        const payload: CreateTaskData = {
-          titulo: formData.finalidade || `${formData.empresa} - Nova tarefa`,
-          descricao: formData.observacoes || '',
-          status: 'pendente',
+        const payloadServer = {
+          empresa_id,
+          finalidade: finalidade_id,
           prioridade: formData.prioridade || 'media',
-          dataInicio: new Date().toISOString(),
-          dataFim: formData.prazo || '',
-          unidadeId: parseId(formData.unidade) || 0,
-          setorId: parseId(formData.setorResponsavel) || 0,
-          usuarioId: parseId(formData.usuarioResponsavel) || 0,
+          status: 'pendente',
+          prazo: formData.prazo || null,
+          setor_id: setor_id || null,
+          responsavel_id: responsavel_id || null,
+          created_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          created_by: user ? Number(user.id) : null,
+          observacoes: formData.observacoes || null,
+          unidade_id: Number(unidade_id),
         }
 
-        const res = await createTask(payload)
+        const res = await createTask(payloadServer as any)
         setSubmitSuccess('Tarefa criada com sucesso')
         // reset form
         setFormData({
@@ -391,7 +394,7 @@ export const NewTaskForm: React.FC = () => {
                 <SelectContent>
                   {finalidades && finalidades.length > 0 ? (
                     finalidades.map((f) => (
-                      <SelectItem key={String(f.id)} value={String(f.tipo)}>
+                      <SelectItem key={String(f.id)} value={String(f.id)}>
                         {f.tipo}
                       </SelectItem>
                     ))

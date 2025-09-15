@@ -469,6 +469,7 @@ interface NewTaskBody {
   created_at: string;
   created_by: number;
   unidade_id: number;
+  observacoes?: string | null;
 }
 
 export const newTask = async (
@@ -487,7 +488,8 @@ export const newTask = async (
       created_at,
       created_by,
       unidade_id,
-    } = req.body;
+      observacoes,
+    } = req.body as NewTaskBody;
 
     const insertQuery = `
       INSERT INTO tarefas
@@ -508,9 +510,27 @@ export const newTask = async (
     ];
 
     const [result] = await pool.query<OkPacket>(insertQuery, values);
+    const insertedId = result.insertId;
+
+    // try to insert a creation entry in historico_alteracoes following PHP logic
+    try {
+      const acao = 'criar';
+      const novo_valor = JSON.stringify({ usuario: created_by });
+      const valor_anterior = JSON.stringify({ usuario: null });
+      const insertHist = `
+        INSERT INTO historico_alteracoes
+          (tarefa_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+      `;
+      await pool.query<OkPacket>(insertHist, [insertedId, created_by, acao, valor_anterior, novo_valor, observacoes || null]);
+    } catch (histErr) {
+      console.error('Erro ao inserir histórico de criação da tarefa:', histErr);
+      // don't block the main response — log and continue
+    }
+
     res
       .status(201)
-      .json({ message: 'Tarefa criada com sucesso', tarefa_id: result.insertId });
+      .json({ message: 'Tarefa criada com sucesso', tarefa_id: insertedId });
   } catch (error) {
     console.error('Erro ao criar tarefa:', error);
     res.status(500).json({ message: 'Erro ao criar tarefa' });
