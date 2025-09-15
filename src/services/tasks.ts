@@ -130,22 +130,33 @@ export async function createTask(taskData: CreateTaskData): Promise<TaskResponse
 
 export async function updateTask(taskId: number, taskData: UpdateTaskData): Promise<TaskResponse> {
     const token = localStorage.getItem('token');
+    const url = `${API_URL}/tarefas/${taskId}`
+    try {
+        // debug info
+        try { console.debug('[tasks.updateTask] url:', url, 'tokenPresent:', !!token) } catch (e) { /* ignore */ }
 
-    const res = await fetch(`${API_URL}/tarefas/${taskId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(taskData),
-    });
+        const res = await fetch(url, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(taskData),
+        });
 
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Erro ao atualizar tarefa');
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Erro ao atualizar tarefa' }));
+            throw new Error(err.message || 'Erro ao atualizar tarefa');
+        }
+
+        return res.json();
+    } catch (err) {
+        // network or other fetch error (e.g., Failed to fetch)
+        const message = err instanceof Error ? err.message : String(err)
+        const detailed = `updateTask failed: ${message} (url: ${url}, tokenPresent: ${!!token})`
+        try { console.error('[tasks.updateTask] ', detailed, err) } catch (e) { /* ignore */ }
+        throw new Error(detailed)
     }
-
-    return res.json();
 }
 
 export async function deleteTask(taskId: number): Promise<{ message: string }> {

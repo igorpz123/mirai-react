@@ -47,7 +47,7 @@ export const UsersProvider: React.FC<React.PropsWithChildren<{}>> = ({ children 
       const msg = err instanceof Error ? err.message : String(err)
       setCache(prev => ({ ...prev, [key]: { users: [], loading: false, error: msg } }))
     }
-  }, [cache, unitId])
+  }, [unitId])
 
   // auto ensure for current unit on mount / unit change
   React.useEffect(() => {
@@ -77,9 +77,34 @@ export const UsersProvider: React.FC<React.PropsWithChildren<{}>> = ({ children 
     // filter by setorId when available
     if (typeof setorId !== 'undefined' && setorId !== null && setorId > 0) {
       list = list.filter(u => {
-        // server may include setor ids in different fields
-        const candidates = [ (u as any).setorId, (u as any).setor_id, (u as any).setores_ids, (u as any).setor_ids ]
-        return candidates.some((c: any) => Number(c) === Number(setorId))
+        // server may include setor ids in different fields; sometimes it's a CSV string '1,2,3'
+        const anyField = (u as any)
+        const candidates = [anyField.setorId, anyField.setor_id, anyField.setor_ids, anyField.setores_ids, anyField.setores, anyField.setores_ids]
+
+        // check primitive numeric fields first
+        for (const c of candidates) {
+          if (c == null) continue
+          if (typeof c === 'number' && Number(c) === Number(setorId)) return true
+          if (typeof c === 'string') {
+            // maybe a single numeric string
+            if (!isNaN(Number(c)) && Number(c) === Number(setorId)) return true
+            // maybe CSV like '1,2,3'
+            if (c.includes(',')) {
+              const parts = c.split(',').map(p => p.trim()).filter(Boolean)
+              if (parts.some(p => !isNaN(Number(p)) && Number(p) === Number(setorId))) return true
+            }
+          }
+          // arrays
+          if (Array.isArray(c)) {
+            if (c.some((el: any) => !isNaN(Number(el)) && Number(el) === Number(setorId))) return true
+          }
+        }
+
+        // as last resort, check campo 'setor' name equality to id as string
+        const fallback = (anyField as any).setor || (anyField as any).setor_nome
+        if (fallback && String(fallback) === String(setorId)) return true
+
+        return false
       })
     } else if (setorName) {
       const s = String(setorName).toLowerCase()

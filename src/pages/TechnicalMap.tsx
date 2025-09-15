@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useUnit } from '@/contexts/UnitContext'
-import { getUsersByUnitId } from '@/services/users'
 import { useUsers } from '@/contexts/UsersContext'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'

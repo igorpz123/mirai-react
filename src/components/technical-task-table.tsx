@@ -102,6 +102,7 @@ interface TableTask {
   setor: string
   setorId?: number
   unidadeId?: number
+  responsavelId?: number | null
   prazo: string
   limit: string
   responsavel: string
@@ -125,6 +126,8 @@ export const schema = z.object({
   prazo: z.string(),
   limit: z.string(),
   responsavel: z.string(),
+  // responsavelId is optional and may be present in raw data
+  responsavelId: z.number().nullable().optional(),
 })
 
 const formatDate = (dateString: string): string =>
@@ -197,6 +200,18 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   onTasksReorder,
 }) => {
   const { unitId } = useUnit();
+  // local handler to update a single task in the table's data
+  const handleTaskUpdate = async (taskId: string, updates: Partial<Task>) => {
+    try {
+      setData(prev => prev.map(d => d.id.toString() === taskId ? { ...d, ...(updates as any) } : d))
+      // notify parent if provided
+      if (onTaskUpdate) await onTaskUpdate(taskId, updates)
+      // optionally call external refresh callback
+      if (onRefresh) onRefresh()
+    } catch (err) {
+      console.error('Erro ao atualizar task localmente:', err)
+    }
+  }
 
   function ResponsibleSelect({ task }: { task: TableTask }) {
   const [users, setUsers] = React.useState<User[] | null>(null)
@@ -206,19 +221,32 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   const [lastRawData, setLastRawData] = React.useState<any | null>(null)
   const usersCtx = useUsers()
     const [assigning, setAssigning] = React.useState(false)
+    // track last ensured unit to avoid calling ensureUsersForUnit repeatedly
+    const lastEnsuredUnitRef = React.useRef<number | null | undefined>(undefined)
 
     React.useEffect(() => {
       let mounted = true
       ;(async () => {
         setLoadingUsers(true)
         try {
-          // ensure ctx has users for the unit
+          // ensure ctx has users for the unit, but only call ensureUsersForUnit
+          // again if the unit changed. This prevents repeated network/cache ops
+          // when the context identity changes.
           const preferredUnit = task.unidadeId ?? unitId ?? null
-          await usersCtx.ensureUsersForUnit(preferredUnit ?? null)
+          if (lastEnsuredUnitRef.current !== preferredUnit) {
+            await usersCtx.ensureUsersForUnit(preferredUnit ?? null)
+            lastEnsuredUnitRef.current = preferredUnit
+          }
+
           if (!mounted) return
-          const { users: fetched, loading, error } = usersCtx.getFilteredUsersForTask({ setorId: task.setorId ?? undefined, setorName: task.setor ?? undefined, unidadeId: task.unidadeId ?? undefined })
+          const { users: fetched, error } = usersCtx.getFilteredUsersForTask({ setorId: task.setorId ?? undefined, setorName: task.setor ?? undefined, unidadeId: task.unidadeId ?? undefined })
           if (!mounted) return
-          setUsers(fetched || [])
+
+          // avoid setting state if nothing changed to prevent re-renders that
+          // might re-trigger effects in other components
+          const normalizedFetched = fetched || []
+          const same = Array.isArray(normalizedFetched) && Array.isArray(users) && normalizedFetched.length === users.length && normalizedFetched.every((u, i) => u.id === (users as User[])[i]?.id)
+          if (!same) setUsers(normalizedFetched)
           setErrorUsers(error ?? null)
           setLastRawData(null)
           setDebugEndpoint(preferredUnit ? `unit:${preferredUnit}` : 'all')
@@ -232,7 +260,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
         }
       })()
       return () => { mounted = false }
-    }, [task.setorId, task.unidadeId, unitId, usersCtx])
+    // only re-run when the logical inputs change (setorId/unitId/task.unit)
+    }, [task.setorId, task.unidadeId, unitId, task.setor])
 
     const handleAssign = async (userIdValue: string) => {
       const userId = Number(userIdValue)
@@ -314,8 +343,10 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       status: task.status || 'pending',
       prioridade: task.prioridade || 'medium',
       setor: task.setor || 'Geral',
-      setorId: (task as any).setorId || undefined,
-      unidadeId: (task as any).unidadeId || undefined,
+      setorId: (task as any).setorId || (task as any).setor_id || undefined,
+      unidadeId: (task as any).unidadeId || (task as any).unidade_id || undefined,
+      // try to preserve responsible user id if backend provides it
+  responsavelId: (task as any).responsavel_id ?? (task as any).usuario_id ?? (task as any).usuarioId ?? (task as any).responsavelId ?? undefined,
       prazo: task.prazo || '',
       limit: task.prazo || '',
       responsavel: task.responsavel || 'Não atribuído'
@@ -501,8 +532,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
           responsavel,
         } = row.original
 
-        const statusText = getStatusText(row.original.status);
-        const prazo = formatDate(row.original.prazo);
+  const prazo = formatDate(row.original.prazo);
 
         return (
           <>
@@ -548,10 +578,13 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
               empresa={empresa}
               finalidade={finalidade}
               prazo={prazo}
-              status={statusText}
+              status={row.original.status}
               prioridade={prioridade}
               setor={setor}
               responsavel={responsavel}
+              responsavelId={row.original.responsavelId}
+              onRefresh={onRefresh}
+              onTaskUpdate={handleTaskUpdate}
             />
           </>
         )

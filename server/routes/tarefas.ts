@@ -16,6 +16,7 @@ import {
   getTaskHistory,
   newTask,
   updateTaskResponsible,
+  updateTask,
   addTaskObservation
 } from '../controllers/TaskController'
 import { getEventsByResponsavel } from '../controllers/AgendaController'
@@ -75,5 +76,8 @@ router.post('/', newTask)
 
 // Atualizar responsável pela tarefa
 router.patch('/:tarefa_id/responsavel', updateTaskResponsible)
+
+// Atualizar campos da tarefa (status, setor, responsavel, etc.)
+router.put('/:tarefa_id', updateTask)
 
 export default router

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import { RowDataPacket, OkPacket } from 'mysql2';
 import pool from '../config/db';
+import jwt from 'jsonwebtoken';
+import authConfig from '../config/auth';
 
 type TaskRow = RowDataPacket & {
   tarefa_id: number;
@@ -913,5 +915,110 @@ export const addTaskObservation = async (
   } catch (error) {
     console.error('Erro ao adicionar observação:', error);
     res.status(500).json({ message: 'Erro ao adicionar observação' });
+  }
+};
+
+// Atualiza campos da tarefa (status, setor, responsavel, etc.) e registra histórico
+export const updateTask = async (
+  req: Request<{ tarefa_id: string }, {}, Partial<{ status: string; setorId: number; usuarioId: number }>>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { tarefa_id } = req.params;
+    const { status, setorId, usuarioId } = req.body || {} as any;
+
+    if (!tarefa_id) {
+      res.status(400).json({ message: 'ID da tarefa é obrigatório' });
+      return;
+    }
+
+    // Determine actor (quem realiza a ação) from Authorization Bearer token
+    let actorId: number | null = null;
+    const authHeader = req.headers && (req.headers.authorization as string | undefined);
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const payload = jwt.verify(token, authConfig.jwtSecret as string) as any;
+        actorId = payload?.userId ?? payload?.id ?? null;
+      } catch (e) {
+        console.warn('Failed to verify JWT for actor extraction:', e);
+        // if token invalid, we will reject later
+      }
+    }
+
+    // fallback: if caller passed usuarioId explicitly, use that as actor
+    if (!actorId && typeof usuarioId === 'number') {
+      actorId = usuarioId;
+    }
+
+    if (!actorId) {
+      res.status(401).json({ message: 'Usuário autenticado é obrigatório para registrar histórico da ação' });
+      return;
+    }
+
+    // fetch current task to build historico (valor_anterior)
+    const [existingRows] = await pool.query<RowDataPacket[]>(`SELECT id, status, setor_id, responsavel_id FROM tarefas WHERE id = ?`, [tarefa_id]);
+    if (!(existingRows as any[]).length) {
+      res.status(404).json({ message: 'Tarefa não encontrada' });
+      return;
+    }
+    const existing = (existingRows as any[])[0];
+
+    // build update parts
+    const updates: string[] = [];
+    const values: any[] = [];
+    if (typeof status === 'string') {
+      updates.push('status = ?');
+      values.push(status);
+    }
+    if (typeof setorId === 'number') {
+      updates.push('setor_id = ?');
+      values.push(setorId);
+    }
+    if (typeof usuarioId === 'number') {
+      updates.push('responsavel_id = ?');
+      values.push(usuarioId);
+    }
+
+    if (!updates.length) {
+      res.status(400).json({ message: 'Nenhum campo válido para atualizar' });
+      return;
+    }
+
+    // always update data_alteracao to NOW()
+    updates.push('data_alteracao = NOW()');
+
+    const updateQuery = `UPDATE tarefas SET ${updates.join(', ')} WHERE id = ?`;
+    values.push(tarefa_id);
+
+    const [result] = await pool.query<OkPacket>(updateQuery, values);
+
+    if (!result.affectedRows || result.affectedRows === 0) {
+      res.status(404).json({ message: 'Tarefa não encontrada' });
+      return;
+    }
+
+    // insert historico
+    try {
+      const acao = typeof status === 'string' && status === 'progress' ? 'iniciar' : (typeof status === 'string' ? status : 'atualizar');
+
+      const valor_anterior = JSON.stringify({ status: existing.status, setor: existing.setor_id, usuario: existing.responsavel_id });
+      const novo_valor = JSON.stringify({ status: status ?? existing.status, setor: setorId ?? existing.setor_id, usuario: usuarioId ?? existing.responsavel_id });
+
+      const insertHist = `
+        INSERT INTO historico_alteracoes
+          (tarefa_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+      `;
+      await pool.query<OkPacket>(insertHist, [tarefa_id, actorId, acao, valor_anterior, novo_valor, null]);
+    } catch (histErr) {
+      console.error('Erro ao inserir histórico da atualização da tarefa:', histErr);
+      // don't block the response
+    }
+
+    res.status(200).json({ message: 'Tarefa atualizada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar tarefa:', error);
+    res.status(500).json({ message: 'Erro ao atualizar tarefa' });
   }
 };

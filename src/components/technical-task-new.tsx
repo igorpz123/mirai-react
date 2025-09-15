@@ -15,6 +15,7 @@ import { getCompaniesByResponsible, type Company } from '@/services/companies'
 import { getSetores, type Setor } from '@/services/setores'
 import { getTipoTarefa, type TipoTarefa } from '@/services/tipoTarefa'
 import { useUsers } from '@/contexts/UsersContext'
+import { getUsersByDepartmentAndUnit } from '@/services/users'
 // import { IconSearch } from '@tabler/icons-react'
 
 interface FormData {
@@ -63,17 +64,14 @@ interface SelectOption {
           } catch (e) {
             // ignore and fallback
             console.debug('[CompanyComboBox] getCompaniesByUnit failed', e)
-            res = undefined
           }
         }
-
 
         // If the unit endpoint returned nothing (empty list) we still try the fallback
         if (!res || !(res.companies && res.companies.length > 0)) {
           console.debug('[CompanyComboBox] falling back to getCompaniesByResponsible', { unitId, userId: user.id })
           res = await getCompaniesByResponsible(Number(user.id), unitId ?? undefined)
         }
-
         if (!mounted) return
         setCompanies(res.companies || [])
       } catch (err) {
@@ -103,27 +101,27 @@ interface SelectOption {
          value={selected ? selected.nome : query}
          onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
          onFocus={() => setOpen(true)}
-         aria-autocomplete="list"
-         aria-expanded={open}
-       />
-       {open && (
-         <div className="absolute left-0 right-0 z-20 mt-1 max-h-44 overflow-auto rounded border bg-popover">
-           {filtered.length === 0 ? (
-             <div className="p-2 text-sm text-muted-foreground">Nenhuma empresa</div>
-           ) : (
-             filtered.map((c) => (
-               <button
-                 key={c.id}
-                 type="button"
-                 className="w-full text-left px-3 py-2 hover:bg-muted"
-                 onClick={() => { onChange(String(c.id)); setOpen(false); setQuery('') }}
-               >
-                 {c.nome}
-               </button>
-             ))
-           )}
-         </div>
-       )}
+           aria-autocomplete="list"
+           aria-expanded={open}
+         />
+         {open && (
+           <div className="absolute left-0 right-0 z-20 mt-1 max-h-44 overflow-auto rounded border bg-popover">
+             {filtered.length === 0 ? (
+               <div className="p-2 text-sm text-muted-foreground">Nenhuma empresa</div>
+             ) : (
+               filtered.map((c) => (
+                 <button
+                   key={c.id}
+                   type="button"
+                   className="w-full text-left px-3 py-2 hover:bg-muted"
+                   onClick={() => { onChange(String(c.id)); setOpen(false); setQuery('') }}
+                 >
+                   {c.nome}
+                 </button>
+               ))
+             )}
+           </div>
+         )}
      </div>
    )
  }
@@ -225,6 +223,20 @@ export const NewTaskForm: React.FC = () => {
         console.debug('[NewTaskForm] fetching users for unit/sector (via UsersContext)', { uid, sid })
         await usersCtx.ensureUsersForUnit(uid)
         const { users: fetched } = usersCtx.getFilteredUsersForTask({ setorId: sid, unidadeId: uid })
+        // fallback: if context cache didn't return users (empty), try direct API call
+        if ((!fetched || fetched.length === 0) && sid && uid) {
+          try {
+            console.debug('[NewTaskForm] UsersContext returned empty, falling back to API getUsersByDepartmentAndUnit', { uid, sid })
+            const res = await getUsersByDepartmentAndUnit(sid, uid)
+            if (!mounted) return
+            const list = res?.users || []
+            setUsuariosOptions(list.map(u => ({ id: u.id, nome: u.nome, sobrenome: (u as any).sobrenome || '' })))
+            return
+          } catch (apiErr) {
+            console.warn('[NewTaskForm] fallback API call failed', apiErr)
+            // continue to set from fetched (which may be empty)
+          }
+        }
         if (!mounted) return
         setUsuariosOptions((fetched || []).map(u => ({ id: u.id, nome: u.nome, sobrenome: (u as any).sobrenome || '' })))
       } catch (err) {
@@ -234,7 +246,13 @@ export const NewTaskForm: React.FC = () => {
       }
     })()
     return () => { mounted = false }
-  }, [formData.setorResponsavel, unitId, usersCtx])
+    // NOTE: we intentionally exclude `usersCtx` from deps because the
+    // UsersContext provider mutates its internal cache which changes the
+    // context value identity on each update; including it here causes this
+    // effect to re-run continuously. We only want to re-run when the
+    // selected setor or unit change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.setorResponsavel, unitId])
 
   // load finalidades when setor changes
   React.useEffect(() => {
@@ -305,7 +323,7 @@ export const NewTaskForm: React.FC = () => {
           unidade_id: Number(unidade_id),
         }
 
-        const res = await createTask(payloadServer as any)
+  await createTask(payloadServer as any)
         setSubmitSuccess('Tarefa criada com sucesso')
         // reset form
         setFormData({
@@ -320,14 +338,14 @@ export const NewTaskForm: React.FC = () => {
         })
         setSelectedFiles([])
         setStep(1)
-        console.debug('createTask response', res)
+            // createTask response available when needed
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         setSubmitError(msg)
       } finally {
         setSubmitting(false)
       }
-    })()
+  })()
   };
 
   return (
