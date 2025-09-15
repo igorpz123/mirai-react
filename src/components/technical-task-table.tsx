@@ -1,8 +1,9 @@
 import * as React from "react"
 import { useState } from "react"
 import type { Task } from "../services/tasks"
-import { getUsersByDepartmentAndUnit, updateUserResponsibleForTask, getUsersByUnitId, getAllUsers } from '@/services/users';
+import { updateUserResponsibleForTask } from '@/services/users';
 import type { User } from '@/services/users';
+import { useUsers } from '@/contexts/UsersContext';
 import { useUnit } from '@/contexts/UnitContext';
 import { useTheme } from '@/components/layout/theme-provider';
 import {
@@ -198,76 +199,40 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   const { unitId } = useUnit();
 
   function ResponsibleSelect({ task }: { task: TableTask }) {
-    const [users, setUsers] = React.useState<User[] | null>(null)
-    const [loadingUsers, setLoadingUsers] = React.useState(false)
-    const [errorUsers, setErrorUsers] = React.useState<string | null>(null)
-    const [debugEndpoint, setDebugEndpoint] = React.useState<string | null>(null)
-    const [lastRawData, setLastRawData] = React.useState<any | null>(null)
+  const [users, setUsers] = React.useState<User[] | null>(null)
+  const [loadingUsers, setLoadingUsers] = React.useState(false)
+  const [errorUsers, setErrorUsers] = React.useState<string | null>(null)
+  const [debugEndpoint, setDebugEndpoint] = React.useState<string | null>(null)
+  const [lastRawData, setLastRawData] = React.useState<any | null>(null)
+  const usersCtx = useUsers()
     const [assigning, setAssigning] = React.useState(false)
 
     React.useEffect(() => {
       let mounted = true
-      let endpointUsed = ''
-      async function fetchUsers() {
+      ;(async () => {
         setLoadingUsers(true)
-        setErrorUsers(null)
         try {
-          // tenta buscar por setor e unidade quando possível
-          if (task.setorId && task.unidadeId) {
-            endpointUsed = `${task.unidadeId}/setor/${task.setorId}`
-            const res = await getUsersByDepartmentAndUnit(task.setorId, task.unidadeId)
-            if (!mounted) return
-            setLastRawData(res)
-            setUsers(res.users || [])
-          } else if (task.unidadeId || unitId) {
-            const uid = task.unidadeId || unitId || 0
-            if (uid > 0) {
-              endpointUsed = `unidade/${uid}`
-              const res = await getUsersByUnitId(uid)
-              if (!mounted) return
-              setLastRawData(res)
-              let list = res.users || []
-              // if we have setor name but not setorId, filter by setor name
-              if (task.setor) {
-                const setorName = task.setor.toString().toLowerCase()
-                list = (list as any[]).filter((u: any) => {
-                  const candidates = [u.setor_nomes, u.setorNomes, u.setores, u.setor, u.setor_nome]
-                  return candidates.some((c: any) => typeof c === 'string' && c.toLowerCase().includes(setorName))
-                })
-              }
-              setUsers(list)
-            } else {
-              endpointUsed = `all`
-              const res = await getAllUsers()
-              if (!mounted) return
-              setLastRawData(res)
-              setUsers(res.users || [])
-            }
-          } else {
-            endpointUsed = `all`
-            const res = await getAllUsers()
-            if (!mounted) return
-            setLastRawData(res)
-            setUsers(res.users || [])
-          }
+          // ensure ctx has users for the unit
+          const preferredUnit = task.unidadeId ?? unitId ?? null
+          await usersCtx.ensureUsersForUnit(preferredUnit ?? null)
+          if (!mounted) return
+          const { users: fetched, loading, error } = usersCtx.getFilteredUsersForTask({ setorId: task.setorId ?? undefined, setorName: task.setor ?? undefined, unidadeId: task.unidadeId ?? undefined })
+          if (!mounted) return
+          setUsers(fetched || [])
+          setErrorUsers(error ?? null)
+          setLastRawData(null)
+          setDebugEndpoint(preferredUnit ? `unit:${preferredUnit}` : 'all')
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erro ao carregar usuários'
+          if (!mounted) return
           setErrorUsers(msg)
           setUsers([])
         } finally {
           if (mounted) setLoadingUsers(false)
-          // debug
-          console.debug('[ResponsibleSelect] fetched users', { taskId: task.id, endpoint: endpointUsed, count: (users || []).length, raw: lastRawData })
-          if (mounted) setDebugEndpoint(endpointUsed)
         }
-      }
-
-      fetchUsers()
-
-      return () => {
-        mounted = false
-      }
-    }, [task.setorId, task.unidadeId, unitId])
+      })()
+      return () => { mounted = false }
+    }, [task.setorId, task.unidadeId, unitId, usersCtx])
 
     const handleAssign = async (userIdValue: string) => {
       const userId = Number(userIdValue)

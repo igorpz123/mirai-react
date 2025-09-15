@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { SiteHeader } from '@/components/layout/site-header'
 // ...existing code...
 import { useUnit } from '@/contexts/UnitContext'
-import { getUsersByUnitId } from '@/services/users'
+import { useUsers } from '@/contexts/UsersContext'
 import { Link } from 'react-router-dom'
 
 export default function TechnicalAgenda() {
@@ -12,6 +12,7 @@ export default function TechnicalAgenda() {
   const [error, setError] = useState<string | null>(null)
 
   const { unitId, isLoading: unitLoading } = useUnit()
+  const usersCtx = useUsers()
 
   useEffect(() => {
     let mounted = true
@@ -23,11 +24,15 @@ export default function TechnicalAgenda() {
           setUsers([])
           return
         }
-        const res = await getUsersByUnitId(Number(unitId))
-        const all = res.users || []
-        if (!mounted) return
-        // filter users with cargoId === 4
-        setUsers(all.filter((u: any) => Number(u.cargo_id) === 4))
+        try {
+          await usersCtx.ensureUsersForUnit(Number(unitId))
+          const { users: all } = usersCtx.getFilteredUsersForTask({ unidadeId: Number(unitId) })
+          if (!mounted) return
+          setUsers((all || []).filter((u: any) => Number(u.cargo_id) === 4))
+        } catch (e) {
+          if (!mounted) return
+          setUsers([])
+        }
       } catch (err) {
         if (!mounted) return
         setError(err instanceof Error ? err.message : String(err))

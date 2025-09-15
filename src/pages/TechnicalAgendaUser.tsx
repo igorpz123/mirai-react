@@ -2,6 +2,7 @@ import { useParams } from 'react-router-dom'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useEffect, useMemo, useState } from 'react'
 import { getUserById } from '@/services/users'
+import { useUsers } from '@/contexts/UsersContext'
 import { getTasksByResponsavel, type Task } from '@/services/tasks'
 import { exportTasksToPdf } from '@/services/export'
 import { getEventsByResponsavel } from '@/services/agenda'
@@ -20,6 +21,7 @@ export default function TechnicalAgendaUser() {
     const [events, setEvents] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const usersCtx = useUsers()
 
   // selected month (Date) - defaults to current month
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
@@ -39,11 +41,26 @@ export default function TechnicalAgendaUser() {
           return
         }
 
-  const uResp = await getUserById(uid)
-  if (!mounted) return
-  // backend returns the user object directly (not { user }), so handle both cases
-  const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
-  setUser(actualUser || null)
+  // try resolve user from UsersContext cache first
+  try {
+    const { users: cached } = usersCtx.getFilteredUsersForTask({})
+    const found = (cached || []).find(u => Number((u as any).id) === Number(uid))
+    if (found) {
+      setUser(found as any)
+    } else {
+      const uResp = await getUserById(uid)
+      if (!mounted) return
+      // backend returns the user object directly (not { user }), so handle both cases
+      const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
+      setUser(actualUser || null)
+    }
+  } catch (e) {
+    // fallback to network call
+    const uResp = await getUserById(uid)
+    if (!mounted) return
+    const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
+    setUser(actualUser || null)
+  }
 
         const tResp = await getTasksByResponsavel(uid)
         if (!mounted) return

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useUnit } from '@/contexts/UnitContext'
 import { getUsersByUnitId } from '@/services/users'
+import { useUsers } from '@/contexts/UsersContext'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { getCompaniesByResponsible } from '@/services/companies'
@@ -14,6 +15,7 @@ export default function TechnicalMap() {
 	const [techs, setTechs] = useState<any[]>([])
 	const [techsLoading, setTechsLoading] = useState(true)
 	const [techsError, setTechsError] = useState<string | null>(null)
+	const usersCtx = useUsers()
 
 	const [companies, setCompanies] = useState<Company[]>([])
 	const [companiesLoading, setCompaniesLoading] = useState(true)
@@ -34,10 +36,15 @@ export default function TechnicalMap() {
 					setTechs([])
 					return
 				}
-				const res = await getUsersByUnitId(Number(unitId))
-				const all = res.users || []
-				if (!mounted) return
-				setTechs(all.filter((u: any) => Number(u.cargo_id) === 4))
+				try {
+					await usersCtx.ensureUsersForUnit(Number(unitId))
+					const { users: all } = usersCtx.getFilteredUsersForTask({ unidadeId: Number(unitId) })
+					if (!mounted) return
+					setTechs((all || []).filter((u: any) => Number(u.cargo_id) === 4))
+				} catch (e) {
+					// fallback to empty list
+					setTechs([])
+				}
 			} catch (err) {
 				if (!mounted) return
 				setTechsError(err instanceof Error ? err.message : String(err))

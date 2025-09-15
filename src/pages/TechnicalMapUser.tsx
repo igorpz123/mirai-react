@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useEffect, useState } from 'react'
 import { getUserById } from '@/services/users'
+import { useUsers } from '@/contexts/UsersContext'
 import { getCompaniesByResponsible, type Company } from '@/services/companies'
 import { getTasksByCompany, getAllTasks, type Task as TaskItem } from '@/services/tasks'
 import {
@@ -41,6 +42,7 @@ export default function TechnicalMapUser() {
 
   const [userNameCache, setUserNameCache] = useState<Record<number, string>>({})
   const [unitNameCache, setUnitNameCache] = useState<Record<number, string>>({})
+  const usersCtx = useUsers()
 
   // when a company is selected/opened, resolve tecnico_responsavel and unidade names
   useEffect(() => {
@@ -49,14 +51,31 @@ export default function TechnicalMapUser() {
     // resolve tecnico_responsavel
     const techId = selectedCompany.tecnico_responsavel
     if (techId != null && !(techId in userNameCache)) {
-      getUserById(Number(techId)).then(res => {
-        const u = (res && (res as any).user) ? (res as any).user : res
-        if (u && u.id) {
-          setUserNameCache(prev => ({ ...prev, [u.id]: u.nome }))
+      // try resolve from UsersContext cache first
+      try {
+        const { users } = usersCtx.getFilteredUsersForTask({ unidadeId: selectedCompany?.unidade_id ?? undefined })
+        const found = (users || []).find(u => Number((u as any).id) === Number(techId))
+        if (found) {
+          setUserNameCache(prev => ({ ...prev, [techId]: (found as any).nome }))
+        } else {
+          getUserById(Number(techId)).then(res => {
+            const u = (res && (res as any).user) ? (res as any).user : res
+            if (u && u.id) {
+              setUserNameCache(prev => ({ ...prev, [u.id]: u.nome }))
+            }
+          }).catch(() => {
+            // ignore
+          })
         }
-      }).catch(() => {
-        // ignore
-      })
+      } catch (e) {
+        // fallback to network call
+        getUserById(Number(techId)).then(res => {
+          const u = (res && (res as any).user) ? (res as any).user : res
+          if (u && u.id) {
+            setUserNameCache(prev => ({ ...prev, [u.id]: u.nome }))
+          }
+        }).catch(() => {})
+      }
     }
 
     // resolve unidade via authUser.unidades if available

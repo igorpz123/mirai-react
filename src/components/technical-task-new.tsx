@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { getCompaniesByResponsible, type Company } from '@/services/companies'
 import { getSetores, type Setor } from '@/services/setores'
 import { getTipoTarefa, type TipoTarefa } from '@/services/tipoTarefa'
-import { getUsersByDepartmentAndUnit } from '@/services/users'
+import { useUsers } from '@/contexts/UsersContext'
 // import { IconSearch } from '@tabler/icons-react'
 
 interface FormData {
@@ -162,6 +162,7 @@ export const NewTaskForm: React.FC = () => {
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
   const { unitId } = useUnit()
   const { user } = useAuth()
+  const usersCtx = useUsers()
 
   const handleNext = () => {
     // Pode adicionar validação antes de avançar para a próxima step
@@ -219,14 +220,13 @@ export const NewTaskForm: React.FC = () => {
         return
       }
       try {
-        // parse numeric ids
         const sid = Number(setorId)
         const uid = Number(unitId)
-        console.debug('[NewTaskForm] fetching users for unit/sector', { uid, sid })
-        const res = await getUsersByDepartmentAndUnit(sid, uid)
+        console.debug('[NewTaskForm] fetching users for unit/sector (via UsersContext)', { uid, sid })
+        await usersCtx.ensureUsersForUnit(uid)
+        const { users: fetched } = usersCtx.getFilteredUsersForTask({ setorId: sid, unidadeId: uid })
         if (!mounted) return
-        console.debug('[NewTaskForm] users response', res)
-        setUsuariosOptions((res.users || []).map(u => ({ id: u.id, nome: u.nome, sobrenome: (u as any).sobrenome || '' })))
+        setUsuariosOptions((fetched || []).map(u => ({ id: u.id, nome: u.nome, sobrenome: (u as any).sobrenome || '' })))
       } catch (err) {
         console.error('Erro ao carregar usuarios por setor/unidade:', err)
         if (!mounted) return
@@ -234,7 +234,7 @@ export const NewTaskForm: React.FC = () => {
       }
     })()
     return () => { mounted = false }
-  }, [formData.setorResponsavel, unitId])
+  }, [formData.setorResponsavel, unitId, usersCtx])
 
   // load finalidades when setor changes
   React.useEffect(() => {
