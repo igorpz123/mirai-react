@@ -305,6 +305,9 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       return <span className="text-destructive">{errorUsers}</span>
     }
 
+    // filter users to only those with valid numeric ids to avoid duplicate/undefined keys
+    const validUsers = (users || []).filter(u => u && (u.id !== undefined && u.id !== null) && !Number.isNaN(Number(u.id)))
+
     return (
       <Select onValueChange={handleAssign}>
         <SelectTrigger
@@ -316,9 +319,9 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
           <SelectValue placeholder={assigning ? 'Atribuindo...' : 'Designar Responsável'} />
         </SelectTrigger>
         <SelectContent align="end">
-          {users && users.length > 0 ? (
-            users.map((u) => (
-              <SelectItem key={u.id} value={`${u.id}`}>
+          {validUsers && validUsers.length > 0 ? (
+            validUsers.map((u) => (
+              <SelectItem key={String(u.id)} value={`${u.id}`}>
                 {u.nome}
               </SelectItem>
             ))
@@ -664,11 +667,11 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       className="w-full flex-col justify-start gap-6"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
-        <Label htmlFor="company-search" className="sr-only">
-          Buscar empresa
+        <Label htmlFor="view-selector" className="sr-only">
+          View
         </Label>
         <div className="flex items-center gap-2">
-          {/* Only company search input on the left */}
+          {/* Company search input */}
           <div className="relative flex items-center">
             <Input
               placeholder="Pesquisar empresa"
@@ -691,10 +694,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
               <IconSearch className="absolute right-2 text-muted-foreground size-4 pointer-events-none" />
             )}
           </div>
-        </div>
-
-        {/* Right-side controls: finalidade, status and column customizer */}
-        <div className="flex items-center gap-2">
+          {/* Styled native select: visually matches the Radix SelectTrigger */}
           <div className="relative">
             <select
               id="view-selector"
@@ -710,6 +710,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
             <IconChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 size-4 pointer-events-none text-muted-foreground" />
           </div>
 
+          {/* Status filter */}
           <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v)}>
             <SelectTrigger className="flex w-fit" size="sm" id="status-selector">
               <SelectValue placeholder="Todos os status" />
@@ -721,7 +722,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
               ))}
             </SelectContent>
           </Select>
-
+        </div>
+        <div className="flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">

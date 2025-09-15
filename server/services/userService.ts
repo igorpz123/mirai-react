@@ -9,7 +9,7 @@ export const getUsersByDepartmentAndUnit = async (
     departmentId: number,
     unitId: number
 ) => {
-    const users = await db.query(
+        const [rows] = await db.query(
         `SELECT 
           u.id,
           u.nome,
@@ -37,5 +37,6 @@ export const getUsersByDepartmentAndUnit = async (
             [unitId, departmentId]
     );
 
-    return users;
+    // rows contains the resultset; return it directly
+    return rows;
 };

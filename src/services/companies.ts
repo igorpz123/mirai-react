@@ -94,3 +94,30 @@ export async function getCompaniesByResponsible(userId: number, unitId?: number)
   const companies = Object.values(unique)
   return { companies, total: companies.length }
 }
+
+export async function getCompaniesByUnit(unitId: number): Promise<CompaniesResponse> {
+  const token = localStorage.getItem('token')
+  const url = `${API_URL}/empresas/unidade/${unitId}`
+
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    })
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: 'Erro ao buscar empresas por unidade' }))
+      throw new Error(err.message || 'Erro ao buscar empresas por unidade')
+    }
+
+    const data = await res.json()
+    if (Array.isArray(data)) return { companies: data as Company[], total: data.length }
+    return data as CompaniesResponse
+  } catch (err) {
+    // Re-throw to let caller fallback if desired
+    throw err
+  }
+}

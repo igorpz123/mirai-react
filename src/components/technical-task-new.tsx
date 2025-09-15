@@ -2,12 +2,21 @@
 
 import React, { useState } from "react";
 import type { ChangeEvent } from "react";
+import { createTask } from '@/services/tasks'
+import type { CreateTaskData } from '@/services/tasks'
 import { SiteHeader } from "@/components/layout/site-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useUnit } from '@/contexts/UnitContext'
+import { useAuth } from '@/hooks/use-auth'
+import { getCompaniesByResponsible, type Company } from '@/services/companies'
+import { getSetores, type Setor } from '@/services/setores'
+import { getTipoTarefa, type TipoTarefa } from '@/services/tipoTarefa'
+import { getUsersByDepartmentAndUnit } from '@/services/users'
+// import { IconSearch } from '@tabler/icons-react'
 
 interface FormData {
   unidade: string;
@@ -26,36 +35,106 @@ interface SelectOption {
   label: string;
 }
 
-const mockUnidades: SelectOption[] = [
-  { value: "unidade1", label: "Unidade 1" },
-  { value: "unidade2", label: "Unidade 2" },
-];
+ 
+ // small combobox component for searching/selecting company
+ function CompanyComboBox({ value, onChange }: { value: string; onChange: (val: string) => void }) {
+   const { unitId } = useUnit()
+   const { user } = useAuth()
+   const [companies, setCompanies] = useState<Company[]>([])
+   const [loading, setLoading] = useState(false)
+   const [query, setQuery] = useState('')
+   const [open, setOpen] = useState(false)
 
-const mockEmpresas: { [key: string]: SelectOption[] } = {
-  unidade1: [
-    { value: "empresa1", label: "Empresa 1 - Unidade 1" },
-    { value: "empresa2", label: "Empresa 2 - Unidade 1" },
-  ],
-  unidade2: [
-    { value: "empresa3", label: "Empresa 3 - Unidade 2" },
-    { value: "empresa4", label: "Empresa 4 - Unidade 2" },
-  ],
-};
+  React.useEffect(() => {
+    let mounted = true
+    async function load() {
+      if (!user) return
+      setLoading(true)
+      try {
+        let res
+        if (unitId) {
+          try {
+            // try direct unit endpoint first
+            // import getCompaniesByUnit dynamically to avoid circular issues
+            const mod = await import('@/services/companies')
+            if (mod.getCompaniesByUnit) {
+              res = await mod.getCompaniesByUnit(unitId)
+              console.debug('[CompanyComboBox] getCompaniesByUnit result', { unitId, count: res?.companies?.length })
+            }
+          } catch (e) {
+            // ignore and fallback
+            console.debug('[CompanyComboBox] getCompaniesByUnit failed', e)
+            res = undefined
+          }
+        }
 
-const mockSetores: SelectOption[] = [
-  { value: "setor1", label: "Setor 1" },
-  { value: "setor2", label: "Setor 2" },
-];
 
-const mockUsuarios: SelectOption[] = [
-  { value: "user1", label: "Usuário 1" },
-  { value: "user2", label: "Usuário 2" },
-];
+        // If the unit endpoint returned nothing (empty list) we still try the fallback
+        if (!res || !(res.companies && res.companies.length > 0)) {
+          console.debug('[CompanyComboBox] falling back to getCompaniesByResponsible', { unitId, userId: user.id })
+          res = await getCompaniesByResponsible(Number(user.id), unitId ?? undefined)
+        }
 
-const mockFinalidades: SelectOption[] = [
-  { value: "finalidade1", label: "Finalidade 1" },
-  { value: "finalidade2", label: "Finalidade 2" },
-];
+        if (!mounted) return
+        setCompanies(res.companies || [])
+      } catch (err) {
+        console.error('Erro ao carregar empresas:', err)
+        if (!mounted) return
+        setCompanies([])
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [user, unitId])
+
+   const filtered = React.useMemo(() => {
+     const q = query.trim().toLowerCase()
+     if (!q) return companies
+     return companies.filter(c => (c.nome || '').toLowerCase().includes(q))
+   }, [companies, query])
+
+   const selected = companies.find(c => String(c.id) === value)
+
+   return (
+     <div className="relative">
+       <Input
+         placeholder={loading ? 'Carregando...' : 'Busque por empresa...'}
+         value={selected ? selected.nome : query}
+         onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
+         onFocus={() => setOpen(true)}
+         aria-autocomplete="list"
+         aria-expanded={open}
+       />
+       {open && (
+         <div className="absolute left-0 right-0 z-20 mt-1 max-h-44 overflow-auto rounded border bg-popover">
+           {filtered.length === 0 ? (
+             <div className="p-2 text-sm text-muted-foreground">Nenhuma empresa</div>
+           ) : (
+             filtered.map((c) => (
+               <button
+                 key={c.id}
+                 type="button"
+                 className="w-full text-left px-3 py-2 hover:bg-muted"
+                 onClick={() => { onChange(String(c.id)); setOpen(false); setQuery('') }}
+               >
+                 {c.nome}
+               </button>
+             ))
+           )}
+         </div>
+       )}
+     </div>
+   )
+ }
+
+// dynamic setores & usuarios loaded from server
+const emptySetores: Setor[] = []
+const emptyUsuarios: { id: number; nome: string; sobrenome?: string }[] = []
+
+// finalidades loaded from tipo_tarefa table
+const emptyFinalidades: TipoTarefa[] = []
 
 const mockPrioridades: SelectOption[] = [
   { value: "alta", label: "Alta" },
@@ -76,6 +155,13 @@ export const NewTaskForm: React.FC = () => {
     observacoes: "",
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [setores, setSetores] = useState<Setor[]>(emptySetores)
+  const [usuariosOptions, setUsuariosOptions] = useState<{ id: number; nome: string; sobrenome?: string }[]>(emptyUsuarios)
+  const [finalidades, setFinalidades] = useState<TipoTarefa[]>(emptyFinalidades)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
+  const { unitId } = useUnit()
 
   const handleNext = () => {
     // Pode adicionar validação antes de avançar para a próxima step
@@ -97,12 +183,77 @@ export const NewTaskForm: React.FC = () => {
   };
 
   const handleSelectChange = (name: string, value: string) => {
-    if (name === "unidade") {
-      setFormData((prev) => ({ ...prev, unidade: value, empresa: "" }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  // load setores on mount
+  React.useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      try {
+        const res = await getSetores()
+        if (!mounted) return
+        setSetores(res.setores || [])
+      } catch (err) {
+        console.error('Erro ao carregar setores:', err)
+        if (!mounted) return
+        setSetores([])
+      }
+    })()
+    return () => { mounted = false }
+  }, [])
+
+  // when setorResponsavel or unit changes, load users for that unit+setor
+  React.useEffect(() => {
+    let mounted = true
+    const setorId = formData.setorResponsavel
+    ;(async () => {
+      if (!setorId) {
+        setUsuariosOptions(emptyUsuarios)
+        return
+      }
+      if (!unitId) {
+        // no unit selected, cannot fetch users by unit+setor
+        console.debug('[NewTaskForm] skip fetching users: no unitId', { setorId })
+        setUsuariosOptions(emptyUsuarios)
+        return
+      }
+      try {
+        // parse numeric ids
+        const sid = Number(setorId)
+        const uid = Number(unitId)
+        console.debug('[NewTaskForm] fetching users for unit/sector', { uid, sid })
+        const res = await getUsersByDepartmentAndUnit(sid, uid)
+        if (!mounted) return
+        console.debug('[NewTaskForm] users response', res)
+        setUsuariosOptions((res.users || []).map(u => ({ id: u.id, nome: u.nome, sobrenome: (u as any).sobrenome || '' })))
+      } catch (err) {
+        console.error('Erro ao carregar usuarios por setor/unidade:', err)
+        if (!mounted) return
+        setUsuariosOptions([])
+      }
+    })()
+    return () => { mounted = false }
+  }, [formData.setorResponsavel, unitId])
+
+  // load finalidades when setor changes
+  React.useEffect(() => {
+    let mounted = true
+    const setorId = formData.setorResponsavel
+    ;(async () => {
+      try {
+        const sid = setorId ? Number(setorId) : undefined
+        const res = await getTipoTarefa(sid)
+        if (!mounted) return
+        setFinalidades(res.tipos || [])
+      } catch (err) {
+        console.error('Erro ao carregar finalidades:', err)
+        if (!mounted) return
+        setFinalidades([])
+      }
+    })()
+    return () => { mounted = false }
+  }, [formData.setorResponsavel])
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -111,7 +262,69 @@ export const NewTaskForm: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    console.log("Dados do formulário:", formData, selectedFiles);
+    ;(async () => {
+      setSubmitError(null)
+      setSubmitSuccess(null)
+      // basic validation
+      if (!formData.unidade) {
+        setSubmitError('Por favor selecione uma unidade')
+        return
+      }
+      if (!formData.empresa) {
+        setSubmitError('Por favor selecione uma empresa')
+        return
+      }
+      if (!formData.finalidade) {
+        setSubmitError('Por favor selecione a finalidade')
+        return
+      }
+
+      setSubmitting(true)
+      try {
+        // helper to extract numeric id if present
+        const parseId = (val?: string) => {
+          if (!val) return undefined
+          const m = String(val).match(/(\d+)/)
+          if (m) return Number(m[1])
+          const n = Number(val)
+          return Number.isFinite(n) ? n : undefined
+        }
+
+        const payload: CreateTaskData = {
+          titulo: formData.finalidade || `${formData.empresa} - Nova tarefa`,
+          descricao: formData.observacoes || '',
+          status: 'pendente',
+          prioridade: formData.prioridade || 'media',
+          dataInicio: new Date().toISOString(),
+          dataFim: formData.prazo || '',
+          unidadeId: parseId(formData.unidade) || 0,
+          setorId: parseId(formData.setorResponsavel) || 0,
+          usuarioId: parseId(formData.usuarioResponsavel) || 0,
+        }
+
+        const res = await createTask(payload)
+        setSubmitSuccess('Tarefa criada com sucesso')
+        // reset form
+        setFormData({
+          unidade: "",
+          empresa: "",
+          setorResponsavel: "",
+          usuarioResponsavel: "",
+          finalidade: "",
+          prazo: "",
+          prioridade: "",
+          observacoes: "",
+        })
+        setSelectedFiles([])
+        setStep(1)
+        console.debug('createTask response', res)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setSubmitError(msg)
+      } finally {
+        setSubmitting(false)
+      }
+    })()
   };
 
   return (
@@ -119,44 +332,13 @@ export const NewTaskForm: React.FC = () => {
       <SiteHeader title='Criar Nova Tarefa' />
       <div className="p-6 max-w-4xl mx-auto mt-4 bg-card rounded-lg shadow">
         {step === 1 && (
-          <div className="space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col items-end">
-              <div>
-                <Label htmlFor="unidade" className="mb-2 text-left">Unidade</Label>
-                <Select value={formData.unidade} onValueChange={(value) => handleSelectChange("unidade", value)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione uma unidade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mockUnidades.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="flex flex-col items-start">
-              <div>
-                <Label htmlFor="empresa" className="mb-2">Empresa</Label>
-                <Select
-                  value={formData.empresa}
-                  onValueChange={(value) => handleSelectChange("empresa", value)}
-                  disabled={!formData.unidade}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={formData.unidade ? "Selecione uma empresa" : "Selecione a unidade primeiro"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.unidade && mockEmpresas[formData.unidade]?.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="space-y-4 grid grid-cols-1 gap-4">
+            <div>
+              <Label htmlFor="empresa" className="mb-2">Empresa</Label>
+              <CompanyComboBox
+                value={formData.empresa}
+                onChange={(val) => handleSelectChange('empresa', val)}
+              />
             </div>
           </div>
         )}
@@ -171,11 +353,13 @@ export const NewTaskForm: React.FC = () => {
                   <SelectValue placeholder="Selecione um setor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockSetores.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
+                  {setores
+                    .filter((item) => item && item.id !== undefined && item.id !== null)
+                    .map((item) => (
+                      <SelectItem key={String(item.id)} value={String(item.id)}>
+                        {item.nome}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -187,11 +371,13 @@ export const NewTaskForm: React.FC = () => {
                   <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockUsuarios.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
+                  {usuariosOptions
+                    .filter((item) => item && item.id !== undefined && item.id !== null && !Number.isNaN(Number(item.id)))
+                    .map((item) => (
+                      <SelectItem key={String(item.id)} value={String(item.id)}>
+                        {item.nome} {item.sobrenome ? item.sobrenome : ''}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -203,11 +389,16 @@ export const NewTaskForm: React.FC = () => {
                   <SelectValue placeholder="Selecione a finalidade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockFinalidades.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
+                  {finalidades && finalidades.length > 0 ? (
+                    finalidades.map((f) => (
+                      <SelectItem key={String(f.id)} value={String(f.tipo)}>
+                        {f.tipo}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    // fallback: show 'Outro' if nothing loaded
+                    <SelectItem value="outro">Outro</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -251,6 +442,9 @@ export const NewTaskForm: React.FC = () => {
                 onChange={handleFileChange}
                 className="w-full"
               />
+              {selectedFiles.length > 0 ? (
+                <div className="text-sm text-muted-foreground mt-2">{selectedFiles.length} arquivo(s) selecionado(s)</div>
+              ) : null}
             </div>
             <div>
               <Label htmlFor="observacoes" className="mb-2">Observações</Label>
@@ -265,17 +459,22 @@ export const NewTaskForm: React.FC = () => {
           </div>
         )}
 
-        <div className="flex justify-between mt-6">
-          {step > 1 && (
-            <Button className="cursor-pointer" variant="outline" onClick={handleBack}>
-              Voltar
-            </Button>
-          )}
-          {step < 3 ? (
-            <Button className="button-primary" onClick={handleNext}>Próximo</Button>
-          ) : (
-            <Button className="button-success" onClick={handleSubmit}>Enviar</Button>
-          )}
+        <div className="flex flex-col gap-2 mt-4">
+          {submitError ? <div className="text-destructive">{submitError}</div> : null}
+          {submitSuccess ? <div className="text-success">{submitSuccess}</div> : null}
+          <div className="flex justify-between mt-2">
+            {step > 1 ? (
+              <Button className="cursor-pointer" variant="outline" onClick={handleBack} disabled={submitting}>
+                Voltar
+              </Button>
+            ) : <div /> }
+
+            {step < 3 ? (
+              <Button className="button-primary" onClick={handleNext} disabled={submitting}>Próximo</Button>
+            ) : (
+              <Button className="button-success" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

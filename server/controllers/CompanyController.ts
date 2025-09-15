@@ -78,3 +78,35 @@ export const getCompaniesByResponsavelAndUnidade = async (req: Request<{ unidade
     res.status(500).json({ message: 'Erro ao buscar empresas' })
   }
 }
+
+export const getCompaniesByUnidade = async (req: Request<{ unidade_id: string }>, res: Response): Promise<void> => {
+  try {
+    const { unidade_id } = req.params
+    if (!unidade_id) {
+      res.status(400).json({ message: 'unidade_id é obrigatório' })
+      return
+    }
+
+    const [rows] = await pool.query<CompanyRow[]>(
+      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel FROM empresas WHERE unidade_responsavel = ? AND status = 'ativo'`,
+      [unidade_id]
+    )
+
+    const companies = (rows || []).map(r => ({
+      id: r.id,
+      nome: r.nome_fantasia,
+      razao_social: r.razao_social,
+      cnpj: r.cnpj,
+      cidade: r.cidade,
+      contabilidade: r.contabilidade,
+      telefone: r.telefone,
+      tecnico_responsavel: r.tecnico_responsavel,
+      unidade_id: r.unidade_responsavel,
+    }))
+
+    res.status(200).json({ companies, total: companies.length })
+  } catch (error) {
+    console.error('Erro ao buscar empresas por unidade:', error)
+    res.status(500).json({ message: 'Erro ao buscar empresas' })
+  }
+}
