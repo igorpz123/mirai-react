@@ -964,18 +964,24 @@ export const updateTask = async (
     }
     const existing = (existingRows as any[])[0];
 
-    // build update parts
+    // build update parts — treat presence of the property as intent to update,
+    // allowing null to explicitly clear fields. This prevents the server from
+    // ignoring null values sent by the client.
     const updates: string[] = [];
     const values: any[] = [];
-    if (typeof status === 'string') {
+
+    // debug incoming payload for easier troubleshooting (can be removed later)
+    try { console.info('updateTask payload:', { status, setorId, usuarioId }) } catch (e) { /* ignore */ }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'status')) {
       updates.push('status = ?');
       values.push(status);
     }
-    if (typeof setorId === 'number') {
+    if (Object.prototype.hasOwnProperty.call(req.body, 'setorId')) {
       updates.push('setor_id = ?');
       values.push(setorId);
     }
-    if (typeof usuarioId === 'number') {
+    if (Object.prototype.hasOwnProperty.call(req.body, 'usuarioId')) {
       updates.push('responsavel_id = ?');
       values.push(usuarioId);
     }

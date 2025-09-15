@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select"
 import {
     Sheet,
     SheetClose,
@@ -132,21 +133,13 @@ export function TaskInfo({
             setLoading(true)
             setErrorMsg(null)
             await updateTask(Number(id), { status: 'concluída' })
-            onOpenChange(false)
-        } catch (err) {
-            console.error(err)
-            setErrorMsg(err instanceof Error ? err.message : String(err))
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    async function handleArchive() {
-        if (!id) return
-        try {
-            setLoading(true)
-            setErrorMsg(null)
-            await updateTask(Number(id), { status: 'archived' })
+            try { toast.success('Tarefa concluída com sucesso') } catch (e) { /* ignore */ }
+            if (onTaskUpdate) {
+                try { await onTaskUpdate(String(id), { status: 'concluída' }) } catch (e) { /* ignore */ }
+            }
+            if (onRefresh) {
+                try { await onRefresh() } catch (e) { /* ignore */ }
+            }
             onOpenChange(false)
         } catch (err) {
             console.error(err)
@@ -161,10 +154,19 @@ export function TaskInfo({
         try {
             setLoading(true)
             setErrorMsg(null)
-            const payload: any = {}
-            if (selectedSetorId) payload.setorId = selectedSetorId
-            if (selectedUserId) payload.usuarioId = selectedUserId
+            const payload: any = {
+                status: 'pendente',
+                setorId: selectedSetorId ?? null,
+                usuarioId: (typeof selectedUserId !== 'undefined' && selectedUserId !== null) ? selectedUserId : null,
+            }
             await updateTask(Number(id), payload)
+            try { toast.success('Tarefa transferida com sucesso') } catch (e) { /* ignore */ }
+            if (onTaskUpdate) {
+                try { await onTaskUpdate(String(id), { status: 'pendente', setorId: selectedSetorId ?? undefined, responsavelId: selectedUserId ?? null } as Partial<Task>) } catch (e) { /* ignore */ }
+            }
+            if (onRefresh) {
+                try { await onRefresh() } catch (e) { /* ignore */ }
+            }
             onOpenChange(false)
         } catch (err) {
             console.error(err)
@@ -283,32 +285,39 @@ export function TaskInfo({
 
                     {showProgressActions && (
                         <div className="space-y-2">
-                            <div className="flex gap-2">
+                            <div className="flex justify-between gap-2">
                                 <Button variant="outline" onClick={handleComplete} disabled={loading}>Concluir</Button>
-                                <Button variant="ghost" onClick={() => setTransfering(v => !v)}>Transferir</Button>
-                                <Button variant="destructive" onClick={handleArchive} disabled={loading}>Arquivar</Button>
+                                <Button variant="secondary" onClick={() => setTransfering(v => !v)}>Transferir</Button>
                             </div>
 
                             {transfering && (
                                 <div className="grid gap-2">
                                     <Label htmlFor="transfer-setor">Setor (opcional)</Label>
-                                    <select id="transfer-setor" className="input" value={selectedSetorId ?? ''} onChange={(e) => setSelectedSetorId(e.target.value ? Number(e.target.value) : null)}>
-                                        <option value="">-- Selecionar setor --</option>
-                                        {setoresLoading && <option value="">Carregando setores...</option>}
-                                        {!setoresLoading && setores && setores.map(s => (
-                                            <option key={s.id} value={s.id}>{s.nome}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={selectedSetorId ? String(selectedSetorId) : ''} onValueChange={(v) => setSelectedSetorId(v === '__none' || v === '' ? null : Number(v))}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="-- Selecionar setor --" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none">-- Selecionar setor --</SelectItem>
+                                            {!setoresLoading && setores && setores.map(s => (
+                                                <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     {setoresError ? <div className="text-destructive text-sm">Erro ao carregar setores: {setoresError}</div> : null}
 
                                     <Label htmlFor="transfer-user">Usuário (opcional)</Label>
-                                    <select id="transfer-user" className="input" value={selectedUserId ?? ''} onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : null)}>
-                                        <option value="">-- Selecionar usuário --</option>
-                                        {filtered.users && filtered.users.map(u => (
-                                            // @ts-ignore users may have id and nome
-                                            <option key={u.id} value={u.id}>{(u.nome || u.nome_completo || `${u.email}`)}</option>
-                                        ))}
-                                    </select>
+                                    <Select value={selectedUserId ? String(selectedUserId) : ''} onValueChange={(v) => setSelectedUserId(v === '__none' || v === '' ? null : Number(v))}>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="-- Selecionar usuário --" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__none">-- Selecionar usuário --</SelectItem>
+                                            {filtered.users && (filtered.users as any[]).map(u => (
+                                                <SelectItem key={(u as any).id} value={String((u as any).id)}>{(u as any).nome || (u as any).nome_completo || `${(u as any).email}`}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
 
                                     <div className="flex justify-end">
                                         <Button onClick={handleTransfer} disabled={loading}>Confirmar Transferência</Button>
