@@ -5,6 +5,7 @@ import { UnitProvider } from '@/contexts/UnitContext'
 import './index.css'
 import App from './App.tsx'
 import { UsersProvider } from '@/contexts/UsersContext'
+import { Toaster } from '@/components/ui/sonner'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -12,6 +13,7 @@ createRoot(document.getElementById('root')!).render(
       <UnitProvider>
         <UsersProvider>
           <App />
+          <Toaster />
         </UsersProvider>
       </UnitProvider>
     </ThemeProvider>

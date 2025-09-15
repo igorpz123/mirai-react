@@ -1004,12 +1004,47 @@ export const updateTask = async (
       return;
     }
 
-    // insert historico
+    // insert historico following PHP semantics for conclude/designate/archive actions
     try {
-      const acao = typeof status === 'string' && status === 'progress' ? 'iniciar' : (typeof status === 'string' ? status : 'atualizar');
+      let acao: string;
 
-      const valor_anterior = JSON.stringify({ status: existing.status, setor: existing.setor_id, usuario: existing.responsavel_id });
-      const novo_valor = JSON.stringify({ status: status ?? existing.status, setor: setorId ?? existing.setor_id, usuario: usuarioId ?? existing.responsavel_id });
+      // detect whether caller provided designated setor/usuario
+      const hasSetorDesignado = Object.prototype.hasOwnProperty.call(req.body, 'setorId');
+      const setorDesignado = hasSetorDesignado ? (setorId as any) : null;
+      const hasUserDesignado = Object.prototype.hasOwnProperty.call(req.body, 'usuarioId') && usuarioId != null;
+
+      // default previous/next values include status/setor/usuario
+      let valorAnteriorObj: any = { status: existing.status, setor: existing.setor_id, usuario: existing.responsavel_id };
+      let novoValorObj: any = { status: status ?? existing.status, setor: setorId ?? existing.setor_id, usuario: usuarioId ?? existing.responsavel_id };
+
+      // Consider a 'conclude' operation either when status explicitly indicates conclusion
+      // or when the client sends a designation (setorId/usuarioId) with status 'pendente'
+      // while the current task was 'progress' — this matches the PHP flow where
+      // conclude+designate results in status 'pendente' but action 'concluir_*'.
+      const explicitConclude = typeof status === 'string' && status.toString().toLowerCase().includes('concl');
+      const implicitConcludeByDesignation = typeof status === 'string' && status.toString().toLowerCase() === 'pendente' && (hasSetorDesignado || hasUserDesignado) && existing.status && existing.status.toString().toLowerCase().includes('progress');
+      const isConclude = explicitConclude || implicitConcludeByDesignation;
+
+      if (isConclude) {
+        if (setorDesignado === null) {
+          acao = 'concluir_arquivar';
+          // novo valor should reflect the designated target (null)
+          valorAnteriorObj = { setor: existing.setor_id, usuario: existing.responsavel_id };
+          novoValorObj = { setor: null, usuario: null };
+        } else {
+          // designated to setor or user
+          acao = hasUserDesignado ? 'concluir_usuario' : 'concluir_setor';
+          valorAnteriorObj = { setor: existing.setor_id, usuario: existing.responsavel_id };
+          novoValorObj = { setor: setorId ?? null, usuario: usuarioId ?? null };
+        }
+      } else if (typeof status === 'string' && status === 'progress') {
+        acao = 'iniciar';
+      } else {
+        acao = typeof status === 'string' ? status : 'atualizar';
+      }
+
+      const valor_anterior = JSON.stringify(valorAnteriorObj);
+      const novo_valor = JSON.stringify(novoValorObj);
 
       const insertHist = `
         INSERT INTO historico_alteracoes

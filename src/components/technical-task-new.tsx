@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useUnit } from '@/contexts/UnitContext'
+import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { getCompaniesByResponsible, type Company } from '@/services/companies'
 import { getSetores, type Setor } from '@/services/setores'
@@ -59,17 +60,14 @@ interface SelectOption {
             const mod = await import('@/services/companies')
             if (mod.getCompaniesByUnit) {
               res = await mod.getCompaniesByUnit(unitId)
-              console.debug('[CompanyComboBox] getCompaniesByUnit result', { unitId, count: res?.companies?.length })
             }
           } catch (e) {
             // ignore and fallback
-            console.debug('[CompanyComboBox] getCompaniesByUnit failed', e)
           }
         }
 
         // If the unit endpoint returned nothing (empty list) we still try the fallback
         if (!res || !(res.companies && res.companies.length > 0)) {
-          console.debug('[CompanyComboBox] falling back to getCompaniesByResponsible', { unitId, userId: user.id })
           res = await getCompaniesByResponsible(Number(user.id), unitId ?? undefined)
         }
         if (!mounted) return
@@ -213,20 +211,17 @@ export const NewTaskForm: React.FC = () => {
       }
       if (!unitId) {
         // no unit selected, cannot fetch users by unit+setor
-        console.debug('[NewTaskForm] skip fetching users: no unitId', { setorId })
         setUsuariosOptions(emptyUsuarios)
         return
       }
       try {
         const sid = Number(setorId)
         const uid = Number(unitId)
-        console.debug('[NewTaskForm] fetching users for unit/sector (via UsersContext)', { uid, sid })
-        await usersCtx.ensureUsersForUnit(uid)
-        const { users: fetched } = usersCtx.getFilteredUsersForTask({ setorId: sid, unidadeId: uid })
+  await usersCtx.ensureUsersForUnit(uid)
+  const { users: fetched } = usersCtx.getFilteredUsersForTask({ setorId: sid, unidadeId: uid })
         // fallback: if context cache didn't return users (empty), try direct API call
         if ((!fetched || fetched.length === 0) && sid && uid) {
           try {
-            console.debug('[NewTaskForm] UsersContext returned empty, falling back to API getUsersByDepartmentAndUnit', { uid, sid })
             const res = await getUsersByDepartmentAndUnit(sid, uid)
             if (!mounted) return
             const list = res?.users || []
@@ -323,22 +318,27 @@ export const NewTaskForm: React.FC = () => {
           unidade_id: Number(unidade_id),
         }
 
-  await createTask(payloadServer as any)
-        setSubmitSuccess('Tarefa criada com sucesso')
-        // reset form
-        setFormData({
-          unidade: "",
-          empresa: "",
-          setorResponsavel: "",
-          usuarioResponsavel: "",
-          finalidade: "",
-          prazo: "",
-          prioridade: "",
-          observacoes: "",
-        })
-        setSelectedFiles([])
-        setStep(1)
-            // createTask response available when needed
+      await createTask(payloadServer as any)
+      setSubmitSuccess('Tarefa criada com sucesso')
+      try {
+        toast.success('Tarefa criada com sucesso')
+      } catch {
+        // ignore toast errors
+      }
+      // reset form
+      setFormData({
+        unidade: "",
+        empresa: "",
+        setorResponsavel: "",
+        usuarioResponsavel: undefined,
+        finalidade: "",
+        prazo: "",
+        prioridade: "",
+        observacoes: "",
+      })
+      setSelectedFiles([])
+      setStep(1)
+      // createTask response available when needed
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         setSubmitError(msg)

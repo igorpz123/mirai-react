@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useState } from "react"
 import type { Task } from "../services/tasks"
-import { updateUserResponsibleForTask } from '@/services/users';
+import { updateUserResponsibleForTask, getUsersByDepartmentAndUnit } from '@/services/users';
 import type { User } from '@/services/users';
 import { useUsers } from '@/contexts/UsersContext';
 import { useUnit } from '@/contexts/UnitContext';
@@ -91,6 +91,7 @@ import {
   TabsContent,
 } from "@/components/ui/tabs"
 import { TaskInfo } from "@/components/technical-task-info";
+import { toast } from 'sonner'
 
 interface TableTask {
   id: number
@@ -242,13 +243,30 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
           const { users: fetched, error } = usersCtx.getFilteredUsersForTask({ setorId: task.setorId ?? undefined, setorName: task.setor ?? undefined, unidadeId: task.unidadeId ?? undefined })
           if (!mounted) return
 
+          // if the context returned empty, attempt a direct API fallback
+          let finalList = fetched || []
+          if ((finalList.length === 0 || !finalList) && (task.setorId || task.unidadeId)) {
+            try {
+              const res = await getUsersByDepartmentAndUnit(Number(task.setorId), Number(preferredUnit ?? 0))
+              if (mounted && res && Array.isArray(res.users) && res.users.length > 0) {
+                finalList = res.users as User[]
+                setLastRawData(res)
+                setDebugEndpoint(`api:unit:${preferredUnit}`)
+              }
+            } catch (apiErr: any) {
+              // surface API error so UI shows reason for empty list (e.g., 401)
+              const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
+              if (mounted) setErrorUsers(msg)
+              console.warn('[ResponsibleSelect] fallback API call failed', apiErr)
+            }
+          }
+
           // avoid setting state if nothing changed to prevent re-renders that
           // might re-trigger effects in other components
-          const normalizedFetched = fetched || []
+          const normalizedFetched = finalList || []
           const same = Array.isArray(normalizedFetched) && Array.isArray(users) && normalizedFetched.length === users.length && normalizedFetched.every((u, i) => u.id === (users as User[])[i]?.id)
           if (!same) setUsers(normalizedFetched)
           setErrorUsers(error ?? null)
-          setLastRawData(null)
           setDebugEndpoint(preferredUnit ? `unit:${preferredUnit}` : 'all')
         } catch (err) {
           const msg = err instanceof Error ? err.message : 'Erro ao carregar usuários'
@@ -274,6 +292,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       try {
         setAssigning(true)
         await updateUserResponsibleForTask(task.id, userId)
+
+        try { toast.success('Responsável atribuído com sucesso') } catch (e) { /* ignore */ }
 
         // Atualiza UI local imediatamente
         setData(prev => prev.map(d => d.id === task.id ? { ...d, responsavel: selectedUser ? selectedUser.nome : d.responsavel } : d))
