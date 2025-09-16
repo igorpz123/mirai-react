@@ -18,52 +18,51 @@ type ComercialDashboardCardsProps = {
 export function ComercialDashboardCards({ stats = null, loading = false, }: ComercialDashboardCardsProps): ReactElement {
     const getCount = (k: string) => stats?.totalByStatus?.[k] ?? 0
     const getTrend = (k: string) => stats?.trendByStatus?.[k]?.percent ?? 0
-
-    const trendPendentes = getTrend('pendente')
-    const trendAndamento = getTrend('andamento')
+    const created = stats?.created ?? { current: 0, percent: 0 }
+    const approved = stats?.approved ?? { current: 0, percent: 0 }
     const trendAnalise = getTrend('analise')
 
     return (
         <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
             <Card className="@container/card">
                 <CardHeader>
-                    <CardDescription>Propostas Pendentes</CardDescription>
+                    <CardDescription>Propostas Criadas</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : getCount('pendente')}
+                        {loading ? '...' : created.current}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">
-                            {getTrend('pendente') >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                            {Math.abs(getTrend('pendente'))}%
+                            {(created.percent ?? 0) >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
+                            {Math.abs(created.percent ?? 0)}%
                         </Badge>
                     </CardAction>
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        {trendPendentes > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : trendPendentes < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
+                        {(created.percent ?? 0) > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : (created.percent ?? 0) < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
                     </div>
-                    <div className="text-muted-foreground">Propostas aguardando retorno</div>
+                    <div className="text-muted-foreground">Criadas no mês atual</div>
                 </CardFooter>
             </Card>
 
             <Card className="@container/card">
                 <CardHeader>
-                    <CardDescription>Propostas em Andamento</CardDescription>
+                    <CardDescription>Propostas Aprovadas</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : getCount('andamento')}
+                        {loading ? '...' : approved.current}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">
-                            {getTrend('andamento') >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                            {Math.abs(getTrend('andamento'))}%
+                            {(approved.percent ?? 0) >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
+                            {Math.abs(approved.percent ?? 0)}%
                         </Badge>
                     </CardAction>
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        {trendAndamento > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : trendAndamento < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
+                        {(approved.percent ?? 0) > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : (approved.percent ?? 0) < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
                     </div>
-                    <div className="text-muted-foreground">Propostas em negociação</div>
+                    <div className="text-muted-foreground">Aprovadas no mês atual</div>
                 </CardFooter>
             </Card>
 

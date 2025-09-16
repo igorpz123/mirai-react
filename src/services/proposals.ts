@@ -35,10 +35,14 @@ export async function getProposalsByUser(userId: number | null) {
   }
 }
 
-export async function getProposalStatsByUser(userId: number | null) {
-  if (!userId) return null
+export async function getProposalStatsByUser(userId: number | null, unidadeId?: number | null) {
+  if (!userId && !unidadeId) return null
   try {
-    const res = await api.get(`/propostas/stats?userId=${userId}`)
+    const params: string[] = []
+    if (userId) params.push(`userId=${userId}`)
+    if (unidadeId) params.push(`unidadeId=${unidadeId}`)
+    const qs = params.length ? `?${params.join('&')}` : ''
+    const res = await api.get(`/propostas/stats${qs}`)
     return res.data
   } catch (err) {
     return null

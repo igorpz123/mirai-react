@@ -29,7 +29,9 @@ export default function ComercialDashboard(): ReactElement {
         list = byUser?.proposals ?? []
       }
       setProposals(list)
-      const s = await getProposalStatsByUser(userId)
+      const s = unitId
+        ? await getProposalStatsByUser(null, unitId)
+        : await getProposalStatsByUser(userId)
       setStats(s)
     } finally {
       setLoading(false)
