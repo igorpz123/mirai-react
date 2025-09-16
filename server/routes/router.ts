@@ -4,7 +4,6 @@ import usuarioRoutes from './usuarios'
 import tarefaRoutes from './tarefas'
 import authRoutes from './auth'
 import empresaRoutes from './empresas'
-// Make sure the file 'setores.ts' exists in the same directory.
 import setorRoutes from './setores'
 import tipoTarefaRoutes from './tipo_tarefa'
 import propostaRoutes from './propostas'

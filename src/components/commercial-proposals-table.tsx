@@ -22,12 +22,53 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
 
+  // helpers: normalize and label statuses
+  const canonicalizeStatus = (s: string): string => {
+    const t = (s || '').toLowerCase().trim()
+    switch (t) {
+      case 'andamento':
+      case 'em andamento':
+      case 'progress':
+        return 'progress'
+      case 'analise':
+      case 'análise':
+      case 'em análise':
+        return 'analise'
+      case 'rejeitada':
+      case 'recusada':
+        return 'rejeitada'
+      case 'aprovada':
+        return 'aprovada'
+      case 'pendente':
+        return 'pendente'
+      default:
+        return t
+    }
+  }
+
+  const statusLabel = (key: string): string => {
+    switch (key) {
+      case 'progress':
+        return 'Em Andamento'
+      case 'analise':
+        return 'Em Análise'
+      case 'pendente':
+        return 'Pendente'
+      case 'rejeitada':
+        return 'Rejeitada'
+      case 'aprovada':
+        return 'Aprovada'
+      default:
+        return key
+    }
+  }
+
   // derive filters
   const uniqueStatuses = Array.from(
     new Set(
       (proposals || [])
-        .map((p) => (p?.status ?? '').toString().trim())
-        .filter(Boolean)
+        .map((p) => canonicalizeStatus((p?.status ?? '').toString()))
+        .filter((v) => !!v)
     )
   )
 
@@ -43,8 +84,8 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
   const filtered = (proposals as Array<Proposal & { titulo?: string; responsavel?: string }>)
     .filter((p) => {
       if (selectedStatus !== 'all') {
-        const ps = (p.status ?? '').toString().toLowerCase()
-        if (ps !== selectedStatus.toLowerCase()) return false
+        const ps = canonicalizeStatus((p.status ?? '').toString())
+        if (ps !== selectedStatus) return false
       }
       if (selectedResp !== 'all') {
         const pr = ((p as any).responsavel ?? '').toString().toLowerCase()
@@ -101,7 +142,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
               <SelectContent>
                 <SelectItem value="all">Todos os status</SelectItem>
                 {uniqueStatuses.map((s) => (
-                  <SelectItem key={s} value={s.toLowerCase()}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

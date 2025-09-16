@@ -49,7 +49,7 @@ export default function ComercialDashboard(): ReactElement {
               {/* Reuse existing chart component later; placeholder for now */}
               <div className="aspect-video w-full rounded-lg border border-dashed" />
             </div>
-            <CommercialProposalsTable proposals={proposals} onRefresh={fetchAll} />
+            <CommercialProposalsTable proposals={proposals} />
           </div>
         </div>
       </div>

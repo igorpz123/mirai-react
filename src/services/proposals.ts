@@ -3,7 +3,7 @@ import api from './api'
 export type Proposal = {
   id: number
   cliente: string
-  valor: number
+  valor?: number
   status: 'pendente' | 'progress' | 'andamento' | 'analise' | 'análise' | 'rejeitada' | 'aprovada' | string
   comissao?: number
   criadoEm?: string
