@@ -27,18 +27,27 @@ export const UsersProvider: React.FC<React.PropsWithChildren<{}>> = ({ children 
   const [cache, setCache] = React.useState<Record<string, CacheEntry>>({})
 
   const ensureUsersForUnit = React.useCallback(async (uId?: number | null) => {
-    const key = keyForUnit(uId ?? unitId ?? null)
-    // if already loading or present, no-op
-    const existing = cache[key]
-    if (existing && (existing.loading || existing.users)) return
+    const preferred = uId ?? unitId ?? null
+    const key = keyForUnit(preferred)
 
-    setCache(prev => ({ ...prev, [key]: { users: null, loading: true } }))
+    // set loading flag only if not already loading / present using functional update
+    let shouldFetch = false
+    setCache(prev => {
+      const existing = prev[key]
+      if (existing && (existing.loading || existing.users)) {
+        // nothing to do
+        return prev
+      }
+      shouldFetch = true
+      return { ...prev, [key]: { users: null, loading: true } }
+    })
+
+    if (!shouldFetch) return
+
     try {
       let res
-      if (uId && Number(uId) > 0) {
-        res = await getUsersByUnitId(Number(uId))
-      } else if (unitId && Number(unitId) > 0) {
-        res = await getUsersByUnitId(Number(unitId))
+      if (preferred && Number(preferred) > 0) {
+        res = await getUsersByUnitId(Number(preferred))
       } else {
         res = await getAllUsers()
       }
