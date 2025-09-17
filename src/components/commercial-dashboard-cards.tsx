@@ -16,11 +16,11 @@ type ComercialDashboardCardsProps = {
 }
 
 export function ComercialDashboardCards({ stats = null, loading = false, }: ComercialDashboardCardsProps): ReactElement {
-    const getCount = (k: string) => stats?.totalByStatus?.[k] ?? 0
-    const getTrend = (k: string) => stats?.trendByStatus?.[k]?.percent ?? 0
     const created = stats?.created ?? { current: 0, percent: 0 }
     const approved = stats?.approved ?? { current: 0, percent: 0 }
-    const trendAnalise = getTrend('analise')
+    const approvedValue = stats?.approvedValue ?? { current: 0, percent: 0 }
+    const commission = stats?.commission ?? { current: 0, percent: 0 }
+    const fmtBRL = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 
     return (
         <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -68,22 +68,22 @@ export function ComercialDashboardCards({ stats = null, loading = false, }: Come
 
             <Card className="@container/card">
                 <CardHeader>
-                    <CardDescription>Propostas em Análise</CardDescription>
+                    <CardDescription>Valor Total Aprovado</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : getCount('analise')}
+                        {loading ? '...' : fmtBRL(approvedValue.current)}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">
-                            {getTrend('analise') >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                            {Math.abs(getTrend('analise'))}%
+                            {(approvedValue.percent ?? 0) >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
+                            {Math.abs(approvedValue.percent ?? 0)}%
                         </Badge>
                     </CardAction>
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        {trendAnalise > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : trendAnalise < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
+                        {(approvedValue.percent ?? 0) > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : (approvedValue.percent ?? 0) < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
                     </div>
-                    <div className="text-muted-foreground">Propostas sob análise do cliente</div>
+                    <div className="text-muted-foreground">Valor total aprovado neste mês</div>
                 </CardFooter>
             </Card>
 
@@ -91,18 +91,18 @@ export function ComercialDashboardCards({ stats = null, loading = false, }: Come
                 <CardHeader>
                     <CardDescription>Comissão</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : getCount('analise')}
+                        {loading ? '...' : fmtBRL(commission.current)}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">
-                            {getTrend('analise') >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
-                            {Math.abs(getTrend('analise'))}%
+                            {(commission.percent ?? 0) >= 0 ? <IconTrendingUp /> : <IconTrendingDown />}
+                            {Math.abs(commission.percent ?? 0)}%
                         </Badge>
                     </CardAction>
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                        {trendAnalise > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : trendAnalise < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
+                        {(commission.percent ?? 0) > 0 ? (<>Aumentando <IconTrendingUp className="size-4" /></>) : (commission.percent ?? 0) < 0 ? (<>Diminuindo <IconTrendingDown className="size-4" /></>) : (<>Estável</>)}
                     </div>
                     <div className="text-muted-foreground">Comissão do mês corrente</div>
                 </CardFooter>

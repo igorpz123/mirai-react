@@ -1,5 +1,5 @@
-import type { ReactElement } from 'react'
-import { useState } from 'react'
+import React, { useState, type ReactElement } from 'react'
+import { Link } from 'react-router-dom'
 import type { Proposal } from '@/services/proposals'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,13 +14,32 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { IconDotsVertical, IconRotateClockwise, IconExternalLink, IconLink, IconTrash } from '@tabler/icons-react'
+import { toast } from 'sonner'
+import { recalculateProposalTotal, deleteProposal } from '@/services/proposals'
+import { useAuth } from '@/hooks/use-auth'
 
 export function CommercialProposalsTable({ proposals = [] }: { proposals?: Proposal[] }): ReactElement {
+  const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [selectedResp, setSelectedResp] = useState<string>('all')
   const [pageIndex, setPageIndex] = useState(0)
   const [pageSize, setPageSize] = useState(10)
+  const [rows, setRows] = useState<Proposal[]>(proposals)
+
+  // keep local rows in sync when proposals prop changes
+  React.useEffect(() => { setRows(proposals) }, [proposals])
+
+  const fmtBRL = (n: number | null | undefined) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n || 0))
 
   // helpers: normalize and label statuses
   const canonicalizeStatus = (s: string): string => {
@@ -81,7 +100,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
   )
 
   // filtered + searched
-  const filtered = (proposals as Array<Proposal & { titulo?: string; responsavel?: string }>)
+  const filtered = (rows as Array<Proposal & { titulo?: string; responsavel?: string }>)
     .filter((p) => {
       if (selectedStatus !== 'all') {
         const ps = canonicalizeStatus((p.status ?? '').toString())
@@ -93,8 +112,8 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
       }
       const q = search.trim().toLowerCase()
       if (q.length === 0) return true
-  const titulo = (p.titulo ?? '').toString().toLowerCase()
-  const cliente = (p.cliente ?? '').toString().toLowerCase()
+      const titulo = (p.titulo ?? '').toString().toLowerCase()
+      const cliente = (p.cliente ?? '').toString().toLowerCase()
       // Prefer match on título; fallback to cliente if título não existir
       return (titulo.length > 0 && titulo.includes(q)) || cliente.includes(q)
     })
@@ -168,6 +187,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
               <TableHead>Responsável</TableHead>
               <TableHead>Data de Elaboração</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Valor Total</TableHead>
               <TableHead>Ação</TableHead>
             </TableRow>
           </TableHeader>
@@ -187,7 +207,77 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                   <TableCell>
                     <ProposalStatusBadge status={p.status} />
                   </TableCell>
-                  <TableCell></TableCell>
+                  <TableCell>
+                    {fmtBRL(p.valor_total ?? p.valor ?? 0)}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="data-[state=open]:bg-muted text-muted-foreground">
+                          <IconDotsVertical />
+                          <span className="sr-only">Abrir menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem asChild className="cursor-pointer">
+                          <Link to={`/comercial/proposta/${p.id}`}>
+                            <IconExternalLink className="mr-2" /> Visualizar
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={async () => {
+                            try {
+                              const res = await recalculateProposalTotal(p.id)
+                              setRows(prev => prev.map(r => r.id === p.id ? { ...r, valor_total: res.valor_total } : r))
+                              toast.success('Valor total recalculado')
+                            } catch (err) {
+                              toast.error('Falha ao recalcular valor total')
+                            }
+                          }}
+                        >
+                          <IconRotateClockwise className="mr-2" /> Recalcular valor
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(window.location.origin + `/comercial/proposta/${p.id}`)
+                              toast.success('Link copiado')
+                            } catch (e) {
+                              toast.error('Não foi possível copiar')
+                            }
+                          }}
+                        >
+                          <IconLink className="mr-2" /> Copiar link
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {(() => {
+                          const isAdmin = [1, 2, 3].includes(Number(user?.cargoId))
+                          const isResponsible = (p as any).responsavel_id ? Number((p as any).responsavel_id) === Number(user?.id) : (p.responsavel ?? '').toString().toLowerCase() === `${user?.nome ?? ''}`.toLowerCase()
+                          if (!(isAdmin || isResponsible)) return null
+                          return (
+                            <DropdownMenuItem
+                              className="cursor-pointer text-destructive focus:text-destructive"
+                              onClick={async () => {
+                                try {
+                                  const confirmed = window.confirm('Tem certeza que deseja deletar esta proposta?')
+                                  if (!confirmed) return
+                                  await deleteProposal(p.id)
+                                  setRows(prev => prev.filter(r => r.id !== p.id))
+                                  toast.success('Proposta deletada')
+                                } catch (err) {
+                                  toast.error('Falha ao deletar proposta')
+                                }
+                              }}
+                            >
+                              <IconTrash className='mr-2 text-destructive' /> Deletar
+                            </DropdownMenuItem>
+                          )
+                        })()}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))
             )}
