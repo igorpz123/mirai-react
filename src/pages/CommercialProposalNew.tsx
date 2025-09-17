@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Progress } from '@/components/ui/progress'
 import { toast } from 'sonner'
 import { useAuth } from '@/hooks/use-auth'
 import { useUnit } from '@/contexts/UnitContext'
@@ -18,6 +19,20 @@ export default function CommercialProposalNew() {
 
   // step control
   const [step, setStep] = React.useState(1)
+
+  // custom step labels for the progress component
+  const stepLabels = [
+    'Consulta',
+    'Empresa',
+    'Programas',
+    'Cursos',
+    'Químicos',
+    'Produtos',
+    'Proposta',
+  ]
+
+  // progress value (0-100) where step 1 = 0% and last step = 100%
+  const progressValue = Math.round(((step - 1) / (stepLabels.length - 1)) * 100)
 
   // Step 1: CNPJ
   const [cnpj, setCnpj] = React.useState('')
@@ -72,10 +87,41 @@ export default function CommercialProposalNew() {
       </div>
 
       {/* Step navigation */}
-      <div className="flex gap-2 flex-wrap">
-        {[1,2,3,4,5,6,7].map(s => (
-          <Button key={s} variant={step === s ? 'default' : 'outline'} onClick={() => setStep(s)}>{`Parte ${String(s).padStart(2,'0')}`}</Button>
-        ))}
+      <div className="space-y-3">
+        <div className="relative mx-20">
+          <Progress value={progressValue} />
+          {/* interactive indicators positioned over the progress bar */}
+          <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none">
+            <div className="relative h-6">
+              {stepLabels.map((label, idx) => {
+                const s = idx + 1
+                const pos = Math.round((idx / (stepLabels.length - 1)) * 100)
+                return (
+                  <button
+                    key={`indicator-${s}`}
+                    type="button"
+                    onClick={() => setStep(s)}
+                    title={label}
+                    aria-current={step === s}
+                    className="pointer-events-auto absolute top-0 transform -translate-x-1/2"
+                    style={{ left: `${pos}%` }}
+                  >
+                    <span className={`block w-4 h-4 rounded-full border-2 ${step === s ? 'bg-primary border-primary' : 'bg-white border-slate-300'}`} />
+                    <span className="sr-only">{label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          {stepLabels.map((label, idx) => {
+            const s = idx + 1
+            return (
+              <Button key={`step-${s}`} variant={step === s ? 'default' : 'outline'} onClick={() => setStep(s)}>{label}</Button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Parte 01 - Consulta da Empresa */}
