@@ -18,7 +18,7 @@ import { updateTask } from "@/services/tasks"
 import { getSetores } from "@/services/setores"
 import { getUsersByDepartmentAndUnit } from "@/services/users"
 import { useUnit } from "@/contexts/UnitContext"
-import { toast } from 'sonner'
+import { toastSuccess } from '@/lib/customToast'
 import type { Task } from '@/services/tasks'
 
 export function TaskInfo({
@@ -110,7 +110,7 @@ export function TaskInfo({
             setErrorMsg(null)
             await updateTask(Number(id), { status: 'progress' })
             // show toast and update parent/list
-            try { toast.success('Tarefa iniciada com sucesso') } catch (e) { /* ignore */ }
+            try { toastSuccess('Tarefa iniciada com sucesso') } catch (e) { /* ignore */ }
             if (onTaskUpdate) {
                 try { await onTaskUpdate(String(id), { status: 'progress' }) } catch (e) { /* ignore */ }
             }
@@ -133,7 +133,7 @@ export function TaskInfo({
             setLoading(true)
             setErrorMsg(null)
             await updateTask(Number(id), { status: 'concluída' })
-            try { toast.success('Tarefa concluída com sucesso') } catch (e) { /* ignore */ }
+            try { toastSuccess('Tarefa concluída com sucesso') } catch (e) { /* ignore */ }
             if (onTaskUpdate) {
                 try { await onTaskUpdate(String(id), { status: 'concluída' }) } catch (e) { /* ignore */ }
             }
@@ -160,7 +160,7 @@ export function TaskInfo({
                 usuarioId: (typeof selectedUserId !== 'undefined' && selectedUserId !== null) ? selectedUserId : null,
             }
             await updateTask(Number(id), payload)
-            try { toast.success('Tarefa transferida com sucesso') } catch (e) { /* ignore */ }
+            try { toastSuccess('Tarefa transferida com sucesso') } catch (e) { /* ignore */ }
             if (onTaskUpdate) {
                 try { await onTaskUpdate(String(id), { status: 'pendente', setorId: selectedSetorId ?? undefined, responsavelId: selectedUserId ?? null } as Partial<Task>) } catch (e) { /* ignore */ }
             }

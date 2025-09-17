@@ -8,7 +8,7 @@ import { SiteHeader } from '@/components/layout/site-header'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { toast } from 'sonner'
+import { toastError, toastSuccess } from '@/lib/customToast'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function CommercialProposalDetail() {
@@ -178,9 +178,9 @@ export default function CommercialProposalDetail() {
                                         setProposal((prev) => prev ? { ...prev, status: res.status, dataAlteracao: res.dataAlteracao ?? prev.dataAlteracao } : prev)
                                         // refresh history
                                         try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
-                                        toast.success('Status atualizado')
+                                        toastSuccess('Status atualizado')
                                     } catch (e: any) {
-                                        toast.error(e?.response?.data?.message || 'Falha ao atualizar status')
+                                        toastError(e?.response?.data?.message || 'Falha ao atualizar status')
                                     }
                                 }}
                             >
@@ -493,19 +493,19 @@ export default function CommercialProposalDetail() {
                             onClick={async () => {
                                 try {
                                     if (!id) return
-                                    if (!formCourse.curso_id) { toast.error('Selecione um curso'); return }
-                                    if (!formCourse.quantidade || formCourse.quantidade <= 0) { toast.error('Quantidade inválida'); return }
-                                    if (!formCourse.valor_unitario || formCourse.valor_unitario <= 0) { toast.error('Valor unitário inválido'); return }
+                                    if (!formCourse.curso_id) { toastError('Selecione um curso'); return }
+                                    if (!formCourse.quantidade || formCourse.quantidade <= 0) { toastError('Quantidade inválida'); return }
+                                    if (!formCourse.valor_unitario || formCourse.valor_unitario <= 0) { toastError('Valor unitário inválido'); return }
                                     const payload = { ...formCourse }
                                     const res = await addCourseToProposal(Number(id), payload)
                                     if (res.item) {
                                         setCursos(prev => [res.item as any, ...(prev ?? [])])
                                         setProposal(prev => prev ? { ...prev, valor_total: Number((prev.valor_total ?? 0)) + Number((res.item as any).valor_total ?? 0) } : prev)
-                                        toast.success('Curso adicionado')
+                                        toastSuccess('Curso adicionado')
                                         setOpenCourse(false)
                                     }
                                 } catch {
-                                    toast.error('Falha ao adicionar curso')
+                                    toastError('Falha ao adicionar curso')
                                 }
                             }}
                         >Salvar</Button>
@@ -565,7 +565,7 @@ export default function CommercialProposalDetail() {
                                         }
                                         setFormProgram((s) => ({ ...s, precoPrev: total }))
                                     } catch {
-                                        toast.error('Falha ao calcular preço')
+                                        toastError('Falha ao calcular preço')
                                     }
                                 }}
                             >Calcular preço</Button>
@@ -581,11 +581,11 @@ export default function CommercialProposalDetail() {
                                     if (res.item) {
                                         setProgramas(prev => [res.item as any, ...(prev ?? [])])
                                         setProposal(prev => prev ? { ...prev, valor_total: Number((prev.valor_total ?? 0)) + Number((res.item as any).valor_total ?? 0) } : prev)
-                                        toast.success('Programa adicionado')
+                                        toastSuccess('Programa adicionado')
                                         setOpenProgram(false)
                                     }
                                 } catch {
-                                    toast.error('Falha ao adicionar programa')
+                                    toastError('Falha ao adicionar programa')
                                 }
                             }}
                         >Salvar</Button>
@@ -646,18 +646,18 @@ export default function CommercialProposalDetail() {
                             onClick={async () => {
                                 try {
                                     if (!id) return
-                                    if (!formChemical.valor_unitario || formChemical.valor_unitario <= 0) { toast.error('Selecione um químico para preencher o preço'); return }
-                                    if (!formChemical.pontos || formChemical.pontos <= 0) { toast.error('Informe os pontos'); return }
+                                    if (!formChemical.valor_unitario || formChemical.valor_unitario <= 0) { toastError('Selecione um químico para preencher o preço'); return }
+                                    if (!formChemical.pontos || formChemical.pontos <= 0) { toastError('Informe os pontos'); return }
                                     const { grupo, pontos, valor_unitario, desconto } = formChemical as any
                                     const res = await addChemicalToProposal(Number(id), { grupo, pontos, valor_unitario, desconto })
                                     if (res.item) {
                                         setQuimicos(prev => [res.item as any, ...(prev ?? [])])
                                         setProposal(prev => prev ? { ...prev, valor_total: Number((prev.valor_total ?? 0)) + Number((res.item as any).valor_total ?? 0) } : prev)
-                                        toast.success('Químico adicionado')
+                                        toastSuccess('Químico adicionado')
                                         setOpenChemical(false)
                                     }
                                 } catch {
-                                    toast.error('Falha ao adicionar químico')
+                                    toastError('Falha ao adicionar químico')
                                 }
                             }}
                         >Salvar</Button>
@@ -717,7 +717,7 @@ export default function CommercialProposalDetail() {
                                         }
                                         setFormProduct((s) => ({ ...s, precoPrev: total }))
                                     } catch {
-                                        toast.error('Falha ao calcular preço')
+                                        toastError('Falha ao calcular preço')
                                     }
                                 }}
                             >Calcular preço</Button>
@@ -733,11 +733,11 @@ export default function CommercialProposalDetail() {
                                     if (res.item) {
                                         setProdutos(prev => [res.item as any, ...(prev ?? [])])
                                         setProposal(prev => prev ? { ...prev, valor_total: Number((prev.valor_total ?? 0)) + Number((res.item as any).valor_total ?? 0) } : prev)
-                                        toast.success('Produto adicionado')
+                                        toastSuccess('Produto adicionado')
                                         setOpenProduct(false)
                                     }
                                 } catch {
-                                    toast.error('Falha ao adicionar produto')
+                                    toastError('Falha ao adicionar produto')
                                 }
                             }}
                         >Salvar</Button>

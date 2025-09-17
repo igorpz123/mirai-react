@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { IconDotsVertical, IconRotateClockwise, IconExternalLink, IconLink, IconTrash } from '@tabler/icons-react'
-import { toast } from 'sonner'
+import { toastError, toastSuccess } from '@/lib/customToast'
 import { recalculateProposalTotal, deleteProposal, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus } from '@/services/proposals'
 import { useAuth } from '@/hooks/use-auth'
 import { DropdownMenuLabel } from '@radix-ui/react-dropdown-menu'
@@ -233,9 +233,9 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                             try {
                               const res = await recalculateProposalTotal(p.id)
                               setRows(prev => prev.map(r => r.id === p.id ? { ...r, valor_total: res.valor_total } : r))
-                              toast.success('Valor total recalculado')
+                              toastSuccess('Valor total recalculado')
                             } catch (err) {
-                              toast.error('Falha ao recalcular valor total')
+                              toastError('Falha ao recalcular valor total')
                             }
                           }}
                         >
@@ -246,9 +246,9 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                           onClick={async () => {
                             try {
                               await navigator.clipboard.writeText(window.location.origin + `/comercial/proposta/${p.id}`)
-                              toast.success('Link copiado')
+                              toastSuccess('Link copiado')
                             } catch (e) {
-                              toast.error('Não foi possível copiar')
+                              toastError('Não foi possível copiar')
                             }
                           }}
                         >
@@ -276,9 +276,9 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                                   }
                                   const res = await updateProposalStatus(p.id, s.key as ProposalStatus)
                                   setRows(prev => prev.map(r => r.id === p.id ? { ...r, status: res.status, dataAlteracao: res.dataAlteracao ?? (r as any).dataAlteracao } : r))
-                                  toast.success(`Status: ${s.label}`)
+                                  toastSuccess(`Status: ${s.label}`)
                                 } catch (e: any) {
-                                  toast.error(e?.response?.data?.message || 'Falha ao atualizar status')
+                                  toastError(e?.response?.data?.message || 'Falha ao atualizar status')
                                 }
                               }}
                             >
@@ -300,9 +300,9 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                                   if (!confirmed) return
                                   await deleteProposal(p.id)
                                   setRows(prev => prev.filter(r => r.id !== p.id))
-                                  toast.success('Proposta deletada')
+                                  toastSuccess('Proposta deletada')
                                 } catch (err) {
-                                  toast.error('Falha ao deletar proposta')
+                                  toastError('Falha ao deletar proposta')
                                 }
                               }}
                             >

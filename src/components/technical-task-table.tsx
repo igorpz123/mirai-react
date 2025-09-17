@@ -91,7 +91,7 @@ import {
   TabsContent,
 } from "@/components/ui/tabs"
 import { TaskInfo } from "@/components/technical-task-info";
-import { toast } from 'sonner'
+import { toastSuccess } from '@/lib/customToast'
 
 interface TableTask {
   id: number
@@ -293,7 +293,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
         setAssigning(true)
         await updateUserResponsibleForTask(task.id, userId)
 
-        try { toast.success('Responsável atribuído com sucesso') } catch (e) { /* ignore */ }
+  try { toastSuccess('Responsável atribuído com sucesso') } catch (e) { /* ignore */ }
 
         // Atualiza UI local imediatamente
         setData(prev => prev.map(d => d.id === task.id ? { ...d, responsavel: selectedUser ? selectedUser.nome : d.responsavel } : d))

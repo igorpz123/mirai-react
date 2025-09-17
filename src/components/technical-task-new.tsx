@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useUnit } from '@/contexts/UnitContext'
-import { toast } from 'sonner'
+import { toastSuccess } from '@/lib/customToast'
 import { useAuth } from '@/hooks/use-auth'
 import { getCompaniesByResponsible, type Company } from '@/services/companies'
 import { getSetores, type Setor } from '@/services/setores'
@@ -321,7 +321,7 @@ export const NewTaskForm: React.FC = () => {
       await createTask(payloadServer as any)
       setSubmitSuccess('Tarefa criada com sucesso')
       try {
-        toast.success('Tarefa criada com sucesso')
+        toastSuccess('Tarefa criada com sucesso')
       } catch {
         // ignore toast errors
       }

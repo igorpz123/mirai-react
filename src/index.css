@@ -169,3 +169,7 @@ h1 {
 .button-progress {
   @apply text-secondary bg-secondary/15 hover:bg-secondary/25 cursor-pointer;
 }
+
+.button-remove {
+  @apply text-destructive bg-destructive/20 hover:bg-destructive/20 cursor-pointer;
+}
