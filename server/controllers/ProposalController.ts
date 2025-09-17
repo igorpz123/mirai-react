@@ -1,6 +1,8 @@
 import { Request, Response } from 'express'
-import { RowDataPacket } from 'mysql2'
+import { RowDataPacket, OkPacket } from 'mysql2'
 import pool from '../config/db'
+import jwt from 'jsonwebtoken'
+import authConfig from '../config/auth'
 
 type ProposalRow = RowDataPacket & {
     id: number
@@ -43,11 +45,13 @@ export const getProposalsByUser = async (
                 e.email AS empresa_email,
                 (SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id) AS curso_total,
                 (SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id) AS quimico_total,
-                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
+                                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
+                                (SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id) AS programa_total,
                 (
                   COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
                 + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
                 ) AS total_itens
             FROM 
                 propostas p
@@ -70,7 +74,8 @@ export const getProposalsByUser = async (
             const cursoTotal = Number(r.curso_total ?? 0)
             const quimicoTotal = Number(r.quimico_total ?? 0)
             const produtoTotal = Number(r.produto_total ?? 0)
-            const totalItens = Number(r.total_itens ?? (cursoTotal + quimicoTotal + produtoTotal))
+            const programaTotal = Number(r.programa_total ?? 0)
+            const totalItens = Number(r.total_itens ?? (cursoTotal + quimicoTotal + produtoTotal + programaTotal))
             const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
             return {
                 id: r.id,
@@ -134,11 +139,13 @@ export const getProposalsByUnidade = async (
                 e.email AS empresa_email,
                 (SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id) AS curso_total,
                 (SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id) AS quimico_total,
-                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
+                                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
+                                (SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id) AS programa_total,
                 (
                   COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
                 + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
                 ) AS total_itens
             FROM 
                 propostas p
@@ -160,7 +167,8 @@ export const getProposalsByUnidade = async (
             const cursoTotal = Number(r.curso_total ?? 0)
             const quimicoTotal = Number(r.quimico_total ?? 0)
             const produtoTotal = Number(r.produto_total ?? 0)
-            const totalItens = Number(r.total_itens ?? (cursoTotal + quimicoTotal + produtoTotal))
+            const programaTotal = Number(r.programa_total ?? 0)
+            const totalItens = Number(r.total_itens ?? (cursoTotal + quimicoTotal + produtoTotal + programaTotal))
             const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
             return {
                 id: r.id,
@@ -328,7 +336,7 @@ export const getProposalStats = async (
         const approvedDiff = approvedCurrent - approvedPrevious
         const approvedPercent = approvedPrevious === 0 ? (approvedCurrent > 0 ? 100 : 0) : Math.round((approvedDiff / approvedPrevious) * 100)
 
-        // Approved total value (sum of cursos, quimicos, produtos) in current vs previous month
+                // Approved total value (sum of cursos, quimicos, produtos, programas) in current vs previous month
         const approvedValueSql = `
             SELECT period, SUM(total_valor) AS total
             FROM (
@@ -336,7 +344,8 @@ export const getProposalStats = async (
                     (
                         COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
                       + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                      + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
                     ) AS total_valor
                 FROM propostas p
                 WHERE p.data_alteracao IS NOT NULL
@@ -348,7 +357,8 @@ export const getProposalStats = async (
                     (
                         COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
                       + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                      + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
                     ) AS total_valor
                 FROM propostas p
                 WHERE p.data_alteracao IS NOT NULL
@@ -386,10 +396,11 @@ export const getProposalStats = async (
                             (
                                 CASE WHEN p.responsavel_id = ? THEN 0.05 ELSE 0 END
                               + CASE WHEN p.indicacao_id = ? THEN 0.02 ELSE 0 END
-                            ) * (
+                                                        ) * (
                                 COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
                               + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                              + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
                             )
                         ) AS val
                     FROM propostas p
@@ -403,10 +414,11 @@ export const getProposalStats = async (
                             (
                                 CASE WHEN p.responsavel_id = ? THEN 0.05 ELSE 0 END
                               + CASE WHEN p.indicacao_id = ? THEN 0.02 ELSE 0 END
-                            ) * (
+                                                        ) * (
                                 COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
                               + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                              + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
                             )
                         ) AS val
                     FROM propostas p
@@ -458,6 +470,276 @@ export default { getProposalsByUser, getProposalsByUnidade, getProposalStats }
 // Named export default updated
 export { }
 
+// Create a new proposal
+export const createProposal = async (
+    req: Request<{}, {}, {
+        titulo?: string
+        empresa_id: number
+        unidade_id: number
+        responsavel_id?: number
+        indicacao_id?: number | null
+        data?: string | null
+        status?: string | null
+        observacoes?: string | null
+    }>,
+    res: Response
+): Promise<void> => {
+    try {
+        // Extract actor
+        let actorId: number | null = null
+        const authHeader = req.headers && (req.headers.authorization as string | undefined)
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            try {
+                const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                actorId = payload?.userId ?? payload?.id ?? null
+            } catch {}
+        }
+        if (!actorId) {
+            res.status(401).json({ message: 'Não autenticado' })
+            return
+        }
+
+        const { titulo, empresa_id, unidade_id, responsavel_id, indicacao_id, data, status, observacoes } = req.body || ({} as any)
+        if (!empresa_id || !unidade_id) {
+            res.status(400).json({ message: 'empresa_id e unidade_id são obrigatórios' })
+            return
+        }
+        const normalizedStatus = normalizeIncomingStatus(status) || 'pendente'
+        const respId = Number(responsavel_id || actorId)
+        const dataElab = data ? new Date(data) : new Date()
+
+        const conn = await pool.getConnection()
+        let newId: number | null = null
+        try {
+            await conn.beginTransaction()
+            const [ins] = await conn.query<OkPacket>(
+                `INSERT INTO propostas (titulo, empresa_id, unidade_id, responsavel_id, indicacao_id, status, data)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                [titulo || null, empresa_id, unidade_id, respId, (indicacao_id ?? null), normalizedStatus, dataElab]
+            )
+            newId = (ins as any).insertId
+
+            // Insert history 'criar'
+            try {
+                const novo_valor = JSON.stringify({ status: normalizedStatus, titulo: titulo || null })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'criar', NULL, ?, ?, NOW())`,
+                    [newId, actorId, novo_valor, observacoes || null]
+                )
+            } catch (histErr) {
+                console.warn('Falha ao registrar histórico (criar):', histErr)
+            }
+
+            await conn.commit()
+        } catch (err) {
+            await conn.rollback()
+            throw err
+        } finally {
+            conn.release()
+        }
+
+        if (!newId) {
+            res.status(500).json({ message: 'Falha ao criar proposta' })
+            return
+        }
+
+        // Return created proposal using getProposalById shape
+        req.params = { id: String(newId) } as any
+        await getProposalById(req as any, res)
+    } catch (error) {
+        console.error('Erro ao criar proposta:', error)
+        res.status(500).json({ message: 'Erro ao criar proposta' })
+    }
+}
+
+// Normalize and validate status updates
+function normalizeIncomingStatus(input?: string | null): string | null {
+    if (!input) return null
+    const s = input
+        .toString()
+        .toLowerCase()
+        .normalize('NFD')
+        // Remove diacritics (safer than Unicode property escapes across runtimes)
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+    if (s === 'progress') return 'andamento'
+    if (s.startsWith('analise')) return 'analise'
+    if (s.startsWith('aprovad')) return 'aprovada'
+    if (s.startsWith('rejeit') || s.startsWith('recus')) return 'rejeitada'
+    if (s.startsWith('pend')) return 'pendente'
+    // fallback to raw (no diacritics)
+    return s
+}
+
+export const updateProposalStatus = async (
+    req: Request<{ id: string }, {}, { status?: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const id = Number(req.params.id)
+        if (!id || Number.isNaN(id)) {
+            res.status(400).json({ message: 'ID da proposta inválido' })
+            return
+        }
+        // Extract actor from Authorization: Bearer <token>
+        let actorId: number | null = null
+        let actorCargoId: number | null = null
+        const authHeader = req.headers && (req.headers.authorization as string | undefined)
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            try {
+                const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                actorId = payload?.userId ?? payload?.id ?? null
+                actorCargoId = payload?.cargoId ?? null
+            } catch (e) {
+                console.warn('JWT inválido ao atualizar status da proposta:', e)
+            }
+        }
+        if (!actorId) {
+            res.status(401).json({ message: 'Não autenticado' })
+            return
+        }
+
+        // Fetch current proposal to validate permission and build history
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `SELECT id, status, responsavel_id FROM propostas WHERE id = ? LIMIT 1`,
+            [id]
+        )
+        if (!rows || rows.length === 0) {
+            res.status(404).json({ message: 'Proposta não encontrada' })
+            return
+        }
+        const current = rows[0] as any
+
+        const statusRaw = req.body?.status ?? ''
+        const status = normalizeIncomingStatus(statusRaw)
+        const allowed = new Set(['pendente', 'andamento', 'analise', 'rejeitada', 'aprovada'])
+        if (!status || !allowed.has(status)) {
+            res.status(400).json({ message: 'Status inválido' })
+            return
+        }
+        // Permission: only admins or the responsible can update
+        const isAdmin = (cid: any) => [1, 2, 3].includes(Number(cid))
+        const isResponsible = Number(current.responsavel_id) === Number(actorId)
+        if (!(isAdmin(actorCargoId) || isResponsible)) {
+            res.status(403).json({ message: 'Sem permissão para alterar status desta proposta' })
+            return
+        }
+
+        const conn = await pool.getConnection()
+        try {
+            await conn.beginTransaction()
+            await conn.query<OkPacket>(
+                `UPDATE propostas SET status = ?, data_alteracao = NOW() WHERE id = ?`,
+                [status, id]
+            )
+
+            // Try to insert history (if table exists)
+            try {
+                const acao = status === 'aprovada' ? 'aprovar' : status === 'rejeitada' ? 'rejeitar' : 'atualizar_status'
+                const valor_anterior = JSON.stringify({ status: current.status })
+                const novo_valor = JSON.stringify({ status })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, ?, ?, ?, NULL, NOW())`,
+                    [id, actorId, acao, valor_anterior, novo_valor]
+                )
+            } catch (histErr) {
+                console.warn('Falha ao registrar histórico de proposta (ignorado):', histErr)
+            }
+
+            await conn.commit()
+        } catch (txErr) {
+            await conn.rollback()
+            throw txErr
+        } finally {
+            conn.release()
+        }
+
+        res.status(200).json({ id, status, dataAlteracao: new Date().toISOString() })
+    } catch (error) {
+        console.error('Erro ao atualizar status da proposta:', error)
+        res.status(500).json({ message: 'Erro ao atualizar status' })
+    }
+}
+
+// Retorna histórico de mudanças da proposta
+export const getProposalHistory = async (
+    req: Request<{ id: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const id = Number(req.params.id)
+        if (!id || Number.isNaN(id)) {
+            res.status(400).json({ message: 'ID da proposta inválido' })
+            return
+        }
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `
+            SELECT
+                h.id,
+                h.acao,
+                h.observacoes,
+                h.data_alteracao,
+                u.id AS actor_id,
+                u.nome AS actor_nome,
+                u.sobrenome AS actor_sobrenome,
+                u.foto_url AS actor_foto,
+                JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.status')) AS anterior_status,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.status')) AS novo_status,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.tipo')) AS novo_tipo,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.curso_id')) AS novo_curso_id,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.curso_nome')) AS novo_curso_nome,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.grupo')) AS novo_grupo,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.produto_id')) AS novo_produto_id,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.produto_nome')) AS novo_produto_nome,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.programa_id')) AS novo_programa_id,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.programa_nome')) AS novo_programa_nome,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.quantidade')) AS novo_quantidade,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.pontos')) AS novo_pontos,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.valor_unitario')) AS novo_valor_unitario,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.desconto')) AS novo_desconto,
+                JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.valor_total')) AS novo_valor_total
+            FROM historico_alteracoes h
+            LEFT JOIN usuarios u ON h.usuario_id = u.id
+            WHERE h.proposta_id = ?
+            ORDER BY h.data_alteracao DESC
+            `,
+            [id]
+        )
+        const mapped = (rows as any[]).map(r => ({
+            id: r.id,
+            acao: r.acao,
+            observacoes: r.observacoes,
+            data_alteracao: r.data_alteracao,
+            actor: r.actor_id ? { id: r.actor_id, nome: r.actor_nome, sobrenome: r.actor_sobrenome, foto: r.actor_foto } : null,
+            anterior: { status: r.anterior_status || null },
+            novo: {
+                status: r.novo_status || null,
+                tipo: r.novo_tipo || null,
+                curso_id: r.novo_curso_id ? Number(r.novo_curso_id) : undefined,
+                curso_nome: r.novo_curso_nome || undefined,
+                grupo: r.novo_grupo || undefined,
+                produto_id: r.novo_produto_id ? Number(r.novo_produto_id) : undefined,
+                produto_nome: r.novo_produto_nome || undefined,
+                programa_id: r.novo_programa_id ? Number(r.novo_programa_id) : undefined,
+                programa_nome: r.novo_programa_nome || undefined,
+                quantidade: r.novo_quantidade != null ? Number(r.novo_quantidade) : undefined,
+                pontos: r.novo_pontos != null ? Number(r.novo_pontos) : undefined,
+                valor_unitario: r.novo_valor_unitario != null ? Number(r.novo_valor_unitario) : undefined,
+                desconto: r.novo_desconto != null ? Number(r.novo_desconto) : undefined,
+                valor_total: r.novo_valor_total != null ? Number(r.novo_valor_total) : undefined,
+            },
+        }))
+        res.status(200).json(mapped)
+    } catch (error) {
+        console.error('Erro ao buscar histórico de proposta:', error)
+        res.status(500).json({ message: 'Erro ao buscar histórico' })
+    }
+}
+
 export const deleteProposal = async (
     req: Request<{ id: string }>,
     res: Response
@@ -468,6 +750,12 @@ export const deleteProposal = async (
             res.status(400).json({ message: 'ID da proposta inválido' })
             return
         }
+        await pool.query('DELETE FROM propostas_cursos WHERE proposta_id = ?', [id])
+        await pool.query('DELETE FROM propostas_quimicos WHERE proposta_id = ?', [id])
+        await pool.query('DELETE FROM propostas_produtos WHERE proposta_id = ?', [id])
+    await pool.query('DELETE FROM propostas_programas WHERE proposta_id = ?', [id])
+        await pool.query('DELETE FROM historico_alteracoes WHERE proposta_id = ?', [id])
+        await pool.query('DELETE FROM arquivos WHERE proposta_id = ?', [id])
         await pool.query('DELETE FROM propostas WHERE id = ?', [id])
         res.status(200).json({ id, deleted: true })
     } catch (error) {
@@ -505,11 +793,13 @@ export const getProposalById = async (
                 e.email AS empresa_email,
                 (SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id) AS curso_total,
                 (SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id) AS quimico_total,
-                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
+                                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
+                                (SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id) AS programa_total,
                 (
                   COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
                 + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                                + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
                 ) AS total_itens
             FROM 
                 propostas p
@@ -535,8 +825,9 @@ export const getProposalById = async (
         const updatedAt = r.data_alteracao ? (r.data_alteracao instanceof Date ? r.data_alteracao.toISOString() : String(r.data_alteracao)) : undefined
         const cursoTotal = Number(r.curso_total ?? 0)
         const quimicoTotal = Number(r.quimico_total ?? 0)
-        const produtoTotal = Number(r.produto_total ?? 0)
-        const totalItens = Number(r.total_itens ?? (cursoTotal + quimicoTotal + produtoTotal))
+    const produtoTotal = Number(r.produto_total ?? 0)
+    const programaTotal = Number(r.programa_total ?? 0)
+    const totalItens = Number(r.total_itens ?? (cursoTotal + quimicoTotal + produtoTotal + programaTotal))
         const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
 
         const proposal = {
@@ -709,6 +1000,22 @@ export const getProductsCatalog = async (
     }
 }
 
+// Programs (Programas de Prevenção) catalog
+export const getProgramsCatalog = async (
+    _req: Request,
+    res: Response
+): Promise<void> => {
+    try {
+        const [rows] = await pool.query<RowDataPacket[]>(
+            'SELECT * FROM programas_prevencao ORDER BY nome ASC'
+        )
+        res.status(200).json(rows || [])
+    } catch (error) {
+        console.error('Erro ao coletar programas de prevenção:', error)
+        res.status(500).json([])
+    }
+}
+
 export const getProductPriceRule = async (
     req: Request<{ produtoId: string }, {}, {}, { quantidade?: string }>,
     res: Response
@@ -736,6 +1043,36 @@ export const getProductPriceRule = async (
     } catch (error) {
         console.error('Erro ao coletar preco do produto:', error)
         res.status(500).json({ message: 'Erro ao coletar preco do produto' })
+    }
+}
+
+export const getProgramPriceRule = async (
+    req: Request<{ programaId: string }, {}, {}, { quantidade?: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const programaId = Number(req.params.programaId)
+        const quantidade = Number(req.query.quantidade ?? '0')
+        if (!programaId || Number.isNaN(programaId) || Number.isNaN(quantidade)) {
+            res.status(400).json({ message: 'Parâmetros inválidos' })
+            return
+        }
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `SELECT preco_linear, min_quantidade, max_quantidade, preco_unitario, preco_adicional
+             FROM regras_preco_programas
+             WHERE programa_id = ?
+               AND ? BETWEEN min_quantidade AND max_quantidade
+             LIMIT 1`,
+            [programaId, quantidade]
+        )
+        if (!rows || rows.length === 0) {
+            res.status(404).json({ message: 'Regra de preço não encontrada para o programa.' })
+            return
+        }
+        res.status(200).json(rows[0])
+    } catch (error) {
+        console.error('Erro ao coletar preco do programa:', error)
+        res.status(500).json({ message: 'Erro ao coletar preco do programa' })
     }
 }
 
@@ -772,6 +1109,37 @@ export const addCourseToProposal = async (
              LIMIT 1`,
             [propostaId]
         )
+        // Register history of item addition (curso)
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try {
+                    const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                    actorId = payload?.userId ?? payload?.id ?? null
+                } catch {}
+            }
+            if (actorId) {
+                const itemRow: any = rows?.[0] || {}
+                const novo_valor = JSON.stringify({
+                    tipo: 'curso',
+                    curso_id,
+                    curso_nome: itemRow.curso_nome ?? null,
+                    quantidade: qtd,
+                    valor_unitario: unit,
+                    desconto: desc,
+                    valor_total,
+                })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'adicionar_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch (histErr) {
+            console.warn('Falha ao registrar histórico (curso):', histErr)
+        }
         await conn.commit()
         res.status(201).json({ item: rows?.[0] || null })
     } catch (error) {
@@ -810,6 +1178,35 @@ export const addChemicalToProposal = async (
             `SELECT * FROM propostas_quimicos WHERE proposta_id = ? ORDER BY id DESC LIMIT 1`,
             [propostaId]
         )
+        // Register history of item addition (químico)
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try {
+                    const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                    actorId = payload?.userId ?? payload?.id ?? null
+                } catch {}
+            }
+            if (actorId) {
+                const novo_valor = JSON.stringify({
+                    tipo: 'quimico',
+                    grupo,
+                    pontos: pts,
+                    valor_unitario: unit,
+                    desconto: desc,
+                    valor_total,
+                })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'adicionar_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch (histErr) {
+            console.warn('Falha ao registrar histórico (químico):', histErr)
+        }
         await conn.commit()
         res.status(201).json({ item: rows?.[0] || null })
     } catch (error) {
@@ -878,12 +1275,175 @@ export const addProductToProposal = async (
              LIMIT 1`,
             [propostaId]
         )
+        // Register history of item addition (produto)
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try {
+                    const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                    actorId = payload?.userId ?? payload?.id ?? null
+                } catch {}
+            }
+            if (actorId) {
+                const itemRow: any = rows?.[0] || {}
+                const novo_valor = JSON.stringify({
+                    tipo: 'produto',
+                    produto_id,
+                    produto_nome: itemRow.produto_nome ?? null,
+                    quantidade: qtd,
+                    valor_unitario,
+                    desconto: desc,
+                    valor_total,
+                })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'adicionar_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch (histErr) {
+            console.warn('Falha ao registrar histórico (produto):', histErr)
+        }
         await conn.commit()
         res.status(201).json({ item: rows?.[0] || null })
     } catch (error) {
         await conn.rollback()
         console.error('Erro ao inserir produto na proposta:', error)
         res.status(500).json({ message: 'Erro ao inserir produto na proposta' })
+    } finally {
+        conn.release()
+    }
+}
+
+// List programas vinculados à proposta
+export const getProgramasByProposal = async (
+    req: Request<{ id: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const id = Number(req.params.id)
+        if (!id || Number.isNaN(id)) {
+            res.status(400).json({ message: 'ID da proposta inválido' })
+            return
+        }
+
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `
+            SELECT 
+                pp.*, 
+                p.nome AS programa_nome
+            FROM propostas_programas pp
+            JOIN programas_prevencao p ON pp.programa_id = p.id
+            WHERE pp.proposta_id = ?
+            `,
+            [id]
+        )
+
+        res.status(200).json(rows || [])
+    } catch (error) {
+        console.error('Erro ao coletar programas por proposta:', error)
+        res.status(500).json([])
+    }
+}
+
+// Insert programa endpoint (similar to produto)
+export const addProgramToProposal = async (
+    req: Request<{ id: string }, {}, { programa_id: number; quantidade: number; desconto: number }>,
+    res: Response
+): Promise<void> => {
+    const propostaId = Number(req.params.id)
+    const { programa_id, quantidade, desconto } = req.body || ({} as any)
+    if (!propostaId || Number.isNaN(propostaId) || !programa_id) {
+        res.status(400).json({ message: 'Parâmetros inválidos' })
+        return
+    }
+    const qtd = Number(quantidade ?? 0)
+    const desc = Number(desconto ?? 0)
+    const conn = await pool.getConnection()
+    try {
+        await conn.beginTransaction()
+        // Fetch pricing rule
+        const [rules] = await conn.query<RowDataPacket[]>(
+            `SELECT preco_linear, min_quantidade, max_quantidade, preco_unitario, preco_adicional
+             FROM regras_preco_programas
+             WHERE programa_id = ? AND ? BETWEEN min_quantidade AND max_quantidade
+             LIMIT 1`,
+            [programa_id, qtd]
+        )
+        if (!rules || rules.length === 0) {
+            await conn.rollback()
+            res.status(400).json({ message: 'Regra de preço não encontrada para o programa.' })
+            return
+        }
+        const rule: any = rules[0]
+        const precoUnitario = Number(rule.preco_unitario ?? 0)
+        const minQuantidade = Number(rule.min_quantidade ?? 0)
+        const precoAdicional = Number(rule.preco_adicional ?? 0)
+        const adicionalFlag = Number(rule.preco_adicional ?? 0) // TINYINT(1) 1=true 0=false (seguindo produtos)
+        let valor_unitario = precoUnitario
+        let valor_total: number
+        if (!adicionalFlag) {
+            valor_total = precoUnitario
+        } else {
+            const extra = Math.max(0, qtd - minQuantidade) * precoAdicional
+            valor_total = Math.max(0, precoUnitario + extra - desc)
+        }
+        await conn.query(
+            `INSERT INTO propostas_programas (proposta_id, programa_id, quantidade, valor_unitario, desconto, valor_total)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [propostaId, programa_id, qtd, valor_unitario, desc, valor_total]
+        )
+        
+        const [rows] = await conn.query<RowDataPacket[]>(
+            `SELECT pp.*, p.nome AS programa_nome
+             FROM propostas_programas pp
+             JOIN programas_prevencao p ON pp.programa_id = p.id
+             WHERE pp.proposta_id = ?
+             ORDER BY pp.id DESC
+             LIMIT 1`,
+            [propostaId]
+        )
+
+        // Register history
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try {
+                    const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                    actorId = payload?.userId ?? payload?.id ?? null
+                } catch {}
+            }
+            if (actorId) {
+                const itemRow: any = rows?.[0] || {}
+                const novo_valor = JSON.stringify({
+                    tipo: 'programa',
+                    programa_id,
+                    programa_nome: itemRow.programa_nome ?? null,
+                    quantidade: qtd,
+                    valor_unitario,
+                    desconto: desc,
+                    valor_total,
+                })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'adicionar_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch (histErr) {
+            console.warn('Falha ao registrar histórico (programa):', histErr)
+        }
+
+        await conn.commit()
+        res.status(201).json({ item: rows?.[0] || null })
+    } catch (error) {
+        await conn.rollback()
+        console.error('Erro ao inserir programa na proposta:', error)
+        res.status(500).json({ message: 'Erro ao inserir programa na proposta' })
     } finally {
         conn.release()
     }

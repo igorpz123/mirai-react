@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico } from '@/services/proposals'
+import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice } from '@/services/proposals'
 import ProposalStatusBadge from '@/components/proposal-status-badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export default function CommercialProposalDetail() {
     const { id } = useParams<{ id: string }>()
@@ -20,17 +21,21 @@ export default function CommercialProposalDetail() {
     const [produtos, setProdutos] = React.useState<ProposalProduto[] | null>(null)
     const [quimicos, setQuimicos] = React.useState<ProposalQuimico[] | null>(null)
     const [loadingItens, setLoadingItens] = React.useState<boolean>(false)
+    const [history, setHistory] = React.useState<ProposalHistoryEntry[] | null>(null)
+    const [programas, setProgramas] = React.useState<ProposalPrograma[] | null>(null)
     // Catalogs
     const [courses, setCourses] = React.useState<Curso[]>([])
     const [products, setProducts] = React.useState<Produto[]>([])
     const [chemicals, setChemicals] = React.useState<Quimico[]>([])
+    const [programs, setPrograms] = React.useState<Programa[]>([])
     React.useEffect(() => {
         let mounted = true
         Promise.all([
             getCoursesCatalog().catch(() => [] as Curso[]),
             getProductsCatalog().catch(() => [] as Produto[]),
             getChemicalsCatalog().catch(() => [] as Quimico[]),
-        ]).then(([cs, ps, qs]) => { if (!mounted) return; setCourses(cs); setProducts(ps); setChemicals(qs) })
+            getProgramsCatalog().catch(() => [] as Programa[]),
+        ]).then(([cs, ps, qs, prgs]) => { if (!mounted) return; setCourses(cs); setProducts(ps); setChemicals(qs); setPrograms(prgs) })
         return () => { mounted = false }
     }, [])
 
@@ -38,10 +43,12 @@ export default function CommercialProposalDetail() {
     const [openCourse, setOpenCourse] = React.useState(false)
     const [openChemical, setOpenChemical] = React.useState(false)
     const [openProduct, setOpenProduct] = React.useState(false)
+    const [openProgram, setOpenProgram] = React.useState(false)
     // Form state
     const [formCourse, setFormCourse] = React.useState({ curso_id: 0, quantidade: 1, valor_unitario: 0, desconto: 0 })
     const [formChemical, setFormChemical] = React.useState({ selectedKey: '', quimico_id: 0, grupo: '', pontos: 0, valor_unitario: 0, desconto: 0 })
     const [formProduct, setFormProduct] = React.useState({ produto_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
+    const [formProgram, setFormProgram] = React.useState({ programa_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
 
     // Reset forms when opening sheets
     React.useEffect(() => {
@@ -53,6 +60,9 @@ export default function CommercialProposalDetail() {
     React.useEffect(() => {
         if (openProduct) setFormProduct({ produto_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
     }, [openProduct])
+    React.useEffect(() => {
+        if (openProgram) setFormProgram({ programa_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
+    }, [openProgram])
 
     React.useEffect(() => {
         if (!id) return
@@ -76,12 +86,16 @@ export default function CommercialProposalDetail() {
             getCursosByProposal(pid).catch(() => [] as ProposalCurso[]),
             getQuimicosByProposal(pid).catch(() => [] as ProposalQuimico[]),
             getProdutosByProposal(pid).catch(() => [] as ProposalProduto[]),
+            getProgramasByProposal(pid).catch(() => [] as ProposalPrograma[]),
+            getProposalHistory(pid).catch(() => [] as ProposalHistoryEntry[]),
         ])
-            .then(([c, q, p]) => {
+            .then(([c, q, p, prgs, h]) => {
                 if (!mounted) return
                 setCursos(c)
                 setQuimicos(q)
                 setProdutos(p)
+                setProgramas(prgs)
+                setHistory(h)
             })
             .finally(() => { if (mounted) setLoadingItens(false) })
         return () => { mounted = false }
@@ -116,6 +130,13 @@ export default function CommercialProposalDetail() {
         return { qtd, valor }
     }, [produtos])
 
+    const programasTotals = React.useMemo(() => {
+        const list = programas ?? []
+        const qtd = list.reduce((acc, item) => acc + Number(item.quantidade ?? 0), 0)
+        const valor = list.reduce((acc, item) => acc + Number(item.valor_total ?? 0), 0)
+        return { qtd, valor }
+    }, [programas])
+
     if (loading) return <div className="p-4">Carregando...</div>
     if (error) return <div className="p-4 text-destructive">{error}</div>
     if (!proposal) return <div className="p-4">Proposta não encontrada.</div>
@@ -135,6 +156,43 @@ export default function CommercialProposalDetail() {
                             <Button onClick={() => setOpenCourse(true)}>+ Curso</Button>
                             <Button onClick={() => setOpenChemical(true)}>+ Químico</Button>
                             <Button onClick={() => setOpenProduct(true)}>+ Produto</Button>
+                            <Button onClick={() => setOpenProgram(true)}>+ Programa</Button>
+                        </div>
+                    </div>
+
+                    {/* Status updater */}
+                    <div className="flex flex-col gap-2 rounded-md border p-3 bg-card/50">
+                        <div className="text-sm font-medium">Status da proposta</div>
+                        <div className="flex items-center gap-2">
+                            <Select
+                                value={(proposal.status || '').toString().toLowerCase().replace('progress', 'andamento').replace('análise', 'analise')}
+                                onValueChange={async (v) => {
+                                    try {
+                                        const key = v as ProposalStatus
+                                        // confirmations
+                                        if (key === 'aprovada' || key === 'rejeitada') {
+                                            const ok = window.confirm(`Tem certeza que deseja marcar como ${PROPOSAL_STATUSES.find(s=>s.key===key)?.label}?`)
+                                            if (!ok) return
+                                        }
+                                        const res = await updateProposalStatus(proposal.id, key)
+                                        setProposal((prev) => prev ? { ...prev, status: res.status, dataAlteracao: res.dataAlteracao ?? prev.dataAlteracao } : prev)
+                                        // refresh history
+                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                        toast.success('Status atualizado')
+                                    } catch (e: any) {
+                                        toast.error(e?.response?.data?.message || 'Falha ao atualizar status')
+                                    }
+                                }}
+                            >
+                                <SelectTrigger className="w-56">
+                                    <SelectValue placeholder="Selecione o status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PROPOSAL_STATUSES.map(s => (
+                                        <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 
@@ -180,6 +238,39 @@ export default function CommercialProposalDetail() {
                             <div className="text-sm text-muted-foreground">Carregando itens...</div>
                         ) : (
                             <div className="space-y-6">
+                                <div>
+                                    <h3 className="font-medium">Programas de Prevenção</h3>
+                                    {(!programas || programas.length === 0) ? (
+                                        <div className="text-sm text-muted-foreground">Nenhum programa vinculado.</div>
+                                    ) : (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Nome</TableHead>
+                                                    <TableHead className="text-right">Qtd</TableHead>
+                                                    <TableHead className="text-right">Valor Unit.</TableHead>
+                                                    <TableHead className="text-right">Valor Total</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {programas.map((p) => (
+                                                    <TableRow key={`programa-${p.id}`}>
+                                                        <TableCell>{p.programa_nome || p.programa_id}</TableCell>
+                                                        <TableCell className="text-right">{Number(p.quantidade ?? 0)}</TableCell>
+                                                        <TableCell className="text-right">{fmtBRL(p.valor_unitario)}</TableCell>
+                                                        <TableCell className="text-right">{fmtBRL(p.valor_total)}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                <TableRow>
+                                                    <TableCell className="font-medium">Total</TableCell>
+                                                    <TableCell className="text-right font-semibold">{programasTotals.qtd}</TableCell>
+                                                    <TableCell className="text-right">—</TableCell>
+                                                    <TableCell className="text-right font-semibold">{fmtBRL(programasTotals.valor)}</TableCell>
+                                                </TableRow>
+                                            </TableBody>
+                                        </Table>
+                                    )}
+                                </div>
                                 <div>
                                     <h3 className="font-medium">Cursos</h3>
                                     {(!cursos || cursos.length === 0) ? (
@@ -284,6 +375,72 @@ export default function CommercialProposalDetail() {
                             </div>
                         )}
                     </section>
+
+                    {/* History section */}
+                    <section className="space-y-2">
+                        <h2 className="text-lg font-semibold">Histórico</h2>
+                        {!history || history.length === 0 ? (
+                            <div className="text-sm text-muted-foreground">Nenhuma alteração registrada.</div>
+                        ) : (
+                            <div className="space-y-4">
+                                {history.map((h, idx) => (
+                                    <div key={`hist-${h.id}`} className={`flex items-center gap-4 py-4 ${idx > 0 ? 'border-t border-muted/40' : ''}`}>
+                                        <div className="flex-shrink-0">
+                                            <div className="size-12">
+                                                <Avatar className="size-12">
+                                                    {h.actor?.foto ? (
+                                                        <AvatarImage src={h.actor.foto} alt={`${h.actor.nome} ${h.actor.sobrenome || ''}`} />
+                                                    ) : (
+                                                        <AvatarFallback className="text-lg">{(h.actor?.nome || 'U').charAt(0)}</AvatarFallback>
+                                                    )}
+                                                </Avatar>
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between">
+                                                <p className="text-xs text-muted-foreground">{h.data_alteracao ? new Date(h.data_alteracao).toLocaleString('pt-BR') : '—'}</p>
+                                                <div className="ml-2 text-muted-foreground" title={h.acao}>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="size-4 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v6l4 2" />
+                                                    </svg>
+                                                </div>
+                                            </div>
+                                            <p className="text-sm font-medium mt-1">
+                                                {(() => {
+                                                    switch (h.acao) {
+                                                        case 'criar':
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} criou a proposta`
+                                                        case 'adicionar_item': {
+                                                            const t = h.novo?.tipo
+                                                            if (t === 'curso') {
+                                                                return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou o curso ${h.novo?.curso_nome || h.novo?.curso_id || ''} (Qtd: ${h.novo?.quantidade ?? 0}, Unit: ${fmtBRL(h.novo?.valor_unitario)}, Desc: ${fmtBRL(h.novo?.desconto)}, Total: ${fmtBRL(h.novo?.valor_total)})`
+                                                            } else if (t === 'quimico') {
+                                                                return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou químico do grupo ${h.novo?.grupo || ''} (Pontos: ${h.novo?.pontos ?? 0}, Unit: ${fmtBRL(h.novo?.valor_unitario)}, Desc: ${fmtBRL(h.novo?.desconto)}, Total: ${fmtBRL(h.novo?.valor_total)})`
+                                                            } else if (t === 'produto') {
+                                                                return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou o produto ${h.novo?.produto_nome || h.novo?.produto_id || ''} (Qtd: ${h.novo?.quantidade ?? 0}, Unit: ${fmtBRL(h.novo?.valor_unitario)}, Desc: ${fmtBRL(h.novo?.desconto)}, Total: ${fmtBRL(h.novo?.valor_total)})`
+                                                            } else if (t === 'programa') {
+                                                                return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou o programa ${h.novo?.programa_nome || h.novo?.programa_id || ''} (Qtd: ${h.novo?.quantidade ?? 0}, Desc: ${fmtBRL(h.novo?.desconto)}, Total: ${fmtBRL(h.novo?.valor_total)})`
+                                                            }
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou um item`
+                                                        }
+                                                        case 'aprovar':
+                                                        case 'rejeitar':
+                                                        case 'atualizar_status':
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} atualizou o status de ${h.anterior?.status || '—'} para ${h.novo?.status || '—'}`
+                                                        default:
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} realizou ${h.acao?.replace('_',' ')}`
+                                                    }
+                                                })()}
+                                            </p>
+                                            {h.observacoes ? (
+                                                <p className="text-sm text-muted-foreground mt-1">Observações: {h.observacoes}</p>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
                 </div>
             </div>
             {/* Sheet: Add Course */}
@@ -356,6 +513,85 @@ export default function CommercialProposalDetail() {
                 </SheetContent>
             </Sheet>
 
+            {/* Sheet: Add Program */}
+            <Sheet open={openProgram} onOpenChange={setOpenProgram}>
+                <SheetContent className="sm:max-w-[520px]">
+                    <SheetHeader>
+                        <SheetTitle>Adicionar Programa</SheetTitle>
+                        <SheetDescription>Selecione um programa e informe a quantidade e desconto. O preço será calculado conforme a regra.</SheetDescription>
+                    </SheetHeader>
+                    <div className="mt-4 space-y-3">
+                        <div>
+                            <div className="text-sm mb-1">Programa</div>
+                            <Select value={String(formProgram.programa_id || '')} onValueChange={(v) => setFormProgram((s) => ({ ...s, programa_id: Number(v) }))}>
+                                <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                <SelectContent>
+                                    {programs.map(p => (
+                                        <SelectItem key={p.id} value={String(p.id)}>{p.nome}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <div className="text-sm mb-1">Quantidade</div>
+                                <Input type="number" min={1} value={formProgram.quantidade} onChange={(e) => setFormProgram((s) => ({ ...s, quantidade: Number(e.target.value) }))} />
+                            </div>
+                            <div>
+                                <div className="text-sm mb-1">Desconto (R$)</div>
+                                <Input type="number" min={0} value={formProgram.desconto} onChange={(e) => setFormProgram((s) => ({ ...s, desconto: Number(e.target.value) }))} />
+                            </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                            Total previsto: {fmtBRL(formProgram.precoPrev)}
+                        </div>
+                        <div>
+                            <Button
+                                variant="secondary"
+                                onClick={async () => {
+                                    try {
+                                        if (!formProgram.programa_id || !formProgram.quantidade) return
+                                        const rule = await getProgramPrice(formProgram.programa_id, formProgram.quantidade)
+                                        const unit = Number((rule as any).preco_unitario ?? 0)
+                                        const minQ = Number((rule as any).min_quantidade ?? 0)
+                                        const adicional = Number((rule as any).preco_adicional ?? 0)
+                                        const isLinear = Boolean((rule as any).preco_linear ?? (rule as any).preco_adicional)
+                                        let total: number
+                                        if (!isLinear) {
+                                            total = unit
+                                        } else {
+                                            const extra = Math.max(0, formProgram.quantidade - minQ) * adicional
+                                            total = Math.max(0, unit + extra - (formProgram.desconto || 0))
+                                        }
+                                        setFormProgram((s) => ({ ...s, precoPrev: total }))
+                                    } catch {
+                                        toast.error('Falha ao calcular preço')
+                                    }
+                                }}
+                            >Calcular preço</Button>
+                        </div>
+                    </div>
+                    <SheetFooter className="mt-4">
+                        <Button
+                            onClick={async () => {
+                                try {
+                                    if (!id) return
+                                    const payload = { programa_id: formProgram.programa_id, quantidade: formProgram.quantidade, desconto: formProgram.desconto }
+                                    const res = await addProgramToProposal(Number(id), payload)
+                                    if (res.item) {
+                                        setProgramas(prev => [res.item as any, ...(prev ?? [])])
+                                        setProposal(prev => prev ? { ...prev, valor_total: Number((prev.valor_total ?? 0)) + Number((res.item as any).valor_total ?? 0) } : prev)
+                                        toast.success('Programa adicionado')
+                                        setOpenProgram(false)
+                                    }
+                                } catch {
+                                    toast.error('Falha ao adicionar programa')
+                                }
+                            }}
+                        >Salvar</Button>
+                    </SheetFooter>
+                </SheetContent>
+            </Sheet>
             {/* Sheet: Add Chemical */}
             <Sheet open={openChemical} onOpenChange={setOpenChemical}>
                 <SheetContent className="sm:max-w-[520px]">

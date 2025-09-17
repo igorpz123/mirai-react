@@ -18,6 +18,7 @@ import TechnicalTaskDetail from './pages/TechnicalTaskDetail';
 //Páginas do Setor Comercial
 import ComercialDashboard from '@/pages/ComercialDashboard';
 import CommercialProposalDetail from '@/pages/CommercialProposalDetail';
+import CommercialProposalNew from '@/pages/CommercialProposalNew';
 
 //Página de Administração
 import AdminDashboard from './pages/AdminDashboard';
@@ -51,6 +52,7 @@ function AppContent() {
             <Route path="technical/dashboard" element={<TecnicoDashboard />} />
             <Route path="admin/dashboard" element={<AdminDashboard />} />
             <Route path="comercial/dashboard" element={<ComercialDashboard />} />
+            <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
             <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />
             <Route path="technical/fluxograma/setor/:setorSlug" element={<TechnicalFluxogramaSetor />} />
             <Route path="technical/agenda" element={<TechnicalAgenda />} />

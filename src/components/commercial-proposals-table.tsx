@@ -1,5 +1,5 @@
 import React, { useState, type ReactElement } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import type { Proposal } from '@/services/proposals'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,10 +23,12 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { IconDotsVertical, IconRotateClockwise, IconExternalLink, IconLink, IconTrash } from '@tabler/icons-react'
 import { toast } from 'sonner'
-import { recalculateProposalTotal, deleteProposal } from '@/services/proposals'
+import { recalculateProposalTotal, deleteProposal, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus } from '@/services/proposals'
 import { useAuth } from '@/hooks/use-auth'
+import { DropdownMenuLabel } from '@radix-ui/react-dropdown-menu'
 
 export function CommercialProposalsTable({ proposals = [] }: { proposals?: Proposal[] }): ReactElement {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
@@ -127,6 +129,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
     <div className="rounded-lg border bg-card mx-6">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h3 className="text-lg font-semibold">Propostas</h3>
+        <Button onClick={() => navigate('/comercial/proposta/nova')}>Nova Proposta</Button>
       </div>
       <div className="px-4 pb-4">
         {/* Controls: search + filters */}
@@ -251,6 +254,38 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                         >
                           <IconLink className="mr-2" /> Copiar link
                         </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className='px-2 text-sm text-muted-foreground'>
+                          Atualizar Status
+                        </DropdownMenuLabel>
+                        {/* Status quick actions */}
+                        {(() => {
+                          const isAdmin = [1, 2, 3].includes(Number(user?.cargoId))
+                          const isResponsible = (p as any).responsavel_id ? Number((p as any).responsavel_id) === Number(user?.id) : (p.responsavel ?? '').toString().toLowerCase() === `${user?.nome ?? ''}`.toLowerCase()
+                          if (!(isAdmin || isResponsible)) return null
+                          return PROPOSAL_STATUSES.map(s => (
+                            <DropdownMenuItem
+                              key={`status-${s.key}`}
+                              className="cursor-pointer"
+                              onClick={async () => {
+                                try {
+                                  // confirmations for approve/reject
+                                  if (s.key === 'aprovada' || s.key === 'rejeitada') {
+                                    const ok = window.confirm(`Tem certeza que deseja marcar como ${s.label}?`)
+                                    if (!ok) return
+                                  }
+                                  const res = await updateProposalStatus(p.id, s.key as ProposalStatus)
+                                  setRows(prev => prev.map(r => r.id === p.id ? { ...r, status: res.status, dataAlteracao: res.dataAlteracao ?? (r as any).dataAlteracao } : r))
+                                  toast.success(`Status: ${s.label}`)
+                                } catch (e: any) {
+                                  toast.error(e?.response?.data?.message || 'Falha ao atualizar status')
+                                }
+                              }}
+                            >
+                              {s.label}
+                            </DropdownMenuItem>
+                          ))
+                        })()}
                         <DropdownMenuSeparator />
                         {(() => {
                           const isAdmin = [1, 2, 3].includes(Number(user?.cargoId))

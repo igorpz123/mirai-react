@@ -86,6 +86,25 @@ export type RegraPrecoProduto = {
   preco_unitario: number
   preco_adicional?: number
 }
+// Programs
+export type Programa = { id: number; nome: string; descricao?: string }
+export type RegraPrecoPrograma = {
+  preco_linear?: number
+  min_quantidade: number
+  max_quantidade: number
+  preco_unitario: number
+  preco_adicional?: number
+}
+export type ProposalPrograma = {
+  id: number
+  proposta_id: number
+  programa_id: number
+  quantidade?: number
+  valor_unitario?: number
+  desconto?: number
+  valor_total?: number
+  programa_nome?: string
+}
 
 export async function getProposalsByUser(userId: number | null) {
   // If backend endpoint exists, this will call it; otherwise return a safe mock shape
@@ -153,6 +172,65 @@ export async function getProdutosByProposal(id: number) {
   return res.data as ProposalProduto[]
 }
 
+// Create proposal service
+export type CreateProposalPayload = {
+  titulo?: string
+  empresa_id: number
+  unidade_id: number
+  responsavel_id?: number
+  indicacao_id?: number | null
+  data?: string | null
+  status?: ProposalStatus | string | null
+  observacoes?: string | null
+}
+export async function createProposal(payload: CreateProposalPayload) {
+  const res = await api.post('/propostas', payload)
+  return res.data as Proposal
+}
+
+// Update status service
+export type ProposalStatus = 'pendente' | 'andamento' | 'analise' | 'rejeitada' | 'aprovada'
+export const PROPOSAL_STATUSES: Array<{ key: ProposalStatus; label: string }> = [
+  { key: 'pendente', label: 'Pendente' },
+  { key: 'andamento', label: 'Em Andamento' },
+  { key: 'analise', label: 'Em Análise' },
+  { key: 'rejeitada', label: 'Rejeitada' },
+  { key: 'aprovada', label: 'Aprovada' },
+]
+export async function updateProposalStatus(id: number, status: ProposalStatus) {
+  const res = await api.patch(`/propostas/${id}/status`, { status })
+  return res.data as { id: number; status: ProposalStatus; dataAlteracao?: string }
+}
+
+export type ProposalHistoryEntry = {
+  id: number
+  acao: string
+  observacoes?: string | null
+  data_alteracao: string
+  actor: { id: number; nome: string; sobrenome?: string; foto?: string } | null
+  anterior: { status: string | null }
+  novo: {
+    status: string | null
+    tipo?: 'curso' | 'quimico' | 'produto' | 'programa' | null
+    curso_id?: number
+    curso_nome?: string
+    grupo?: string
+    produto_id?: number
+    produto_nome?: string
+    programa_id?: number
+    programa_nome?: string
+    quantidade?: number
+    pontos?: number
+    valor_unitario?: number
+    desconto?: number
+    valor_total?: number
+  }
+}
+export async function getProposalHistory(id: number) {
+  const res = await api.get(`/propostas/${id}/historico`)
+  return res.data as ProposalHistoryEntry[]
+}
+
 // Catalog services
 export async function getCoursesCatalog() {
   const res = await api.get('/propostas/catalog/cursos')
@@ -170,6 +248,14 @@ export async function getProductPrice(produtoId: number, quantidade: number) {
   const res = await api.get(`/propostas/catalog/produtos/${produtoId}/preco`, { params: { quantidade } })
   return res.data as RegraPrecoProduto
 }
+export async function getProgramsCatalog() {
+  const res = await api.get('/propostas/catalog/programas')
+  return res.data as Programa[]
+}
+export async function getProgramPrice(programaId: number, quantidade: number) {
+  const res = await api.get(`/propostas/catalog/programas/${programaId}/preco`, { params: { quantidade } })
+  return res.data as RegraPrecoPrograma
+}
 
 // Insert item services
 export type AddCoursePayload = { curso_id: number; quantidade: number; valor_unitario: number; desconto: number }
@@ -186,4 +272,13 @@ export type AddProductPayload = { produto_id: number; quantidade: number; descon
 export async function addProductToProposal(propostaId: number, payload: AddProductPayload) {
   const res = await api.post(`/propostas/${propostaId}/produtos`, payload)
   return res.data as { item: ProposalProduto | null }
+}
+export type AddProgramPayload = { programa_id: number; quantidade: number; desconto: number }
+export async function addProgramToProposal(propostaId: number, payload: AddProgramPayload) {
+  const res = await api.post(`/propostas/${propostaId}/programas`, payload)
+  return res.data as { item: ProposalPrograma | null }
+}
+export async function getProgramasByProposal(id: number) {
+  const res = await api.get(`/propostas/${id}/programas`)
+  return res.data as ProposalPrograma[]
 }

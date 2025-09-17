@@ -121,3 +121,37 @@ export async function getCompaniesByUnit(unitId: number): Promise<CompaniesRespo
     throw err
   }
 }
+
+export async function getCompanyByCNPJ(cnpj: string): Promise<Company | null> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/empresas/cnpj/${cnpj}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (res.status === 404) return null
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao consultar CNPJ' }))
+    throw new Error(err.message || 'Erro ao consultar CNPJ')
+  }
+  return res.json()
+}
+
+export async function createCompany(payload: { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string }): Promise<Company> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/empresas`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao criar empresa' }))
+    throw new Error(err.message || 'Erro ao criar empresa')
+  }
+  return res.json()
+}
