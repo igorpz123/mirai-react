@@ -256,13 +256,13 @@ export default function CommercialProposalNew() {
                 <div className="text-sm mb-1">Desconto (R$ ou %)</div>
                 <Input type="text" value={programDiscount} onChange={(e) => setProgramDiscount(e.target.value)} className="w-full" />
               </div>
-                <div className="flex items-end">
+              <div className="flex items-end">
                 <Button className='button-primary rounded-full' onClick={async () => {
-                  if (!selectedProgramId) { toastError('Selecione um programa antes de adicionar'); return }
+                  if (!selectedProgramId) { toastWarning('Selecione um programa antes de adicionar'); return }
                   const p = programs.find(pp => pp.id === Number(selectedProgramId))
                   if (!p) return
                   // prevent duplicate program
-                  if (programas.some(pr => pr.programa_id === p.id)) { toastError('Programa já adicionado'); return }
+                  if (programas.some(pr => pr.programa_id === p.id)) { toastWarning('Este programa já foi adicionado'); return }
                   // parse discount: allow values like '10%' or '100.00'
                   const raw = (programDiscount || '').toString().trim()
                   let descontoNum = 0
@@ -293,39 +293,50 @@ export default function CommercialProposalNew() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Programa</TableHead>
-                      <TableHead className="text-right">Qtd</TableHead>
-                      <TableHead className="text-right">Valor Unit.</TableHead>
-                      <TableHead className="text-right">Desconto</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
+                      <TableHead>Qtd</TableHead>
+                      <TableHead>Valor Unit.</TableHead>
+                      <TableHead>Desconto</TableHead>
+                      <TableHead>Valor Total</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {programas.map((p, idx) => (
-                      <TableRow key={`ppp-${idx}`}>
-                        <TableCell>{p.nome || p.programa_id}</TableCell>
-                        <TableCell className="text-right">{p.quantidade}</TableCell>
-                        <TableCell className="text-right">
-                          <Input type="text" value={p.descontoIsPercent ? `${p.desconto}%` : String(p.desconto)} onChange={(e) => {
-                            const raw = e.target.value.trim()
-                            let descontoNum = 0
-                            let descontoIsPercent = false
-                            if (raw.endsWith('%')) { descontoIsPercent = true; descontoNum = Number(raw.replace('%', '')) || 0 } else { descontoNum = Number(raw) || 0 }
-                            // cap percent and fixed using stored unit price when available
-                            const unit = Number(p.valor_unitario || 0)
-                            if (descontoIsPercent) descontoNum = Math.min(Math.max(0, descontoNum), 100)
-                            else if (unit > 0) descontoNum = Math.min(Math.max(0, descontoNum), unit)
-                            else descontoNum = Math.max(0, descontoNum)
-                            setProgramas(prev => prev.map((pp, i) => i === idx ? { ...pp, desconto: descontoNum, descontoIsPercent } : pp))
-                          }} className="w-36 ml-auto" />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button variant="ghost" onClick={() => setProgramas(prev => prev.filter((_, i) => i !== idx))}>Remover</Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {programas.map((p, idx) => {
+                      const unit = Number(p.valor_unitario || 0)
+                      const descontoPerUnit = p.descontoIsPercent ? (Number(p.desconto || 0) / 100) * unit : Number(p.desconto || 0)
+                      const cappedDescontoPerUnit = Math.min(Math.max(0, descontoPerUnit), unit)
+                      const lineTotal = Math.max(0, (unit - cappedDescontoPerUnit) * (p.quantidade || 1))
+                      return (
+                        <TableRow key={`ppp-${idx}`}>
+                          <TableCell>{p.nome || p.programa_id}</TableCell>
+                          <TableCell className="text-center">{p.quantidade}</TableCell>
+                          <TableCell className="text-center">{fmtBRL(unit)}</TableCell>
+                          <TableCell className="text-center">
+                            <Input
+                              type="text"
+                              value={p.descontoIsPercent ? `${p.desconto}%` : String(p.desconto)}
+                              onChange={(e) => {
+                                const raw = e.target.value.trim()
+                                let descontoNum = 0
+                                let descontoIsPercent = false
+                                if (raw.endsWith('%')) { descontoIsPercent = true; descontoNum = Number(raw.replace('%', '')) || 0 } else { descontoNum = Number(raw) || 0 }
+                                // cap percent and fixed using stored unit price when available
+                                const unitLocal = Number(p.valor_unitario || 0)
+                                if (descontoIsPercent) descontoNum = Math.min(Math.max(0, descontoNum), 100)
+                                else if (unitLocal > 0) descontoNum = Math.min(Math.max(0, descontoNum), unitLocal)
+                                else descontoNum = Math.max(0, descontoNum)
+                                setProgramas(prev => prev.map((pp, i) => i === idx ? { ...pp, desconto: descontoNum, descontoIsPercent } : pp))
+                              }}
+                              className="text-center w-32"
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">{fmtBRL(lineTotal)}</TableCell>
+                          <TableCell className="text-center">
+                            <Button className='button-remove' onClick={() => setProgramas(prev => prev.filter((_, i) => i !== idx))}><IconTrash />Remover</Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
 
@@ -372,11 +383,11 @@ export default function CommercialProposalNew() {
               </div>
               <div className="flex items-end">
                 <Button className='button-primary rounded-full' onClick={() => {
-                  if (!selectedCourseId) { toastError('Selecione um curso antes de adicionar'); return }
+                  if (!selectedCourseId) { toastWarning('Selecione um curso antes de adicionar'); return }
                   const c = courses.find(cc => cc.id === Number(selectedCourseId))
                   if (!c) return
                   // prevent duplicate course
-                  if (cursos.some(cur => cur.curso_id === c.id)) { toastError('Curso já adicionado'); return }
+                  if (cursos.some(cur => cur.curso_id === c.id)) { toastWarning('Este curso já foi adicionado'); return }
                   const raw = (courseDiscount || '').toString().trim()
                   let descontoNum = 0
                   let descontoIsPercent = false
@@ -401,10 +412,11 @@ export default function CommercialProposalNew() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Curso</TableHead>
-                      <TableHead className="text-right">Unit</TableHead>
-                      <TableHead className="text-right">Desc</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead className="text-right"></TableHead>
+                      <TableHead>Quantidade</TableHead>
+                      <TableHead className='text-left'>Valor Unit</TableHead>
+                      <TableHead>Desc</TableHead>
+                      <TableHead>Valor Total</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -416,12 +428,12 @@ export default function CommercialProposalNew() {
                       return (
                         <TableRow key={`cur-${idx}`}>
                           <TableCell>{c.nome || c.curso_id}</TableCell>
-                          <TableCell className="text-right"><Input type="number" min={1} value={c.quantidade} onChange={(e) => {
+                          <TableCell className="text-center"><Input type="number" min={1} value={c.quantidade} onChange={(e) => {
                             const q = Number(e.target.value || 1)
                             setCursos(prev => prev.map((pp, i) => i === idx ? { ...pp, quantidade: q } : pp))
-                          }} className="w-20 ml-auto" /></TableCell>
-                          <TableCell className="text-right">{fmtBRL(c.valor_unitario)}</TableCell>
-                          <TableCell className="text-right">
+                          }} className="w-20 text-center" /></TableCell>
+                          <TableCell className="text-center">{fmtBRL(c.valor_unitario)}</TableCell>
+                          <TableCell className="text-center flex justify-center">
                             <Input type="text" value={c.descontoIsPercent ? `${c.desconto}%` : String(c.desconto)} onChange={(e) => {
                               const raw = e.target.value.trim()
                               let descontoNum = 0
@@ -434,14 +446,12 @@ export default function CommercialProposalNew() {
                                 descontoNum = Math.min(Math.max(0, descontoNum), unit)
                               }
                               setCursos(prev => prev.map((pp, i) => i === idx ? { ...pp, desconto: descontoNum, descontoIsPercent } : pp))
-                            }} className="w-36 ml-auto" />
+                            }} className="w-20 text-center" />
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="text-sm">{fmtBRL(Math.max(0, (unit - cappedDescontoPerUnit) * (c.quantidade || 1)))}</div>
-                            </div>
+                          <TableCell className="text-center">
+                            <div className="text-sm text-center">{fmtBRL(Math.max(0, (unit - cappedDescontoPerUnit) * (c.quantidade || 1)))}</div>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-center">
                             <Button className='button-remove' onClick={() => setCursos(prev => prev.filter((_, i) => i !== idx))}><IconTrash /> Remover</Button>
                           </TableCell>
                         </TableRow>
@@ -494,13 +504,13 @@ export default function CommercialProposalNew() {
               </div>
               <div className="flex items-end">
                 <Button className='button-primary rounded-full' onClick={() => {
-                  if (!selectedChemicalIdx) { toastError('Selecione um químico antes de adicionar'); return }
+                  if (!selectedChemicalIdx) { toastWarning('Selecione um químico antes de adicionar'); return }
                   const idx = Number(selectedChemicalIdx)
                   const q = chemicals[idx]
                   if (!q) return
                   // prevent duplicate chemical by group
                   const grupo = q.grupo || String(q.id)
-                  if (quimicos.some(qq => qq.grupo === grupo)) { toastError('Químico já adicionado'); return }
+                  if (quimicos.some(qq => qq.grupo === grupo)) { toastWarning('Este químico já foi adicionado'); return }
                   const raw = (chemicalDiscount || '').toString().trim()
                   let descontoNum = 0
                   let descontoIsPercent = false
@@ -521,11 +531,11 @@ export default function CommercialProposalNew() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Grupo</TableHead>
-                      <TableHead className="text-right">Pontos</TableHead>
-                      <TableHead className="text-right">Unit</TableHead>
-                      <TableHead className="text-right">Desc</TableHead>
-                      <TableHead className="text-right">Valor Total</TableHead>
-                      <TableHead className="text-right"></TableHead>
+                      <TableHead>Pontos</TableHead>
+                      <TableHead>Valor Unit</TableHead>
+                      <TableHead>Desc</TableHead>
+                      <TableHead>Valor Total</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -536,12 +546,12 @@ export default function CommercialProposalNew() {
                       return (
                         <TableRow key={`qui-${idx}`}>
                           <TableCell>{q.grupo}</TableCell>
-                          <TableCell className="text-right"><Input type="number" min={1} value={q.pontos} onChange={(e) => {
+                          <TableCell className="text-center"><Input type="number" min={1} value={q.pontos} onChange={(e) => {
                             const v = Number(e.target.value || 1)
                             setQuimicos(prev => prev.map((pp, i) => i === idx ? { ...pp, pontos: v } : pp))
-                          }} className="w-20 ml-auto" /></TableCell>
-                          <TableCell className="text-right">{fmtBRL(q.valor_unitario)}</TableCell>
-                          <TableCell className="text-right"><Input type="text" value={q.descontoIsPercent ? `${q.desconto}%` : String(q.desconto)} onChange={(e) => {
+                          }} className="w-20 text-center" /></TableCell>
+                          <TableCell className="text-center">{fmtBRL(q.valor_unitario)}</TableCell>
+                          <TableCell className="text-center"><Input type="text" value={q.descontoIsPercent ? `${q.desconto}%` : String(q.desconto)} onChange={(e) => {
                             const raw = e.target.value.trim()
                             let descontoNum = 0
                             let descontoIsPercent = false
@@ -549,13 +559,11 @@ export default function CommercialProposalNew() {
                             if (descontoIsPercent) descontoNum = Math.min(Math.max(0, descontoNum), 100)
                             else descontoNum = Math.min(Math.max(0, descontoNum), unit)
                             setQuimicos(prev => prev.map((pp, i) => i === idx ? { ...pp, desconto: descontoNum, descontoIsPercent } : pp))
-                          }} className="w-36 ml-auto" /></TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <div className="text-sm">{fmtBRL(Math.max(0, (unit - capped) * (q.pontos || 1)))}</div>
-                            </div>
+                          }} className="w-20 text-center" /></TableCell>
+                          <TableCell className="text-center">
+                            <div className="text-sm text-center">{fmtBRL(Math.max(0, (unit - capped) * (q.pontos || 1)))}</div>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-center">
                             <Button className='button-remove' onClick={() => setQuimicos(prev => prev.filter((_, i) => i !== idx))}><IconTrash /> Remover</Button>
                           </TableCell>
                         </TableRow>
@@ -607,11 +615,11 @@ export default function CommercialProposalNew() {
               </div>
               <div className="flex items-end">
                 <Button className='rounded-full button-primary' onClick={async () => {
-                  if (!selectedProductId) { toastError('Selecione um produto antes de adicionar'); return }
+                  if (!selectedProductId) { toastWarning('Selecione um produto antes de adicionar'); return }
                   const p = products.find(pp => pp.id === Number(selectedProductId))
                   if (!p) return
                   // prevent duplicate product
-                  if (produtos.some(pr => pr.produto_id === p.id)) { toastError('Produto já adicionado'); return }
+                  if (produtos.some(pr => pr.produto_id === p.id)) { toastWarning('Este produto já foi adicionado'); return }
                   const raw = (productDiscount || '').toString().trim()
                   let descontoNum = 0
                   let descontoIsPercent = false
@@ -674,14 +682,12 @@ export default function CommercialProposalNew() {
                           setProdutos(prev => prev.map((pp, i) => i === idx ? { ...pp, desconto: descontoNum, descontoIsPercent } : pp))
                         }} className="w-36 text-center" /></TableCell>
                         <TableCell className="text-center">
-                          <div className="flex items-center gap-2">
-                            <div className="text-sm">{fmtBRL(Math.max(0, (() => {
-                              const unit = Number(p.valor_unitario || 0)
-                              const descontoPerUnit = p.descontoIsPercent ? (Number(p.desconto || 0) / 100) * unit : Number(p.desconto || 0)
-                              const capped = Math.min(Math.max(0, descontoPerUnit), unit)
-                              return (unit - capped) * (p.quantidade || 1)
-                            })()))}</div>
-                          </div>
+                          <div className="text-sm">{fmtBRL(Math.max(0, (() => {
+                            const unit = Number(p.valor_unitario || 0)
+                            const descontoPerUnit = p.descontoIsPercent ? (Number(p.desconto || 0) / 100) * unit : Number(p.desconto || 0)
+                            const capped = Math.min(Math.max(0, descontoPerUnit), unit)
+                            return (unit - capped) * (p.quantidade || 1)
+                          })()))}</div>
                         </TableCell>
                         <TableCell className="text-center">
                           <Button className='button-remove' onClick={() => setProdutos(prev => prev.filter((_, i) => i !== idx))}><IconTrash /> Remover</Button>
@@ -821,7 +827,7 @@ export default function CommercialProposalNew() {
                     await Promise.all([...programPromises, ...coursePromises, ...chemicalPromises, ...productPromises])
                     navigate(`/comercial/proposta/${pid}`)
                   } catch (e: any) {
-                  toastError(e?.message || 'Falha ao criar proposta')
+                    toastError(e?.message || 'Falha ao criar proposta')
                   }
                 }}
               >Finalizar</Button>

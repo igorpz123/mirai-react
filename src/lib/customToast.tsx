@@ -41,6 +41,6 @@ const render = (variant: 'error' | 'warning' | 'success', title: string, content
 
 export const toastError = (content: ToastContent) => render('error', 'Erro ao executar a ação', content)
 export const toastWarning = (content: ToastContent) => render('warning', 'Esta ação precisa de atenção', content)
-export const toastSuccess = (content: ToastContent) => render('success', 'Esta ação foi executada com sucesso', content)
+export const toastSuccess = (content: ToastContent) => render('success', 'Ação executada com sucesso', content)
 
 export default { toastError, toastWarning, toastSuccess }

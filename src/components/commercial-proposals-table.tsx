@@ -1,4 +1,4 @@
-import React, { useState, type ReactElement } from 'react'
+import React, { useState, useMemo, type ReactElement } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { Proposal } from '@/services/proposals'
 import { Button } from '@/components/ui/button'
@@ -31,6 +31,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
   const navigate = useNavigate()
   const { user } = useAuth()
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedStatus, setSelectedStatus] = useState<string>('all')
   const [selectedResp, setSelectedResp] = useState<string>('all')
   const [pageIndex, setPageIndex] = useState(0)
@@ -39,6 +40,14 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
 
   // keep local rows in sync when proposals prop changes
   React.useEffect(() => { setRows(proposals) }, [proposals])
+
+  // debounce search to avoid rerender/glitch on each keystroke
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 150)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const isAdmin = useMemo(() => [1, 2, 3].includes(Number(user?.cargoId)), [user?.cargoId])
 
   const fmtBRL = (n: number | null | undefined) =>
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n || 0))
@@ -85,25 +94,30 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
   }
 
   // derive filters
-  const uniqueStatuses = Array.from(
-    new Set(
-      (proposals || [])
-        .map((p) => canonicalizeStatus((p?.status ?? '').toString()))
-        .filter((v) => !!v)
+  const uniqueStatuses = useMemo(() => (
+    Array.from(
+      new Set(
+        (proposals || [])
+          .map((p) => canonicalizeStatus((p?.status ?? '').toString()))
+          .filter((v) => !!v)
+      )
     )
-  )
+  ), [proposals])
 
-  const uniqueResponsaveis = Array.from(
-    new Set(
-      (proposals as Array<Proposal & { responsavel?: string }>)
-        .map((p) => (p as any).responsavel as string | undefined)
-        .filter((v): v is string => !!v && v.trim().length > 0)
+  const uniqueResponsaveis = useMemo(() => (
+    Array.from(
+      new Set(
+        (proposals as Array<Proposal & { responsavel?: string }>)
+          .map((p) => (p as any).responsavel as string | undefined)
+          .filter((v): v is string => !!v && v.trim().length > 0)
+      )
     )
-  )
+  ), [proposals])
 
   // filtered + searched
-  const filtered = (rows as Array<Proposal & { titulo?: string; responsavel?: string }>)
-    .filter((p) => {
+  const filtered = useMemo(() => {
+    const list = (rows as Array<Proposal & { titulo?: string; responsavel?: string }>)
+    return list.filter((p) => {
       if (selectedStatus !== 'all') {
         const ps = canonicalizeStatus((p.status ?? '').toString())
         if (ps !== selectedStatus) return false
@@ -112,18 +126,139 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
         const pr = ((p as any).responsavel ?? '').toString().toLowerCase()
         if (pr !== selectedResp.toLowerCase()) return false
       }
-      const q = search.trim().toLowerCase()
+      const q = debouncedSearch
       if (q.length === 0) return true
       const titulo = (p.titulo ?? '').toString().toLowerCase()
       const cliente = (p.cliente ?? '').toString().toLowerCase()
-      // Prefer match on título; fallback to cliente if título não existir
       return (titulo.length > 0 && titulo.includes(q)) || cliente.includes(q)
     })
+  }, [rows, selectedStatus, selectedResp, debouncedSearch])
 
   // pagination
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
-  const safePageIndex = Math.min(Math.max(0, pageIndex), totalPages - 1)
-  const pageItems = filtered.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize)
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filtered.length / pageSize)), [filtered.length, pageSize])
+  const safePageIndex = useMemo(() => Math.min(Math.max(0, pageIndex), totalPages - 1), [pageIndex, totalPages])
+  const pageItems = useMemo(() => filtered.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize), [filtered, safePageIndex, pageSize])
+
+  const isUserResponsible = React.useCallback((p: Proposal) => {
+    return (p as any).responsavel_id
+      ? Number((p as any).responsavel_id) === Number(user?.id)
+      : (p.responsavel ?? '').toString().toLowerCase() === `${user?.nome ?? ''}`.toLowerCase()
+  }, [user?.id, user?.nome])
+
+  const ProposalActionsMenu: React.FC<{ p: Proposal; onChange: (updater: (prev: Proposal[]) => Proposal[]) => void }>
+    = React.memo(({ p, onChange }) => {
+    const [open, setOpen] = useState(false)
+    const canManage = isAdmin || isUserResponsible(p)
+    return (
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="data-[state=open]:bg-muted text-muted-foreground">
+            <IconDotsVertical />
+            <span className="sr-only">Abrir menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        {open && (
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link to={`/comercial/proposta/${p.id}`}>
+                <IconExternalLink className="mr-2" /> Visualizar
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={async () => {
+                try {
+                  const res = await recalculateProposalTotal(p.id)
+                  onChange(prev => prev.map(r => r.id === p.id ? { ...r, valor_total: res.valor_total } : r))
+                  toastSuccess('Valor total recalculado')
+                } catch (err) {
+                  toastError('Falha ao recalcular valor total')
+                }
+              }}
+            >
+              <IconRotateClockwise className="mr-2" /> Recalcular valor
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(window.location.origin + `/comercial/proposta/${p.id}`)
+                  toastSuccess('Link copiado')
+                } catch (e) {
+                  toastError('Não foi possível copiar')
+                }
+              }}
+            >
+              <IconLink className="mr-2" /> Copiar link
+            </DropdownMenuItem>
+            {canManage && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className='px-2 text-sm text-muted-foreground'>
+                  Atualizar Status
+                </DropdownMenuLabel>
+                {PROPOSAL_STATUSES.map(s => (
+                  <DropdownMenuItem
+                    key={`status-${s.key}`}
+                    className="cursor-pointer"
+                    onClick={async () => {
+                      try {
+                        if (s.key === 'aprovada' || s.key === 'rejeitada') {
+                          const ok = window.confirm(`Tem certeza que deseja marcar como ${s.label}?`)
+                          if (!ok) return
+                        }
+                        const res = await updateProposalStatus(p.id, s.key as ProposalStatus)
+                        onChange(prev => prev.map(r => r.id === p.id ? { ...r, status: res.status, dataAlteracao: res.dataAlteracao ?? (r as any).dataAlteracao } : r))
+                        toastSuccess(`O status da proposta foi atualizado para: ${s.label}`)
+                      } catch (e: any) {
+                        toastError(e?.response?.data?.message || 'Falha ao atualizar status')
+                      }
+                    }}
+                  >
+                    {s.label}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer text-destructive focus:text-destructive"
+                  onClick={async () => {
+                    try {
+                      const confirmed = window.confirm('Tem certeza que deseja deletar esta proposta?')
+                      if (!confirmed) return
+                      await deleteProposal(p.id)
+                      onChange(prev => prev.filter(r => r.id !== p.id))
+                      toastSuccess('Proposta deletada')
+                    } catch (err) {
+                      toastError('Falha ao deletar proposta')
+                    }
+                  }}
+                >
+                  <IconTrash className='mr-2 text-destructive' /> Deletar
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        )}
+      </DropdownMenu>
+    )
+  })
+
+  const ProposalRow: React.FC<{ p: Proposal }> = React.memo(({ p }) => (
+    <TableRow key={p.id} className="align-top" style={{ touchAction: 'manipulation' }}>
+      <TableCell>{p.titulo ?? '—'}</TableCell>
+      <TableCell>{p.responsavel ?? '—'}</TableCell>
+      <TableCell>{p.criadoEm ? new Date(p.criadoEm).toLocaleDateString('pt-BR') : '—'}</TableCell>
+      <TableCell>
+        <ProposalStatusBadge status={p.status} />
+      </TableCell>
+      <TableCell>
+        {fmtBRL(p.valor_total ?? p.valor ?? 0)}
+      </TableCell>
+      <TableCell>
+        <ProposalActionsMenu p={p} onChange={setRows} />
+      </TableCell>
+    </TableRow>
+  ))
 
   return (
     <div className="rounded-lg border bg-card mx-6">
@@ -203,117 +338,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
               </TableRow>
             ) : (
               pageItems.map((p) => (
-                <TableRow key={p.id} className="align-top">
-                  <TableCell>{p.titulo ?? '—'}</TableCell>
-                  <TableCell>{p.responsavel ?? '—'}</TableCell>
-                  <TableCell>{p.criadoEm ? new Date(p.criadoEm).toLocaleDateString('pt-BR') : '—'}</TableCell>
-                  <TableCell>
-                    <ProposalStatusBadge status={p.status} />
-                  </TableCell>
-                  <TableCell>
-                    {fmtBRL(p.valor_total ?? p.valor ?? 0)}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="data-[state=open]:bg-muted text-muted-foreground">
-                          <IconDotsVertical />
-                          <span className="sr-only">Abrir menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-44">
-                        <DropdownMenuItem asChild className="cursor-pointer">
-                          <Link to={`/comercial/proposta/${p.id}`}>
-                            <IconExternalLink className="mr-2" /> Visualizar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={async () => {
-                            try {
-                              const res = await recalculateProposalTotal(p.id)
-                              setRows(prev => prev.map(r => r.id === p.id ? { ...r, valor_total: res.valor_total } : r))
-                              toastSuccess('Valor total recalculado')
-                            } catch (err) {
-                              toastError('Falha ao recalcular valor total')
-                            }
-                          }}
-                        >
-                          <IconRotateClockwise className="mr-2" /> Recalcular valor
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(window.location.origin + `/comercial/proposta/${p.id}`)
-                              toastSuccess('Link copiado')
-                            } catch (e) {
-                              toastError('Não foi possível copiar')
-                            }
-                          }}
-                        >
-                          <IconLink className="mr-2" /> Copiar link
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className='px-2 text-sm text-muted-foreground'>
-                          Atualizar Status
-                        </DropdownMenuLabel>
-                        {/* Status quick actions */}
-                        {(() => {
-                          const isAdmin = [1, 2, 3].includes(Number(user?.cargoId))
-                          const isResponsible = (p as any).responsavel_id ? Number((p as any).responsavel_id) === Number(user?.id) : (p.responsavel ?? '').toString().toLowerCase() === `${user?.nome ?? ''}`.toLowerCase()
-                          if (!(isAdmin || isResponsible)) return null
-                          return PROPOSAL_STATUSES.map(s => (
-                            <DropdownMenuItem
-                              key={`status-${s.key}`}
-                              className="cursor-pointer"
-                              onClick={async () => {
-                                try {
-                                  // confirmations for approve/reject
-                                  if (s.key === 'aprovada' || s.key === 'rejeitada') {
-                                    const ok = window.confirm(`Tem certeza que deseja marcar como ${s.label}?`)
-                                    if (!ok) return
-                                  }
-                                  const res = await updateProposalStatus(p.id, s.key as ProposalStatus)
-                                  setRows(prev => prev.map(r => r.id === p.id ? { ...r, status: res.status, dataAlteracao: res.dataAlteracao ?? (r as any).dataAlteracao } : r))
-                                  toastSuccess(`Status: ${s.label}`)
-                                } catch (e: any) {
-                                  toastError(e?.response?.data?.message || 'Falha ao atualizar status')
-                                }
-                              }}
-                            >
-                              {s.label}
-                            </DropdownMenuItem>
-                          ))
-                        })()}
-                        <DropdownMenuSeparator />
-                        {(() => {
-                          const isAdmin = [1, 2, 3].includes(Number(user?.cargoId))
-                          const isResponsible = (p as any).responsavel_id ? Number((p as any).responsavel_id) === Number(user?.id) : (p.responsavel ?? '').toString().toLowerCase() === `${user?.nome ?? ''}`.toLowerCase()
-                          if (!(isAdmin || isResponsible)) return null
-                          return (
-                            <DropdownMenuItem
-                              className="cursor-pointer text-destructive focus:text-destructive"
-                              onClick={async () => {
-                                try {
-                                  const confirmed = window.confirm('Tem certeza que deseja deletar esta proposta?')
-                                  if (!confirmed) return
-                                  await deleteProposal(p.id)
-                                  setRows(prev => prev.filter(r => r.id !== p.id))
-                                  toastSuccess('Proposta deletada')
-                                } catch (err) {
-                                  toastError('Falha ao deletar proposta')
-                                }
-                              }}
-                            >
-                              <IconTrash className='mr-2 text-destructive' /> Deletar
-                            </DropdownMenuItem>
-                          )
-                        })()}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
+                <ProposalRow key={p.id} p={p} />
               ))
             )}
           </TableBody>

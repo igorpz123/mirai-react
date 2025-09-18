@@ -10,8 +10,7 @@ import {
   closestCenter,
   DndContext,
   KeyboardSensor,
-  MouseSensor,
-  TouchSensor,
+  PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -148,41 +147,38 @@ const getStatusText = (status: string): string => {
 }
 
 // Create a separate component for the drag handle
-function DragHandle({ id }: { id: number }) {
-  const { attributes, listeners } = useSortable({
-    id,
-  })
-
+const DragHandle: React.FC = React.memo(function DragHandleInner() {
   return (
     <Button
-      {...attributes}
-      {...listeners}
       variant="ghost"
       size="icon"
-      className="text-muted-foreground size-7 hover:bg-transparent"
+      className="text-muted-foreground size-7 hover:bg-transparent cursor-grab"
+      tabIndex={-1}
     >
       <IconGripVertical className="text-muted-foreground size-3" />
       <span className="sr-only">Arraste para ordenar</span>
     </Button>
   )
-}
+})
 
 // columns moved inside component so we can access component props/state
 
-function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
-    id: row.original.id,
-  })
+const DraggableRow: React.FC<{ row: Row<z.infer<typeof schema>> }> = React.memo(function DraggableRowInner({ row }) {
+  const { attributes, listeners, transform, transition, setNodeRef, isDragging } = useSortable({ id: row.original.id })
 
   return (
     <TableRow
       data-state={row.getIsSelected() && "selected"}
       data-dragging={isDragging}
       ref={setNodeRef}
+      // Apply DnD listeners/attributes to the whole row (with activation constraint, clicks won't drag)
+      {...attributes}
+      {...listeners}
       className="relative z-0 data-[dragging=true]:z-10 data-[dragging=true]:opacity-80"
       style={{
         transform: CSS.Transform.toString(transform),
         transition: transition,
+        touchAction: 'manipulation',
       }}
     >
       {row.getVisibleCells().map((cell) => (
@@ -192,7 +188,7 @@ function DraggableRow({ row }: { row: Row<z.infer<typeof schema>> }) {
       ))}
     </TableRow>
   )
-}
+})
 
 export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   tasks,
@@ -388,8 +384,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   })
   const sortableId = React.useId()
   const sensors = useSensors(
-    useSensor(MouseSensor, {}),
-    useSensor(TouchSensor, {}),
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, {})
   )
 
@@ -452,11 +447,11 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     setData(tableData)
   }, [tableData])
 
-  const columns: ColumnDef<z.infer<typeof schema>>[] = [
+  const columns: ColumnDef<z.infer<typeof schema>>[] = React.useMemo(() => [
     {
       id: "drag",
       header: () => null,
-      cell: ({ row }) => <DragHandle id={row.original.id} />,
+      cell: () => <DragHandle />,
     },
     {
       id: "select",
@@ -610,7 +605,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
         )
       },
     },
-  ]
+  ], [handleTaskUpdate, onRefresh])
 
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],
