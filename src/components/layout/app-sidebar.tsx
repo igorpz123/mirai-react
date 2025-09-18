@@ -9,6 +9,7 @@ import {
   HardHat,
   GalleryVerticalEnd,
   Calendar,
+  Map,
 } from "lucide-react"
 
 import { NavTechnical } from "@/components/layout/nav-technical"
@@ -28,17 +29,22 @@ import { useAuth } from '@/hooks/use-auth'
 import { getTasksByUnitId } from '@/services/tasks'
 import { useEffect, useState } from 'react'
 
+//Página comercial para usuários internos (equipe comercial)
 const navComercialData = [
   { title: "Dashboard", url: "/comercial/dashboard", icon: ClipboardCheck },
   {
-    title: "CRM", url: "/crm", icon: Wallet, items: [
-      { title: "Criar proposta", url: "comercial/crm/criar-proposta" },
+    title: "CRM", url: "", icon: Wallet, items: [
+      { title: "Criar proposta", url: "/comercial/proposta/nova" },
+      { title: "Cursos", url: "/comercial/cursos" },
+      { title: "Programas", url: "/comercial/programas" },
+      { title: "Químicos", url: "/comercial/quimicos" },
+      { title: "Produtos", url: "/comercial/produtos" },
     ]
   },
-  { title: "Cursos", url: "/cursos", icon: Calendar },
-  { title: "Livro de Registros", url: "/livro-de-registros", icon: FileSliders },
+  { title: "Livro de Registros", url: "/comercial/livro-de-registros", icon: FileSliders },
 ];
 
+//Página comercial para usuários externos (fora da equipe comercial)
 const navComercialDataOutside = [
   {
     title: "CRM", url: "/crm", icon: Wallet, items: [
@@ -137,7 +143,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Mapa",
       url: "/technical/mapa",
-      icon: Calendar,
+      icon: Map,
     },
     {
       title: "Fluxograma",

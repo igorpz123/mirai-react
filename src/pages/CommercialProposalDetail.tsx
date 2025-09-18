@@ -1,19 +1,24 @@
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice } from '@/services/proposals'
+import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation } from '@/services/proposals'
 import ProposalStatusBadge from '@/components/proposal-status-badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { SiteHeader } from '@/components/layout/site-header'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toastError, toastSuccess } from '@/lib/customToast'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { IconTrash } from '@tabler/icons-react'
+import { AuthContext } from '@/contexts/AuthContext'
 
 export default function CommercialProposalDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const { user } = React.useContext(AuthContext)
     const [proposal, setProposal] = React.useState<Proposal | null>(null)
     const [loading, setLoading] = React.useState<boolean>(true)
     const [error, setError] = React.useState<string | null>(null)
@@ -28,6 +33,19 @@ export default function CommercialProposalDetail() {
     const [products, setProducts] = React.useState<Produto[]>([])
     const [chemicals, setChemicals] = React.useState<Quimico[]>([])
     const [programs, setPrograms] = React.useState<Programa[]>([])
+    const [note, setNote] = React.useState<string>('')
+    const [savingNote, setSavingNote] = React.useState<boolean>(false)
+
+    // Confirm dialog state
+    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [confirmText, setConfirmText] = React.useState<string>('')
+    const [confirming, setConfirming] = React.useState(false)
+    const confirmActionRef = React.useRef<null | (() => Promise<void>)>(null)
+    const openConfirm = (text: string, action: () => Promise<void>) => {
+        setConfirmText(text)
+        confirmActionRef.current = action
+        setConfirmOpen(true)
+    }
     React.useEffect(() => {
         let mounted = true
         Promise.all([
@@ -137,6 +155,13 @@ export default function CommercialProposalDetail() {
         return { qtd, valor }
     }, [programas])
 
+    // Permissions: disable remove if approved or user not responsible/admin
+    const isApproved = React.useMemo(() => (proposal?.status || '').toString().toLowerCase() === 'aprovada', [proposal?.status])
+    const isAdmin = React.useMemo(() => [1, 2, 3].includes(Number(user?.cargoId)), [user?.cargoId])
+    const isResponsible = React.useMemo(() => Number(user?.id) === Number(proposal?.responsavel_id), [user?.id, proposal?.responsavel_id])
+    const canRemoveItems = !isApproved && (isAdmin || isResponsible)
+    const canUpdateStatus = isAdmin || isResponsible
+
     if (loading) return <div className="p-4">Carregando...</div>
     if (error) return <div className="p-4 text-destructive">{error}</div>
     if (!proposal) return <div className="p-4">Proposta não encontrada.</div>
@@ -153,10 +178,10 @@ export default function CommercialProposalDetail() {
                         </h1>
                         <div className="flex items-center gap-2">
                             <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
-                            <Button onClick={() => setOpenCourse(true)}>+ Curso</Button>
-                            <Button onClick={() => setOpenChemical(true)}>+ Químico</Button>
-                            <Button onClick={() => setOpenProduct(true)}>+ Produto</Button>
-                            <Button onClick={() => setOpenProgram(true)}>+ Programa</Button>
+                            <Button onClick={() => setOpenCourse(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Curso</Button>
+                            <Button onClick={() => setOpenChemical(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Químico</Button>
+                            <Button onClick={() => setOpenProduct(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Produto</Button>
+                            <Button onClick={() => setOpenProgram(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Programa</Button>
                         </div>
                     </div>
 
@@ -165,6 +190,7 @@ export default function CommercialProposalDetail() {
                         <div className="text-sm font-medium">Status da proposta</div>
                         <div className="flex items-center gap-2">
                             <Select
+                                disabled={!canUpdateStatus}
                                 value={(proposal.status || '').toString().toLowerCase().replace('progress', 'andamento').replace('análise', 'analise')}
                                 onValueChange={async (v) => {
                                     try {
@@ -232,6 +258,40 @@ export default function CommercialProposalDetail() {
                         </div>
                     </section>
 
+                    {/* Observações sobre a proposta */}
+                    <section className="space-y-2">
+                        <h2 className="text-lg font-semibold">Observações</h2>
+                        <div className="rounded-md border p-3 bg-card/50">
+                            <Textarea
+                                placeholder="Escreva uma observação sobre esta proposta..."
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                disabled={!canUpdateStatus || isApproved || savingNote}
+                            />
+                            <div className="flex justify-end mt-2">
+                                <Button
+                                    onClick={async () => {
+                                        try {
+                                            if (!id || !user?.id) return
+                                            const content = (note || '').trim()
+                                            if (!content) { toastError('Digite uma observação'); return }
+                                            setSavingNote(true)
+                                            await addProposalObservation(Number(id), Number(user.id), content)
+                                            setNote('')
+                                            try { const h = await getProposalHistory(Number(id)); setHistory(h) } catch {}
+                                            toastSuccess('Observação adicionada')
+                                        } catch (err: any) {
+                                            toastError(err?.response?.data?.message || err?.message || 'Erro ao adicionar observação')
+                                        } finally {
+                                            setSavingNote(false)
+                                        }
+                                    }}
+                                    disabled={!canUpdateStatus || isApproved || savingNote}
+                                >{savingNote ? 'Salvando...' : 'Salvar observação'}</Button>
+                            </div>
+                        </div>
+                    </section>
+
                     <section className="space-y-2">
                         <h2 className="text-lg font-semibold">Produtos vinculados</h2>
                         {loadingItens ? (
@@ -250,6 +310,7 @@ export default function CommercialProposalDetail() {
                                                     <TableHead className="text-right">Qtd</TableHead>
                                                     <TableHead className="text-right">Valor Unit.</TableHead>
                                                     <TableHead className="text-right">Valor Total</TableHead>
+                                                    <TableHead></TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -259,6 +320,24 @@ export default function CommercialProposalDetail() {
                                                         <TableCell className="text-right">{Number(p.quantidade ?? 0)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL(p.valor_unitario)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL(p.valor_total)}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                className='button-remove'
+                                                                size="sm"
+                                                                disabled={!canRemoveItems}
+                                                                title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível remover itens.' : 'Apenas o responsável ou um administrador pode remover itens.') : undefined}
+                                                                onClick={() => openConfirm(
+                                                                    `Remover programa ${p.programa_nome || p.programa_id}?`,
+                                                                    async () => {
+                                                                        await deleteProgramFromProposal(proposal.id, p.id)
+                                                                        setProgramas(prev => prev ? prev.filter(x => x.id !== p.id) : prev)
+                                                                        setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number(p.valor_total || 0) } : prev)
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        toastSuccess('Programa removido')
+                                                                    }
+                                                                )}
+                                                            ><IconTrash /> Remover</Button>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                                 <TableRow>
@@ -266,6 +345,7 @@ export default function CommercialProposalDetail() {
                                                     <TableCell className="text-right font-semibold">{programasTotals.qtd}</TableCell>
                                                     <TableCell className="text-right">—</TableCell>
                                                     <TableCell className="text-right font-semibold">{fmtBRL(programasTotals.valor)}</TableCell>
+                                                    <TableCell className="text-right">—</TableCell>
                                                 </TableRow>
                                             </TableBody>
                                         </Table>
@@ -283,6 +363,7 @@ export default function CommercialProposalDetail() {
                                                     <TableHead className="text-right">Qtd</TableHead>
                                                     <TableHead className="text-right">Valor Unit.</TableHead>
                                                     <TableHead className="text-right">Valor Total</TableHead>
+                                                    <TableHead></TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -292,6 +373,24 @@ export default function CommercialProposalDetail() {
                                                         <TableCell className="text-right">{Number(c.quantidade ?? 0)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL(c.valor_unitario)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL(c.valor_total)}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                className='button-remove'
+                                                                size="sm"
+                                                                disabled={!canRemoveItems}
+                                                                title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível remover itens.' : 'Apenas o responsável ou um administrador pode remover itens.') : undefined}
+                                                                onClick={() => openConfirm(
+                                                                    `Remover curso ${c.curso_nome || c.curso_id}?`,
+                                                                    async () => {
+                                                                        await deleteCourseFromProposal(proposal.id, c.id)
+                                                                        setCursos(prev => prev ? prev.filter(x => x.id !== c.id) : prev)
+                                                                        setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number(c.valor_total || 0) } : prev)
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        toastSuccess('Curso removido')
+                                                                    }
+                                                                )}
+                                                            ><IconTrash /> Remover</Button>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                                 <TableRow>
@@ -299,6 +398,7 @@ export default function CommercialProposalDetail() {
                                                     <TableCell className="text-right font-semibold">{cursosTotals.qtd}</TableCell>
                                                     <TableCell className="text-right">—</TableCell>
                                                     <TableCell className="text-right font-semibold">{fmtBRL(cursosTotals.valor)}</TableCell>
+                                                    <TableCell className="text-right">—</TableCell>
                                                 </TableRow>
                                             </TableBody>
                                         </Table>
@@ -317,6 +417,7 @@ export default function CommercialProposalDetail() {
                                                     <TableHead className="text-right">Qtd</TableHead>
                                                     <TableHead className="text-right">Valor Unit.</TableHead>
                                                     <TableHead className="text-right">Valor Total</TableHead>
+                                                    <TableHead></TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -326,6 +427,24 @@ export default function CommercialProposalDetail() {
                                                         <TableCell className="text-right">{Number((q as any).pontos ?? 0)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL((q as any).valor_unitario)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL((q as any).valor_total)}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                className='button-remove'
+                                                                size="sm"
+                                                                disabled={!canRemoveItems}
+                                                                title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível remover itens.' : 'Apenas o responsável ou um administrador pode remover itens.') : undefined}
+                                                                onClick={() => openConfirm(
+                                                                    `Remover químico do grupo ${(q as any).grupo || ''}?`,
+                                                                    async () => {
+                                                                        await deleteChemicalFromProposal(proposal.id, q.id)
+                                                                        setQuimicos(prev => prev ? prev.filter(x => x.id !== q.id) : prev)
+                                                                        setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number((q as any).valor_total || 0) } : prev)
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        toastSuccess('Químico removido')
+                                                                    }
+                                                                )}
+                                                            ><IconTrash />Remover</Button>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                                 <TableRow>
@@ -333,6 +452,7 @@ export default function CommercialProposalDetail() {
                                                     <TableCell className="text-right font-semibold">{quimicosTotals.qtd}</TableCell>
                                                     <TableCell className="text-right">—</TableCell>
                                                     <TableCell className="text-right font-semibold">{fmtBRL(quimicosTotals.valor)}</TableCell>
+                                                    <TableCell className="text-right">—</TableCell>
                                                 </TableRow>
                                             </TableBody>
                                         </Table>
@@ -351,6 +471,7 @@ export default function CommercialProposalDetail() {
                                                     <TableHead className="text-right">Qtd</TableHead>
                                                     <TableHead className="text-right">Valor Unit.</TableHead>
                                                     <TableHead className="text-right">Valor Total</TableHead>
+                                                    <TableHead></TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -360,6 +481,24 @@ export default function CommercialProposalDetail() {
                                                         <TableCell className="text-right">{Number(p.quantidade ?? 0)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL(p.valor_unitario)}</TableCell>
                                                         <TableCell className="text-right">{fmtBRL(p.valor_total)}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                disabled={!canRemoveItems}
+                                                                title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível remover itens.' : 'Apenas o responsável ou um administrador pode remover itens.') : undefined}
+                                                                onClick={() => openConfirm(
+                                                                    `Remover produto ${p.produto_nome || p.produto_id}?`,
+                                                                    async () => {
+                                                                        await deleteProductFromProposal(proposal.id, p.id)
+                                                                        setProdutos(prev => prev ? prev.filter(x => x.id !== p.id) : prev)
+                                                                        setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number(p.valor_total || 0) } : prev)
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        toastSuccess('Produto removido')
+                                                                    }
+                                                                )}
+                                                            ><IconTrash /> Remover</Button>
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))}
                                                 <TableRow>
@@ -367,6 +506,7 @@ export default function CommercialProposalDetail() {
                                                     <TableCell className="text-right font-semibold">{produtosTotals.qtd}</TableCell>
                                                     <TableCell className="text-right">—</TableCell>
                                                     <TableCell className="text-right font-semibold">{fmtBRL(produtosTotals.valor)}</TableCell>
+                                                    <TableCell className="text-right">—</TableCell>
                                                 </TableRow>
                                             </TableBody>
                                         </Table>
@@ -427,6 +567,8 @@ export default function CommercialProposalDetail() {
                                                         case 'rejeitar':
                                                         case 'atualizar_status':
                                                             return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} atualizou o status de ${h.anterior?.status || '—'} para ${h.novo?.status || '—'}`
+                                                        case 'adicionar_observacao':
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou uma observação`
                                                         default:
                                                             return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} realizou ${h.acao?.replace('_',' ')}`
                                                     }
@@ -490,6 +632,7 @@ export default function CommercialProposalDetail() {
                     </div>
                     <SheetFooter className="mt-4">
                         <Button
+                            disabled={!canRemoveItems}
                             onClick={async () => {
                                 try {
                                     if (!id) return
@@ -573,6 +716,7 @@ export default function CommercialProposalDetail() {
                     </div>
                     <SheetFooter className="mt-4">
                         <Button
+                            disabled={!canRemoveItems}
                             onClick={async () => {
                                 try {
                                     if (!id) return
@@ -643,6 +787,7 @@ export default function CommercialProposalDetail() {
                     </div>
                     <SheetFooter className="mt-4">
                         <Button
+                            disabled={!canRemoveItems}
                             onClick={async () => {
                                 try {
                                     if (!id) return
@@ -725,6 +870,7 @@ export default function CommercialProposalDetail() {
                     </div>
                     <SheetFooter className="mt-4">
                         <Button
+                            disabled={!canRemoveItems}
                             onClick={async () => {
                                 try {
                                     if (!id) return
@@ -744,6 +890,29 @@ export default function CommercialProposalDetail() {
                     </SheetFooter>
                 </SheetContent>
             </Sheet>
+            <Dialog open={confirmOpen} onOpenChange={(o) => { if (!o) { setConfirmOpen(false); setConfirming(false) } }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Confirmar remoção</DialogTitle>
+                        <DialogDescription>{confirmText || 'Deseja remover este item da proposta?'}</DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={confirming}>Cancelar</Button>
+                        <Button
+                            variant="destructive"
+                            onClick={async () => {
+                                if (!confirmActionRef.current) { setConfirmOpen(false); return }
+                                try { setConfirming(true); await confirmActionRef.current(); } finally { setConfirming(false); setConfirmOpen(false) }
+                            }}
+                            disabled={confirming}
+                        >{confirming ? 'Removendo...' : 'Remover'}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
+
+// Confirmation Dialog component inline
+// Render after the main component return block
+

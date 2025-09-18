@@ -740,6 +740,60 @@ export const getProposalHistory = async (
     }
 }
 
+// Adiciona uma observação ao histórico da proposta
+export const addProposalObservation = async (
+    req: Request<{ id: string }, {}, { usuario_id?: number; observacoes?: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const propostaId = Number(req.params.id)
+        if (!propostaId || Number.isNaN(propostaId)) {
+            res.status(400).json({ message: 'ID da proposta inválido' })
+            return
+        }
+
+        const { usuario_id, observacoes } = (req.body || {}) as any
+        const note = typeof observacoes === 'string' ? observacoes.trim() : ''
+        if (!note) {
+            res.status(400).json({ message: 'observações são obrigatórias' })
+            return
+        }
+
+        // Identificar o ator pelo token ou pelo usuario_id do corpo
+        let actorId: number | null = null
+        const authHeader = req.headers && (req.headers.authorization as string | undefined)
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1]
+            try {
+                const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                actorId = payload?.userId ?? payload?.id ?? null
+            } catch (e) {
+                // token inválido, tenta fallback
+            }
+        }
+        if (!actorId && typeof usuario_id === 'number' && !Number.isNaN(usuario_id)) {
+            actorId = Number(usuario_id)
+        }
+        if (!actorId) {
+            res.status(401).json({ message: 'Usuário autenticado é obrigatório para registrar observação' })
+            return
+        }
+
+        // Insere apenas uma entrada no histórico com acao 'adicionar_observacao'
+        const insertSql = `
+            INSERT INTO historico_alteracoes
+              (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+            VALUES (?, ?, 'adicionar_observacao', NULL, NULL, ?, NOW())
+        `
+        const [result] = await pool.query<OkPacket>(insertSql, [propostaId, actorId, note])
+
+        res.status(201).json({ message: 'Observação adicionada com sucesso', id: (result as any)?.insertId })
+    } catch (error) {
+        console.error('Erro ao adicionar observação à proposta:', error)
+        res.status(500).json({ message: 'Erro ao adicionar observação' })
+    }
+}
+
 export const deleteProposal = async (
     req: Request<{ id: string }>,
     res: Response
@@ -1444,6 +1498,212 @@ export const addProgramToProposal = async (
         await conn.rollback()
         console.error('Erro ao inserir programa na proposta:', error)
         res.status(500).json({ message: 'Erro ao inserir programa na proposta' })
+    } finally {
+        conn.release()
+    }
+}
+
+// Delete item endpoints
+export const deleteCourseFromProposal = async (
+    req: Request<{ id: string; itemId: string }>,
+    res: Response
+): Promise<void> => {
+    const propostaId = Number(req.params.id)
+    const itemId = Number(req.params.itemId)
+    if (!propostaId || Number.isNaN(propostaId) || !itemId || Number.isNaN(itemId)) {
+        res.status(400).json({ message: 'Parâmetros inválidos' })
+        return
+    }
+    const conn = await pool.getConnection()
+    try {
+        await conn.beginTransaction()
+        const [rows] = await conn.query<RowDataPacket[]>(
+            `SELECT pc.*, c.nome AS curso_nome FROM propostas_cursos pc JOIN cursos c ON pc.curso_id = c.id WHERE pc.id = ? AND pc.proposta_id = ? LIMIT 1`,
+            [itemId, propostaId]
+        )
+        if (!rows || rows.length === 0) {
+            await conn.rollback()
+            res.status(404).json({ message: 'Item não encontrado' })
+            return
+        }
+        const item: any = rows[0]
+        await conn.query(`DELETE FROM propostas_cursos WHERE id = ? AND proposta_id = ?`, [itemId, propostaId])
+        // history
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try { const payload = jwt.verify(token, authConfig.jwtSecret as string) as any; actorId = payload?.userId ?? payload?.id ?? null } catch {}
+            }
+            if (actorId) {
+                const novo_valor = JSON.stringify({ tipo: 'curso', curso_id: item.curso_id, curso_nome: item.curso_nome ?? null, quantidade: item.quantidade, valor_unitario: item.valor_unitario, desconto: item.desconto, valor_total: item.valor_total, removed: true })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'remover_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch {}
+        await conn.commit()
+        res.status(200).json({ deleted: true })
+    } catch (error) {
+        await conn.rollback()
+        console.error('Erro ao remover curso da proposta:', error)
+        res.status(500).json({ message: 'Erro ao remover curso da proposta' })
+    } finally {
+        conn.release()
+    }
+}
+
+export const deleteChemicalFromProposal = async (
+    req: Request<{ id: string; itemId: string }>,
+    res: Response
+): Promise<void> => {
+    const propostaId = Number(req.params.id)
+    const itemId = Number(req.params.itemId)
+    if (!propostaId || Number.isNaN(propostaId) || !itemId || Number.isNaN(itemId)) {
+        res.status(400).json({ message: 'Parâmetros inválidos' })
+        return
+    }
+    const conn = await pool.getConnection()
+    try {
+        await conn.beginTransaction()
+        const [rows] = await conn.query<RowDataPacket[]>(
+            `SELECT * FROM propostas_quimicos WHERE id = ? AND proposta_id = ? LIMIT 1`,
+            [itemId, propostaId]
+        )
+        if (!rows || rows.length === 0) {
+            await conn.rollback()
+            res.status(404).json({ message: 'Item não encontrado' })
+            return
+        }
+        const item: any = rows[0]
+        await conn.query(`DELETE FROM propostas_quimicos WHERE id = ? AND proposta_id = ?`, [itemId, propostaId])
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try { const payload = jwt.verify(token, authConfig.jwtSecret as string) as any; actorId = payload?.userId ?? payload?.id ?? null } catch {}
+            }
+            if (actorId) {
+                const novo_valor = JSON.stringify({ tipo: 'quimico', grupo: item.grupo, pontos: item.pontos, valor_unitario: item.valor_unitario, desconto: item.desconto, valor_total: item.valor_total, removed: true })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'remover_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch {}
+        await conn.commit()
+        res.status(200).json({ deleted: true })
+    } catch (error) {
+        await conn.rollback()
+        console.error('Erro ao remover químico da proposta:', error)
+        res.status(500).json({ message: 'Erro ao remover químico da proposta' })
+    } finally {
+        conn.release()
+    }
+}
+
+export const deleteProductFromProposal = async (
+    req: Request<{ id: string; itemId: string }>,
+    res: Response
+): Promise<void> => {
+    const propostaId = Number(req.params.id)
+    const itemId = Number(req.params.itemId)
+    if (!propostaId || Number.isNaN(propostaId) || !itemId || Number.isNaN(itemId)) {
+        res.status(400).json({ message: 'Parâmetros inválidos' })
+        return
+    }
+    const conn = await pool.getConnection()
+    try {
+        await conn.beginTransaction()
+        const [rows] = await conn.query<RowDataPacket[]>(
+            `SELECT pp.*, p.nome AS produto_nome FROM propostas_produtos pp JOIN produtos p ON pp.produto_id = p.id WHERE pp.id = ? AND pp.proposta_id = ? LIMIT 1`,
+            [itemId, propostaId]
+        )
+        if (!rows || rows.length === 0) {
+            await conn.rollback()
+            res.status(404).json({ message: 'Item não encontrado' })
+            return
+        }
+        const item: any = rows[0]
+        await conn.query(`DELETE FROM propostas_produtos WHERE id = ? AND proposta_id = ?`, [itemId, propostaId])
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try { const payload = jwt.verify(token, authConfig.jwtSecret as string) as any; actorId = payload?.userId ?? payload?.id ?? null } catch {}
+            }
+            if (actorId) {
+                const novo_valor = JSON.stringify({ tipo: 'produto', produto_id: item.produto_id, produto_nome: item.produto_nome ?? null, quantidade: item.quantidade, valor_unitario: item.valor_unitario, desconto: item.desconto, valor_total: item.valor_total, removed: true })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'remover_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch {}
+        await conn.commit()
+        res.status(200).json({ deleted: true })
+    } catch (error) {
+        await conn.rollback()
+        console.error('Erro ao remover produto da proposta:', error)
+        res.status(500).json({ message: 'Erro ao remover produto da proposta' })
+    } finally {
+        conn.release()
+    }
+}
+
+export const deleteProgramFromProposal = async (
+    req: Request<{ id: string; itemId: string }>,
+    res: Response
+): Promise<void> => {
+    const propostaId = Number(req.params.id)
+    const itemId = Number(req.params.itemId)
+    if (!propostaId || Number.isNaN(propostaId) || !itemId || Number.isNaN(itemId)) {
+        res.status(400).json({ message: 'Parâmetros inválidos' })
+        return
+    }
+    const conn = await pool.getConnection()
+    try {
+        await conn.beginTransaction()
+        const [rows] = await conn.query<RowDataPacket[]>(
+            `SELECT pp.*, p.nome AS programa_nome FROM propostas_programas pp JOIN programas_prevencao p ON pp.programa_id = p.id WHERE pp.id = ? AND pp.proposta_id = ? LIMIT 1`,
+            [itemId, propostaId]
+        )
+        if (!rows || rows.length === 0) {
+            await conn.rollback()
+            res.status(404).json({ message: 'Item não encontrado' })
+            return
+        }
+        const item: any = rows[0]
+        await conn.query(`DELETE FROM propostas_programas WHERE id = ? AND proposta_id = ?`, [itemId, propostaId])
+        try {
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            let actorId: number | null = null
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try { const payload = jwt.verify(token, authConfig.jwtSecret as string) as any; actorId = payload?.userId ?? payload?.id ?? null } catch {}
+            }
+            if (actorId) {
+                const novo_valor = JSON.stringify({ tipo: 'programa', programa_id: item.programa_id, programa_nome: item.programa_nome ?? null, quantidade: item.quantidade, valor_unitario: item.valor_unitario, desconto: item.desconto, valor_total: item.valor_total, removed: true })
+                await conn.query<OkPacket>(
+                    `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                     VALUES (?, ?, 'remover_item', NULL, ?, NULL, NOW())`,
+                    [propostaId, actorId, novo_valor]
+                )
+            }
+        } catch {}
+        await conn.commit()
+        res.status(200).json({ deleted: true })
+    } catch (error) {
+        await conn.rollback()
+        console.error('Erro ao remover programa da proposta:', error)
+        res.status(500).json({ message: 'Erro ao remover programa da proposta' })
     } finally {
         conn.release()
     }

@@ -295,7 +295,7 @@ export default function CommercialProposalNew() {
                       <TableHead>Programa</TableHead>
                       <TableHead>Qtd</TableHead>
                       <TableHead>Valor Unit.</TableHead>
-                      <TableHead>Desconto</TableHead>
+                      <TableHead>Desc (R$ ou %)</TableHead>
                       <TableHead>Valor Total</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
@@ -414,7 +414,7 @@ export default function CommercialProposalNew() {
                       <TableHead>Curso</TableHead>
                       <TableHead>Quantidade</TableHead>
                       <TableHead className='text-left'>Valor Unit</TableHead>
-                      <TableHead>Desc</TableHead>
+                      <TableHead>Desc (R$ ou %)</TableHead>
                       <TableHead>Valor Total</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
@@ -533,7 +533,7 @@ export default function CommercialProposalNew() {
                       <TableHead>Grupo</TableHead>
                       <TableHead>Pontos</TableHead>
                       <TableHead>Valor Unit</TableHead>
-                      <TableHead>Desc</TableHead>
+                      <TableHead>Desc (R$ ou %)</TableHead>
                       <TableHead>Valor Total</TableHead>
                       <TableHead></TableHead>
                     </TableRow>

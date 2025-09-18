@@ -231,6 +231,12 @@ export async function getProposalHistory(id: number) {
   return res.data as ProposalHistoryEntry[]
 }
 
+export interface AddProposalObservationResponse { id: number; message: string }
+export async function addProposalObservation(propostaId: number, usuarioId: number, observacoes: string): Promise<AddProposalObservationResponse> {
+  const res = await api.post(`/propostas/${propostaId}/observacoes`, { usuario_id: usuarioId, observacoes })
+  return res.data as AddProposalObservationResponse
+}
+
 // Catalog services
 export async function getCoursesCatalog() {
   const res = await api.get('/propostas/catalog/cursos')
@@ -281,4 +287,22 @@ export async function addProgramToProposal(propostaId: number, payload: AddProgr
 export async function getProgramasByProposal(id: number) {
   const res = await api.get(`/propostas/${id}/programas`)
   return res.data as ProposalPrograma[]
+}
+
+// Delete item services
+export async function deleteCourseFromProposal(propostaId: number, itemId: number) {
+  const res = await api.delete(`/propostas/${propostaId}/cursos/${itemId}`)
+  return res.data as { deleted: boolean }
+}
+export async function deleteChemicalFromProposal(propostaId: number, itemId: number) {
+  const res = await api.delete(`/propostas/${propostaId}/quimicos/${itemId}`)
+  return res.data as { deleted: boolean }
+}
+export async function deleteProductFromProposal(propostaId: number, itemId: number) {
+  const res = await api.delete(`/propostas/${propostaId}/produtos/${itemId}`)
+  return res.data as { deleted: boolean }
+}
+export async function deleteProgramFromProposal(propostaId: number, itemId: number) {
+  const res = await api.delete(`/propostas/${propostaId}/programas/${itemId}`)
+  return res.data as { deleted: boolean }
 }
