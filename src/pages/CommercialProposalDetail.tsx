@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation } from '@/services/proposals'
+import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, listProposalFiles, uploadProposalFile, deleteProposalFile, type Arquivo as PropostaArquivo } from '@/services/proposals'
 import ProposalStatusBadge from '@/components/proposal-status-badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -28,6 +28,8 @@ export default function CommercialProposalDetail() {
     const [loadingItens, setLoadingItens] = React.useState<boolean>(false)
     const [history, setHistory] = React.useState<ProposalHistoryEntry[] | null>(null)
     const [programas, setProgramas] = React.useState<ProposalPrograma[] | null>(null)
+    const [arquivos, setArquivos] = React.useState<PropostaArquivo[] | null>(null)
+    const [uploading, setUploading] = React.useState(false)
     // Catalogs
     const [courses, setCourses] = React.useState<Curso[]>([])
     const [products, setProducts] = React.useState<Produto[]>([])
@@ -106,14 +108,16 @@ export default function CommercialProposalDetail() {
             getProdutosByProposal(pid).catch(() => [] as ProposalProduto[]),
             getProgramasByProposal(pid).catch(() => [] as ProposalPrograma[]),
             getProposalHistory(pid).catch(() => [] as ProposalHistoryEntry[]),
+            listProposalFiles(pid).catch(() => [] as PropostaArquivo[]),
         ])
-            .then(([c, q, p, prgs, h]) => {
+            .then(([c, q, p, prgs, h, arqs]) => {
                 if (!mounted) return
                 setCursos(c)
                 setQuimicos(q)
                 setProdutos(p)
                 setProgramas(prgs)
                 setHistory(h)
+                setArquivos(arqs)
             })
             .finally(() => { if (mounted) setLoadingItens(false) })
         return () => { mounted = false }
@@ -288,6 +292,79 @@ export default function CommercialProposalDetail() {
                                     }}
                                     disabled={!canUpdateStatus || isApproved || savingNote}
                                 >{savingNote ? 'Salvando...' : 'Salvar observação'}</Button>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Arquivos vinculados */}
+                    <section className="space-y-2">
+                        <h2 className="text-lg font-semibold">Arquivos</h2>
+                        <div className="rounded-md border p-3 bg-card/50 space-y-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <input
+                                    type="file"
+                                    id="file-proposta"
+                                    disabled={!canRemoveItems || uploading}
+                                    onChange={async (e) => {
+                                        const file = e.currentTarget.files?.[0]
+                                        if (!file || !id) return
+                                        try {
+                                            setUploading(true)
+                                            await uploadProposalFile(Number(id), file)
+                                            const list = await listProposalFiles(Number(id))
+                                            setArquivos(list)
+                                            e.currentTarget.value = ''
+                                            toastSuccess('Arquivo enviado')
+                                        } catch (err: any) {
+                                            toastError(err?.response?.data?.message || err?.message || 'Erro ao enviar arquivo')
+                                        } finally {
+                                            setUploading(false)
+                                        }
+                                    }}
+                                />
+                                <Button
+                                    variant="outline"
+                                    disabled
+                                    title="Selecione um arquivo para enviar"
+                                >Enviar</Button>
+                                {!canRemoveItems && (
+                                    <div className="text-xs text-muted-foreground">{isApproved ? 'Proposta aprovada: uploads desabilitados.' : 'Apenas o responsável ou um administrador pode enviar/excluir arquivos.'}</div>
+                                )}
+                            </div>
+                            <div>
+                                {!arquivos || arquivos.length === 0 ? (
+                                    <div className="text-sm text-muted-foreground">Nenhum arquivo enviado.</div>
+                                ) : (
+                                    <ul className="space-y-2">
+                                        {arquivos.map((a) => (
+                                            <li key={a.id} className="flex items-center justify-between gap-2">
+                                                <a href={a.caminho} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate max-w-[70%]">{a.nome_arquivo}</a>
+                                                <div className="flex items-center gap-2">
+                                                    <a href={a.caminho} target="_blank" rel="noreferrer">
+                                                        <Button size="sm" variant="secondary">Abrir</Button>
+                                                    </a>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        disabled={!canRemoveItems}
+                                                        onClick={async () => {
+                                                            if (!id) return
+                                                            const ok = window.confirm('Excluir este arquivo?')
+                                                            if (!ok) return
+                                                            try {
+                                                                await deleteProposalFile(Number(id), a.id)
+                                                                setArquivos(prev => prev ? prev.filter(x => x.id !== a.id) : prev)
+                                                                toastSuccess('Arquivo excluído')
+                                                            } catch (err: any) {
+                                                                toastError(err?.response?.data?.message || err?.message || 'Erro ao excluir arquivo')
+                                                            }
+                                                        }}
+                                                    >Excluir</Button>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         </div>
                     </section>

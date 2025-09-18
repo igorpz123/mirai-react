@@ -306,3 +306,20 @@ export async function deleteProgramFromProposal(propostaId: number, itemId: numb
   const res = await api.delete(`/propostas/${propostaId}/programas/${itemId}`)
   return res.data as { deleted: boolean }
 }
+
+// Files (arquivos) services for proposals
+export type Arquivo = { id: number; nome_arquivo: string; caminho: string }
+export async function listProposalFiles(propostaId: number) {
+  const res = await api.get(`/propostas/${propostaId}/arquivos`)
+  return res.data as Arquivo[]
+}
+export async function uploadProposalFile(propostaId: number, file: File) {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await api.post(`/propostas/${propostaId}/arquivos`, form, { headers: { 'Content-Type': 'multipart/form-data' } })
+  return res.data as { id: number; nome_arquivo: string; caminho: string }
+}
+export async function deleteProposalFile(propostaId: number, arquivoId: number) {
+  const res = await api.delete(`/propostas/${propostaId}/arquivos/${arquivoId}`)
+  return res.data as { deleted: boolean; id: number }
+}

@@ -3,6 +3,7 @@ import { RowDataPacket, OkPacket } from 'mysql2'
 import pool from '../config/db'
 import jwt from 'jsonwebtoken'
 import authConfig from '../config/auth'
+import type { Request as ExpressRequest } from 'express'
 
 type ProposalRow = RowDataPacket & {
     id: number
@@ -1714,5 +1715,71 @@ export const deleteProgramFromProposal = async (
         res.status(500).json({ message: 'Erro ao remover programa da proposta' })
     } finally {
         conn.release()
+    }
+}
+
+// Files (Arquivos) for proposals
+export const getArquivosByProposta = async (
+    req: Request<{ id: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const id = Number(req.params.id)
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `SELECT id, nome_arquivo, caminho FROM arquivos WHERE proposta_id = ?`,
+            [id]
+        )
+        res.status(200).json(rows || [])
+    } catch (error) {
+        console.error('Erro ao buscar arquivos da proposta:', error)
+        res.status(500).json({ message: 'Erro ao buscar arquivos' })
+    }
+}
+
+export const uploadArquivoProposta = async (
+    req: Request<{ id: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const id = Number(req.params.id)
+        const anyReq = req as unknown as ExpressRequest & { file?: any }
+        const file = anyReq.file
+        if (!file) {
+            res.status(400).json({ message: 'Arquivo não enviado' })
+            return
+        }
+        const nome = file.originalname
+        const caminhoPublico = `/uploads/propostas/${id}/${file.filename}`
+        const [result] = await pool.query<OkPacket>(
+            `INSERT INTO arquivos (proposta_id, nome_arquivo, caminho, created_at) VALUES (?, ?, ?, NOW())`,
+            [id, nome, caminhoPublico]
+        )
+        res.status(201).json({ id: (result as any).insertId, nome_arquivo: nome, caminho: caminhoPublico })
+    } catch (error) {
+        console.error('Erro ao fazer upload de arquivo da proposta:', error)
+        res.status(500).json({ message: 'Erro ao fazer upload de arquivo' })
+    }
+}
+
+export const deleteArquivoProposta = async (
+    req: Request<{ id: string; arquivo_id: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const id = Number(req.params.id)
+        const arquivoId = Number(req.params.arquivo_id)
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `SELECT id FROM arquivos WHERE id = ? AND proposta_id = ? LIMIT 1`,
+            [arquivoId, id]
+        )
+        if (!rows || rows.length === 0) {
+            res.status(404).json({ message: 'Arquivo não encontrado' })
+            return
+        }
+        await pool.query<OkPacket>(`DELETE FROM arquivos WHERE id = ?`, [arquivoId])
+        res.status(200).json({ deleted: true, id: arquivoId })
+    } catch (error) {
+        console.error('Erro ao excluir arquivo da proposta:', error)
+        res.status(500).json({ message: 'Erro ao excluir arquivo' })
     }
 }

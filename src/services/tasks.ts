@@ -361,3 +361,53 @@ export async function addTaskObservation(taskId: number, usuarioId: number, obse
 
     return res.json();
 }
+
+    // Files (Arquivos) services for tasks
+    export interface Arquivo { id: number; nome_arquivo: string; caminho: string }
+    export async function listTaskFiles(taskId: number): Promise<Arquivo[]> {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/tarefas/arquivos/${taskId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        })
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Erro ao buscar arquivos' }))
+            throw new Error(err.message || 'Erro ao buscar arquivos')
+        }
+        return res.json()
+    }
+
+    export async function uploadTaskFile(taskId: number, file: File): Promise<Arquivo> {
+        const token = localStorage.getItem('token');
+        const form = new FormData()
+        form.append('file', file)
+        const res = await fetch(`${API_URL}/tarefas/${taskId}/arquivos`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: form
+        })
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Erro ao enviar arquivo' }))
+            throw new Error(err.message || 'Erro ao enviar arquivo')
+        }
+        return res.json()
+    }
+
+    export async function deleteTaskFile(taskId: number, arquivoId: number): Promise<{ deleted: boolean; id: number }> {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/tarefas/${taskId}/arquivos/${arquivoId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+        })
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({ message: 'Erro ao excluir arquivo' }))
+            throw new Error(err.message || 'Erro ao excluir arquivo')
+        }
+        return res.json()
+    }

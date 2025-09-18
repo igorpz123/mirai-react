@@ -372,6 +372,56 @@ export const getArquivosByTarefa = async (
   }
 };
 
+// Upload a file for a specific task
+export const uploadArquivoTarefa = async (
+  req: Request<{ tarefa_id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { tarefa_id } = req.params
+  const file = (req as any).file as any
+    if (!file) {
+      res.status(400).json({ message: 'Arquivo não enviado' })
+      return
+    }
+    const nome = file.originalname
+    // Public path exposed at /uploads
+    const caminhoPublico = `/uploads/tarefas/${tarefa_id}/${file.filename}`
+    const [result] = await pool.query<OkPacket>(
+      `INSERT INTO arquivos (tarefa_id, nome_arquivo, caminho, created_at) VALUES (?, ?, ?, NOW())`,
+      [tarefa_id, nome, caminhoPublico]
+    )
+    res.status(201).json({ id: (result as any).insertId, nome_arquivo: nome, caminho: caminhoPublico })
+  } catch (error) {
+    console.error('Erro ao fazer upload de arquivo da tarefa:', error)
+    res.status(500).json({ message: 'Erro ao fazer upload de arquivo' })
+  }
+}
+
+// Delete a task file
+export const deleteArquivoTarefa = async (
+  req: Request<{ tarefa_id: string; arquivo_id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { tarefa_id, arquivo_id } = req.params
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, caminho FROM arquivos WHERE id = ? AND tarefa_id = ? LIMIT 1`,
+      [arquivo_id, tarefa_id]
+    )
+    if (!rows || rows.length === 0) {
+      res.status(404).json({ message: 'Arquivo não encontrado' })
+      return
+    }
+    const fileRow: any = rows[0]
+    await pool.query<OkPacket>(`DELETE FROM arquivos WHERE id = ?`, [arquivo_id])
+    res.status(200).json({ deleted: true, id: fileRow.id })
+  } catch (error) {
+    console.error('Erro ao excluir arquivo da tarefa:', error)
+    res.status(500).json({ message: 'Erro ao excluir arquivo' })
+  }
+}
+
 export const getTaskHistory = async (
   req: Request<{ tarefa_id: string }>,
   res: Response

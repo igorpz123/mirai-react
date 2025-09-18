@@ -1,6 +1,6 @@
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTaskById, getTaskHistory, addTaskObservation } from '@/services/tasks'
+import { getTaskById, getTaskHistory, addTaskObservation, listTaskFiles, uploadTaskFile, deleteTaskFile, type Arquivo } from '@/services/tasks'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import TaskStatusBadge from '@/components/task-status-badge'
@@ -17,6 +17,8 @@ export default function TechnicalTaskDetail() {
   const [historyLoading, setHistoryLoading] = React.useState(false)
   const [note, setNote] = React.useState('')
   const [saving, setSaving] = React.useState(false)
+  const [files, setFiles] = React.useState<Arquivo[] | null>(null)
+  const [uploading, setUploading] = React.useState(false)
   const { user } = useAuth()
 
   React.useEffect(() => {
@@ -50,6 +52,13 @@ export default function TechnicalTaskDetail() {
       .catch((err: any) => { console.error(err); if (mounted) setHistory(null) })
       .finally(() => { if (mounted) setHistoryLoading(false) })
 
+    return () => { mounted = false }
+  }, [id])
+
+  React.useEffect(() => {
+    if (!id) return
+    let mounted = true
+    listTaskFiles(Number(id)).then(lst => { if (mounted) setFiles(lst) }).catch(() => { if (mounted) setFiles([]) })
     return () => { mounted = false }
   }, [id])
 
@@ -142,6 +151,64 @@ export default function TechnicalTaskDetail() {
               {saving ? 'Salvando...' : 'Salvar observação'}
             </Button>
           </div>
+        </div>
+      </div>
+
+      {/* Arquivos */}
+      <div className="mt-6">
+        <h2 className="text-lg font-semibold mb-2">Arquivos</h2>
+        <div className="rounded-md border p-3 bg-card/50 space-y-3">
+          <div className="flex items-center gap-2">
+            <input
+              type="file"
+              disabled={uploading}
+              onChange={async (e) => {
+                const file = e.currentTarget.files?.[0]
+                if (!file || !id) return
+                try {
+                  setUploading(true)
+                  await uploadTaskFile(Number(id), file)
+                  const lst = await listTaskFiles(Number(id))
+                  setFiles(lst)
+                  e.currentTarget.value = ''
+                } catch (err) {
+                  alert('Erro ao enviar arquivo')
+                } finally {
+                  setUploading(false)
+                }
+              }}
+            />
+          </div>
+          {!files || files.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Nenhum arquivo enviado.</div>
+          ) : (
+            <ul className="space-y-2">
+              {files.map((f) => (
+                <li key={f.id} className="flex items-center justify-between gap-2">
+                  <a href={f.caminho} className="text-primary hover:underline truncate max-w-[70%]" target="_blank" rel="noreferrer">{f.nome_arquivo}</a>
+                  <div className="flex items-center gap-2">
+                    <a href={f.caminho} target="_blank" rel="noreferrer" className="inline-block">
+                      <button className="px-2 py-1 border rounded text-sm">Abrir</button>
+                    </a>
+                    <button
+                      className="px-2 py-1 border rounded text-sm text-red-600"
+                      onClick={async () => {
+                        if (!id) return
+                        const ok = window.confirm('Excluir este arquivo?')
+                        if (!ok) return
+                        try {
+                          await deleteTaskFile(Number(id), f.id)
+                          setFiles(prev => prev ? prev.filter(x => x.id !== f.id) : prev)
+                        } catch (err) {
+                          alert('Erro ao excluir arquivo')
+                        }
+                      }}
+                    >Excluir</button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 

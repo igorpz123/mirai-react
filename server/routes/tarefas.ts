@@ -1,5 +1,6 @@
 // src/routes/tarefas.ts
 import { Router } from 'express'
+import { uploadTarefa } from '../middleware/upload'
 import {
   getAllTasks,
   getTaskById,
@@ -17,7 +18,9 @@ import {
   newTask,
   updateTaskResponsible,
   updateTask,
-  addTaskObservation
+  addTaskObservation,
+  uploadArquivoTarefa,
+  deleteArquivoTarefa
 } from '../controllers/TaskController'
 import { getEventsByResponsavel } from '../controllers/AgendaController'
 
@@ -64,6 +67,10 @@ router.get('/unidade/:unidade_id/setor/:setor_id', getTaskByUnidadeSetor)
 
 // Coletar arquivos de uma tarefa
 router.get('/arquivos/:tarefa_id', getArquivosByTarefa)
+// Upload de arquivo para tarefa
+router.post('/:tarefa_id/arquivos', uploadTarefa.single('file'), uploadArquivoTarefa)
+// Remover arquivo de tarefa
+router.delete('/:tarefa_id/arquivos/:arquivo_id', deleteArquivoTarefa)
 
 // Coletar histórico de uma tarefa
 router.get('/historico/:tarefa_id', getTaskHistory)
