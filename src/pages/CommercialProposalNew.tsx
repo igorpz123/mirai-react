@@ -44,7 +44,7 @@ export default function CommercialProposalNew() {
   const [empresaForm, setEmpresaForm] = React.useState({ cnpj: '', razao_social: '', nome_fantasia: '', cidade: '' })
 
   // Items buffers (for display before creation)
-  type ProgramaItem = { programa_id: number; nome?: string; quantidade: number; desconto: number; descontoIsPercent?: boolean; valor_unitario?: number }
+  type ProgramaItem = { programa_id: number; nome?: string; quantidade: number; desconto: number; descontoIsPercent?: boolean; valor_unitario?: number; acrescimo_mensal?: number }
   type CursoItem = { curso_id: number; nome?: string; quantidade: number; valor_unitario: number; desconto: number; descontoIsPercent?: boolean }
   type QuimicoItem = { grupo: string; pontos: number; valor_unitario: number; desconto: number; descontoIsPercent?: boolean }
   type ProdutoItem = { produto_id: number; nome?: string; quantidade: number; desconto: number; descontoIsPercent?: boolean; valor_unitario?: number }
@@ -65,6 +65,7 @@ export default function CommercialProposalNew() {
   const [programQuantity, setProgramQuantity] = React.useState<number>(1)
   // discount as string to allow values like '10%' or '100.00'
   const [programDiscount, setProgramDiscount] = React.useState<string>('0')
+  const [programIncrement, setProgramIncrement] = React.useState<string>('0')
 
   // Course helpers (step 4)
   const [selectedCourseId, setSelectedCourseId] = React.useState<string | undefined>(undefined)
@@ -256,6 +257,10 @@ export default function CommercialProposalNew() {
                 <div className="text-sm mb-1">Desconto (R$ ou %)</div>
                 <Input type="text" value={programDiscount} onChange={(e) => setProgramDiscount(e.target.value)} className="w-full" />
               </div>
+              <div>
+                <div className="text-sm mb-1">Acréscimo Mensal (R$)</div>
+                <Input type="text" value={programIncrement} onChange={(e) => setProgramIncrement(e.target.value)} className="w-full" />
+              </div>
               <div className="flex items-end">
                 <Button className='button-primary rounded-full' onClick={async () => {
                   if (!selectedProgramId) { toastWarning('Selecione um programa antes de adicionar'); return }
@@ -280,9 +285,16 @@ export default function CommercialProposalNew() {
                   if (descontoIsPercent) descontoNum = Math.min(Math.max(0, descontoNum), 100)
                   else if (unitVal > 0) descontoNum = Math.min(Math.max(0, descontoNum), unitVal)
                   else descontoNum = Math.max(0, descontoNum)
-                  setProgramas(prev => [...prev, { programa_id: p.id, nome: p.nome, quantidade: programQuantity, desconto: descontoNum, descontoIsPercent, valor_unitario: unitVal }])
+                  // parse increment as currency
+                  let incVal = 0
+                  const incRaw = (programIncrement || '').toString().trim()
+                  incVal = Number(incRaw.replace(',', '.'))
+                  if (Number.isNaN(incVal)) incVal = 0
+                  incVal = Math.max(0, incVal)
+                  setProgramas(prev => [...prev, { programa_id: p.id, nome: p.nome, quantidade: programQuantity, desconto: descontoNum, descontoIsPercent, valor_unitario: unitVal, acrescimo_mensal: incVal }])
                   setProgramQuantity(1)
                   setProgramDiscount('0')
+                  setProgramIncrement('0')
                   setSelectedProgramId(undefined)
                 }}><IconPlus /></Button>
               </div>
@@ -294,9 +306,10 @@ export default function CommercialProposalNew() {
                     <TableRow>
                       <TableHead>Programa</TableHead>
                       <TableHead>Qtd</TableHead>
-                      <TableHead>Valor Unit.</TableHead>
+                      <TableHead>Valor Unit. (mês)</TableHead>
                       <TableHead>Desc (R$ ou %)</TableHead>
-                      <TableHead>Valor Total</TableHead>
+                      <TableHead>Acrésc. Mensal (R$)</TableHead>
+                      <TableHead>Valor Total (anual)</TableHead>
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -305,7 +318,12 @@ export default function CommercialProposalNew() {
                       const unit = Number(p.valor_unitario || 0)
                       const descontoPerUnit = p.descontoIsPercent ? (Number(p.desconto || 0) / 100) * unit : Number(p.desconto || 0)
                       const cappedDescontoPerUnit = Math.min(Math.max(0, descontoPerUnit), unit)
-                      const lineTotal = Math.max(0, (unit - cappedDescontoPerUnit) * (p.quantidade || 1))
+                      // monthly line total
+                      const monthlyBase = Math.max(0, (unit - cappedDescontoPerUnit) * (p.quantidade || 1))
+                      const inc = Math.max(0, Number(p.acrescimo_mensal || 0))
+                      const monthly = Math.max(0, monthlyBase + inc)
+                      // annualized for contract
+                      const lineTotal = monthly * 12
                       return (
                         <TableRow key={`ppp-${idx}`}>
                           <TableCell>{p.nome || p.programa_id}</TableCell>
@@ -330,6 +348,18 @@ export default function CommercialProposalNew() {
                               className="text-center w-32"
                             />
                           </TableCell>
+                          <TableCell className="text-center">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={p.acrescimo_mensal ?? 0}
+                              onChange={(e) => {
+                                const v = Math.max(0, Number(e.target.value))
+                                setProgramas(prev => prev.map((pp, i) => i === idx ? { ...pp, acrescimo_mensal: v } : pp))
+                              }}
+                              className="text-center w-32"
+                            />
+                          </TableCell>
                           <TableCell className="text-center">{fmtBRL(lineTotal)}</TableCell>
                           <TableCell className="text-center">
                             <Button className='button-remove' onClick={() => setProgramas(prev => prev.filter((_, i) => i !== idx))}><IconTrash />Remover</Button>
@@ -341,12 +371,14 @@ export default function CommercialProposalNew() {
                 </Table>
 
                 <div className="flex justify-end mt-2">
-                  <div className="text-sm font-medium">Total dos programas adicionados: {fmtBRL(programas.reduce((sum, p) => {
+                  <div className="text-sm font-medium">Total dos programas adicionados (anual): {fmtBRL(programas.reduce((sum, p) => {
                     const unit = Number(p.valor_unitario || 0)
                     const descontoPerUnit = p.descontoIsPercent ? (Number(p.desconto || 0) / 100) * unit : Number(p.desconto || 0)
                     const capped = Math.min(Math.max(0, descontoPerUnit), unit)
-                    const line = Math.max(0, (unit - capped) * (p.quantidade || 1))
-                    return sum + line
+                    const monthlyBase = Math.max(0, (unit - capped) * (p.quantidade || 1))
+                    const inc = Math.max(0, Number(p.acrescimo_mensal || 0))
+                    const monthly = Math.max(0, monthlyBase + inc)
+                    return sum + (monthly * 12)
                   }, 0))}</div>
                 </div>
               </>
@@ -796,7 +828,7 @@ export default function CommercialProposalNew() {
                         unit = 0
                       }
                       const descontoVal = await convertDiscount(p, unit)
-                      return addProgramToProposal(pid, { programa_id: p.programa_id, quantidade: p.quantidade, desconto: descontoVal })
+                      return addProgramToProposal(pid, { programa_id: p.programa_id, quantidade: p.quantidade, desconto: descontoVal, acrescimo_mensal: Math.max(0, Number(p.acrescimo_mensal || 0)) })
                     })
 
                     // Courses: use valor_unitario available on item

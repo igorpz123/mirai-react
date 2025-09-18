@@ -1404,11 +1404,11 @@ export const getProgramasByProposal = async (
 
 // Insert programa endpoint (similar to produto)
 export const addProgramToProposal = async (
-    req: Request<{ id: string }, {}, { programa_id: number; quantidade: number; desconto: number }>,
+    req: Request<{ id: string }, {}, { programa_id: number; quantidade: number; desconto: number; acrescimo_mensal?: number }>,
     res: Response
 ): Promise<void> => {
     const propostaId = Number(req.params.id)
-    const { programa_id, quantidade, desconto } = req.body || ({} as any)
+    const { programa_id, quantidade, desconto, acrescimo_mensal } = req.body || ({} as any)
     if (!propostaId || Number.isNaN(propostaId) || !programa_id) {
         res.status(400).json({ message: 'Parâmetros inválidos' })
         return
@@ -1437,13 +1437,20 @@ export const addProgramToProposal = async (
         const precoAdicional = Number(rule.preco_adicional ?? 0)
         const adicionalFlag = Number(rule.preco_adicional ?? 0) // TINYINT(1) 1=true 0=false (seguindo produtos)
         let valor_unitario = precoUnitario
-        let valor_total: number
+        let valor_total_mensal: number
         if (!adicionalFlag) {
-            valor_total = precoUnitario
+            // total mensal (sem adicional) por regra existente
+            valor_total_mensal = precoUnitario
         } else {
             const extra = Math.max(0, qtd - minQuantidade) * precoAdicional
-            valor_total = Math.max(0, precoUnitario + extra - desc)
+            // total mensal (com adicional) por regra existente
+            valor_total_mensal = Math.max(0, precoUnitario + extra - desc)
         }
+        // Acrescimo mensal (flat por mês)
+        const acres = Math.max(0, Number(acrescimo_mensal ?? 0))
+        valor_total_mensal = Math.max(0, valor_total_mensal + acres)
+        // Adaptacao: contrato anual — total anual = 12 x total mensal
+        const valor_total = Math.max(0, valor_total_mensal * 12)
         await conn.query(
             `INSERT INTO propostas_programas (proposta_id, programa_id, quantidade, valor_unitario, desconto, valor_total)
              VALUES (?, ?, ?, ?, ?, ?)`,
@@ -1480,6 +1487,7 @@ export const addProgramToProposal = async (
                     quantidade: qtd,
                     valor_unitario,
                     desconto: desc,
+                    acrescimo_mensal: acres,
                     valor_total,
                 })
                 await conn.query<OkPacket>(

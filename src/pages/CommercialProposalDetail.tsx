@@ -66,7 +66,7 @@ export default function CommercialProposalDetail() {
     const [formCourse, setFormCourse] = React.useState({ curso_id: 0, quantidade: 1, valor_unitario: 0, desconto: 0 })
     const [formChemical, setFormChemical] = React.useState({ selectedKey: '', quimico_id: 0, grupo: '', pontos: 0, valor_unitario: 0, desconto: 0 })
     const [formProduct, setFormProduct] = React.useState({ produto_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
-    const [formProgram, setFormProgram] = React.useState({ programa_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
+    const [formProgram, setFormProgram] = React.useState({ programa_id: 0, quantidade: 1, desconto: 0, acrescimo_mensal: 0, precoPrev: 0 })
 
     // Reset forms when opening sheets
     React.useEffect(() => {
@@ -79,7 +79,7 @@ export default function CommercialProposalDetail() {
         if (openProduct) setFormProduct({ produto_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
     }, [openProduct])
     React.useEffect(() => {
-        if (openProgram) setFormProgram({ programa_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
+    if (openProgram) setFormProgram({ programa_id: 0, quantidade: 1, desconto: 0, acrescimo_mensal: 0, precoPrev: 0 })
     }, [openProgram])
 
     React.useEffect(() => {
@@ -308,8 +308,8 @@ export default function CommercialProposalDetail() {
                                                 <TableRow>
                                                     <TableHead>Nome</TableHead>
                                                     <TableHead className="text-right">Qtd</TableHead>
-                                                    <TableHead className="text-right">Valor Unit.</TableHead>
-                                                    <TableHead className="text-right">Valor Total</TableHead>
+                                                    <TableHead className="text-right">Valor Unit. (mês)</TableHead>
+                                                    <TableHead className="text-right">Valor Total (anual)</TableHead>
                                                     <TableHead></TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -685,8 +685,13 @@ export default function CommercialProposalDetail() {
                                 <Input type="number" min={0} value={formProgram.desconto} onChange={(e) => setFormProgram((s) => ({ ...s, desconto: Number(e.target.value) }))} />
                             </div>
                         </div>
+                        <div>
+                            <div className="text-sm mb-1">Acréscimo Mensal (R$)</div>
+                            <Input type="number" min={0} value={formProgram.acrescimo_mensal}
+                                onChange={(e) => setFormProgram((s) => ({ ...s, acrescimo_mensal: Number(e.target.value) }))} />
+                        </div>
                         <div className="text-sm text-muted-foreground">
-                            Total previsto: {fmtBRL(formProgram.precoPrev)}
+                            Total previsto (anual): {fmtBRL(formProgram.precoPrev)}
                         </div>
                         <div>
                             <Button
@@ -706,7 +711,11 @@ export default function CommercialProposalDetail() {
                                             const extra = Math.max(0, formProgram.quantidade - minQ) * adicional
                                             total = Math.max(0, unit + extra - (formProgram.desconto || 0))
                                         }
-                                        setFormProgram((s) => ({ ...s, precoPrev: total }))
+                                        // Add monthly increment before annualizing
+                                        const acres = Math.max(0, Number(formProgram.acrescimo_mensal || 0))
+                                        const mensal = Math.max(0, total + acres)
+                                        // Preview shows annual total (12x monthly)
+                                        setFormProgram((s) => ({ ...s, precoPrev: mensal * 12 }))
                                     } catch {
                                         toastError('Falha ao calcular preço')
                                     }
@@ -720,7 +729,7 @@ export default function CommercialProposalDetail() {
                             onClick={async () => {
                                 try {
                                     if (!id) return
-                                    const payload = { programa_id: formProgram.programa_id, quantidade: formProgram.quantidade, desconto: formProgram.desconto }
+                                    const payload = { programa_id: formProgram.programa_id, quantidade: formProgram.quantidade, desconto: formProgram.desconto, acrescimo_mensal: Math.max(0, Number(formProgram.acrescimo_mensal || 0)) }
                                     const res = await addProgramToProposal(Number(id), payload)
                                     if (res.item) {
                                         setProgramas(prev => [res.item as any, ...(prev ?? [])])

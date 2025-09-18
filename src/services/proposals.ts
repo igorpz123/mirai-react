@@ -279,7 +279,7 @@ export async function addProductToProposal(propostaId: number, payload: AddProdu
   const res = await api.post(`/propostas/${propostaId}/produtos`, payload)
   return res.data as { item: ProposalProduto | null }
 }
-export type AddProgramPayload = { programa_id: number; quantidade: number; desconto: number }
+export type AddProgramPayload = { programa_id: number; quantidade: number; desconto: number; acrescimo_mensal?: number }
 export async function addProgramToProposal(propostaId: number, payload: AddProgramPayload) {
   const res = await api.post(`/propostas/${propostaId}/programas`, payload)
   return res.data as { item: ProposalPrograma | null }
