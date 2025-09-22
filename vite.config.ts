@@ -18,6 +18,10 @@ export default defineConfig({
         changeOrigin: true,
         // keep the /api prefix so routes like /api/auth/login still work
       },
+      "/uploads": {
+        target: "http://127.0.0.1:5000",
+        changeOrigin: true,
+      },
     },
   },
 })
