@@ -5,6 +5,7 @@ import cors from 'cors'
 import bodyParser from 'body-parser'
 import routes from './routes/router'
 import path from 'path'
+import fs from 'fs'
 import { PUBLIC_UPLOADS_DIR, PUBLIC_UPLOADS_PREFIX } from './middleware/upload'
 import authRoutes from './routes/auth';
 
@@ -14,6 +15,9 @@ const app = express()
 app.use(cors())
 app.use(bodyParser.json())
 app.use(bodyParser.urlencoded({ extended: true }))
+
+// Ensure uploads base directory exists (created on first server start)
+try { fs.mkdirSync(PUBLIC_UPLOADS_DIR, { recursive: true }) } catch {}
 
 // Static hosting for uploaded files
 app.use(PUBLIC_UPLOADS_PREFIX, express.static(PUBLIC_UPLOADS_DIR))

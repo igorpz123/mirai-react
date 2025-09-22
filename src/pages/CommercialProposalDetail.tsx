@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, listProposalFiles, uploadProposalFile, deleteProposalFile, type Arquivo as PropostaArquivo } from '@/services/proposals'
+import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, listProposalFiles, uploadProposalFile, deleteProposalFile, type Arquivo as PropostaArquivo, exportProposalDocx } from '@/services/proposals'
 import ProposalStatusBadge from '@/components/proposal-status-badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -180,8 +180,27 @@ export default function CommercialProposalDetail() {
                             Proposta #{proposal.id}
                             <ProposalStatusBadge status={proposal.status} />
                         </h1>
-                        <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2">
                             <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={async () => {
+                                                                try {
+                                                                    if (!id) return
+                                                                    const blob = await exportProposalDocx(Number(id))
+                                                                    const url = window.URL.createObjectURL(blob)
+                                                                    const a = document.createElement('a')
+                                                                    a.href = url
+                                                                    a.download = `Proposta-${id}.docx`
+                                                                    document.body.appendChild(a)
+                                                                    a.click()
+                                                                    a.remove()
+                                                                    window.URL.revokeObjectURL(url)
+                                                                } catch (err: any) {
+                                                                    toastError(err?.response?.data?.message || err?.message || 'Falha ao exportar DOCX')
+                                                                }
+                                                            }}
+                                                        >Exportar Word</Button>
                             <Button onClick={() => setOpenCourse(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Curso</Button>
                             <Button onClick={() => setOpenChemical(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Químico</Button>
                             <Button onClick={() => setOpenProduct(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Produto</Button>
@@ -306,18 +325,19 @@ export default function CommercialProposalDetail() {
                                     id="file-proposta"
                                     disabled={!canRemoveItems || uploading}
                                     onChange={async (e) => {
-                                        const file = e.currentTarget.files?.[0]
+                                        const inputEl = e.currentTarget
+                                        const file = inputEl.files?.[0]
                                         if (!file || !id) return
                                         try {
                                             setUploading(true)
                                             await uploadProposalFile(Number(id), file)
                                             const list = await listProposalFiles(Number(id))
                                             setArquivos(list)
-                                            e.currentTarget.value = ''
                                             toastSuccess('Arquivo enviado')
                                         } catch (err: any) {
                                             toastError(err?.response?.data?.message || err?.message || 'Erro ao enviar arquivo')
                                         } finally {
+                                            try { inputEl.value = '' } catch {}
                                             setUploading(false)
                                         }
                                     }}

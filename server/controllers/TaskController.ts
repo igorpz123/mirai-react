@@ -1,4 +1,7 @@
 import { Request, Response } from 'express';
+import fs from 'fs'
+import path from 'path'
+import { PUBLIC_UPLOADS_DIR } from '../middleware/upload'
 import { RowDataPacket, OkPacket } from 'mysql2';
 import pool from '../config/db';
 import jwt from 'jsonwebtoken';
@@ -384,9 +387,9 @@ export const uploadArquivoTarefa = async (
       res.status(400).json({ message: 'Arquivo não enviado' })
       return
     }
-    const nome = file.originalname
-    // Public path exposed at /uploads
-    const caminhoPublico = `/uploads/tarefas/${tarefa_id}/${file.filename}`
+  const nome = file.originalname
+  // Public path exposed at /uploads (folder: task-<id>)
+  const caminhoPublico = `/uploads/task-${tarefa_id}/${file.filename}`
     const [result] = await pool.query<OkPacket>(
       `INSERT INTO arquivos (tarefa_id, nome_arquivo, caminho, created_at) VALUES (?, ?, ?, NOW())`,
       [tarefa_id, nome, caminhoPublico]
@@ -415,6 +418,18 @@ export const deleteArquivoTarefa = async (
     }
     const fileRow: any = rows[0]
     await pool.query<OkPacket>(`DELETE FROM arquivos WHERE id = ?`, [arquivo_id])
+    // Attempt safe filesystem removal (only inside uploads dir)
+    try {
+      const publicPath = String(fileRow.caminho || '')
+      if (publicPath.startsWith('/uploads/')) {
+        const fileAbs = path.join(PUBLIC_UPLOADS_DIR, publicPath.replace('/uploads/', ''))
+        // ensure resolved path remains inside uploads dir
+        const resolved = path.resolve(fileAbs)
+        if (resolved.startsWith(PUBLIC_UPLOADS_DIR)) {
+          fs.unlink(resolved, () => { /* ignore errors */ })
+        }
+      }
+    } catch {}
     res.status(200).json({ deleted: true, id: fileRow.id })
   } catch (error) {
     console.error('Erro ao excluir arquivo da tarefa:', error)

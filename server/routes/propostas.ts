@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { uploadProposta } from '../middleware/upload'
-import { getProposalsByUnidade, getProposalsByUser, getProposalStats, deleteProposal, getProposalById, getCursosByProposal, getQuimicosByProposal, getProdutosByProposal, getCoursesCatalog, getChemicalsCatalog, getProductsCatalog, getProductPriceRule, addCourseToProposal, addChemicalToProposal, addProductToProposal, updateProposalStatus, getProposalHistory, createProposal, getProgramsCatalog, getProgramPriceRule, getProgramasByProposal, addProgramToProposal, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, getArquivosByProposta, uploadArquivoProposta, deleteArquivoProposta } from '../controllers/ProposalController'
+import { getProposalsByUnidade, getProposalsByUser, getProposalStats, deleteProposal, getProposalById, getCursosByProposal, getQuimicosByProposal, getProdutosByProposal, getCoursesCatalog, getChemicalsCatalog, getProductsCatalog, getProductPriceRule, addCourseToProposal, addChemicalToProposal, addProductToProposal, updateProposalStatus, getProposalHistory, createProposal, getProgramsCatalog, getProgramPriceRule, getProgramasByProposal, addProgramToProposal, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, getArquivosByProposta, uploadArquivoProposta, deleteArquivoProposta, exportProposalDocx } from '../controllers/ProposalController'
 
 const router = Router()
 
@@ -40,6 +40,8 @@ router.post('/:id/observacoes', addProposalObservation)
 router.get('/:id/arquivos', getArquivosByProposta)
 router.post('/:id/arquivos', uploadProposta.single('file'), uploadArquivoProposta)
 router.delete('/:id/arquivos/:arquivo_id', deleteArquivoProposta)
+// Export DOCX
+router.get('/:id/export/docx', exportProposalDocx)
 // Proposal history
 router.get('/:id/historico', getProposalHistory)
 router.delete('/:id', deleteProposal)

@@ -14,12 +14,13 @@ function ensureDirSync(dir: string) {
   }
 }
 
-// Build a diskStorage that saves files under uploads/<entity>/<id>/
-export function makeDiskStorage(entityFolder: 'tarefas' | 'propostas', idParam: string): StorageEngine {
+// Build a diskStorage that saves files under uploads/task-<id>/ or uploads/proposal-<id>/
+export function makeDiskStorage(entityPrefix: 'task' | 'proposal', idParam: string): StorageEngine {
   return multer.diskStorage({
   destination: (req: Request, _file: any, cb: (error: Error | null, destination: string) => void) => {
       const id = (req.params as any)?.[idParam]
-      const dest = path.join(BASE_UPLOAD_DIR, entityFolder, String(id || 'unknown'))
+      const folderName = `${entityPrefix}-${String(id || 'unknown')}`
+      const dest = path.join(BASE_UPLOAD_DIR, folderName)
       ensureDirSync(dest)
       cb(null, dest)
     },
@@ -33,8 +34,8 @@ export function makeDiskStorage(entityFolder: 'tarefas' | 'propostas', idParam: 
   })
 }
 
-export const uploadTarefa = multer({ storage: makeDiskStorage('tarefas', 'tarefa_id') })
-export const uploadProposta = multer({ storage: makeDiskStorage('propostas', 'id') })
+export const uploadTarefa = multer({ storage: makeDiskStorage('task', 'tarefa_id') })
+export const uploadProposta = multer({ storage: makeDiskStorage('proposal', 'id') })
 
 // Public URL path prefix used by server.ts when exposing static files
 export const PUBLIC_UPLOADS_PREFIX = '/uploads'

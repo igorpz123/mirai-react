@@ -163,17 +163,19 @@ export default function TechnicalTaskDetail() {
               type="file"
               disabled={uploading}
               onChange={async (e) => {
-                const file = e.currentTarget.files?.[0]
+                const inputEl = e.currentTarget
+                const file = inputEl.files?.[0]
                 if (!file || !id) return
                 try {
                   setUploading(true)
                   await uploadTaskFile(Number(id), file)
                   const lst = await listTaskFiles(Number(id))
                   setFiles(lst)
-                  e.currentTarget.value = ''
                 } catch (err) {
                   alert('Erro ao enviar arquivo')
                 } finally {
+                  // clear input safely without touching possibly nulled event
+                  try { inputEl.value = '' } catch {}
                   setUploading(false)
                 }
               }}

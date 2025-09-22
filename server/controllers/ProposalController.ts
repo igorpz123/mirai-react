@@ -1,9 +1,15 @@
 import { Request, Response } from 'express'
+import fs from 'fs'
+import path from 'path'
 import { RowDataPacket, OkPacket } from 'mysql2'
 import pool from '../config/db'
 import jwt from 'jsonwebtoken'
 import authConfig from '../config/auth'
 import type { Request as ExpressRequest } from 'express'
+import { PUBLIC_UPLOADS_DIR } from '../middleware/upload'
+import { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType } from 'docx'
+import PizZip from 'pizzip'
+import Docxtemplater from 'docxtemplater'
 
 type ProposalRow = RowDataPacket & {
     id: number
@@ -470,6 +476,314 @@ export default { getProposalsByUser, getProposalsByUnidade, getProposalStats }
 
 // Named export default updated
 export { }
+// Export proposal to DOCX
+export const exportProposalDocx = async (
+    req: Request<{ id: string }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const id = Number(req.params.id)
+        if (!id || Number.isNaN(id)) {
+            res.status(400).json({ message: 'ID da proposta inválido' })
+            return
+        }
+
+        // Fetch proposal header details
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `
+            SELECT 
+                p.*, 
+                usr_responsavel.nome AS responsavel_nome, 
+                usr_responsavel.sobrenome AS responsavel_sobrenome, 
+                usr_indicacao.nome AS indicacao_nome, 
+                usr_indicacao.sobrenome AS indicacao_sobrenome, 
+                e.razao_social AS empresa_razaoSocial,
+                e.nome_fantasia AS empresa_nome,
+                e.cnpj AS empresa_cnpj,
+                e.cidade AS empresa_cidade,
+                e.contabilidade AS empresa_contabilidade,
+                e.telefone AS empresa_telefone,
+                e.email AS empresa_email
+            FROM 
+                propostas p
+            LEFT JOIN usuarios usr_responsavel ON p.responsavel_id = usr_responsavel.id
+            LEFT JOIN usuarios usr_indicacao ON p.indicacao_id = usr_indicacao.id
+            LEFT JOIN empresas e ON p.empresa_id = e.id
+            WHERE p.id = ?
+            LIMIT 1
+            `,
+            [id]
+        )
+
+        if (!rows || rows.length === 0) {
+            res.status(404).json({ message: 'Proposta não encontrada' })
+            return
+        }
+        const r: any = rows[0]
+
+        // Fetch linked items
+        const [[cursos], [quimicos], [produtos], [programas]] = await Promise.all([
+            pool.query<RowDataPacket[]>(
+                `SELECT pc.*, c.nome AS curso_nome FROM propostas_cursos pc JOIN cursos c ON pc.curso_id = c.id WHERE pc.proposta_id = ? ORDER BY pc.id ASC`,
+                [id]
+            ),
+            pool.query<RowDataPacket[]>(
+                `SELECT * FROM propostas_quimicos WHERE proposta_id = ? ORDER BY id ASC`,
+                [id]
+            ),
+            pool.query<RowDataPacket[]>(
+                `SELECT pp.*, p.nome AS produto_nome FROM propostas_produtos pp JOIN produtos p ON pp.produto_id = p.id WHERE pp.proposta_id = ? ORDER BY pp.id ASC`,
+                [id]
+            ),
+            pool.query<RowDataPacket[]>(
+                `SELECT pp.*, p.nome AS programa_nome FROM propostas_programas pp JOIN programas_prevencao p ON pp.programa_id = p.id WHERE pp.proposta_id = ? ORDER BY pp.id ASC`,
+                [id]
+            ),
+        ])
+
+        const fmtBRL = (n: number | null | undefined) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n || 0))
+        const formatCNPJ = (value: any) => {
+            const digits = String(value || '').replace(/\D/g, '')
+            if (digits.length !== 14) return String(value || '')
+            return digits.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+        }
+        const cliente = r.empresa_nome || r.empresa_razaoSocial || '-'
+        const resp = [r.responsavel_nome, r.responsavel_sobrenome].filter(Boolean).join(' ').trim()
+        const indic = [r.indicacao_nome, r.indicacao_sobrenome].filter(Boolean).join(' ').trim()
+        const dataStr = r.data ? new Date(r.data).toLocaleDateString('pt-BR') : ''
+        const empresaData = {
+            cnpj: r.empresa_cnpj || '',
+            cnpj_fmt: formatCNPJ(r.empresa_cnpj || ''),
+            cidade: r.empresa_cidade || '',
+            razaoSocial: r.empresa_razaoSocial || '',
+            razao_social: r.empresa_razaoSocial || '',
+            nomeFantasia: r.empresa_nome || '',
+            nome_fantasia: r.empresa_nome || '',
+            // alias commonly used in templates
+            nome: r.empresa_nome || r.empresa_razaoSocial || '',
+            telefone: r.empresa_telefone || '',
+            email: r.empresa_email || '',
+            contabilidade: r.empresa_contabilidade || '',
+        }
+
+        const programasTpl = (programas as any[]).map(p => ({
+            programa_nome: String(p.programa_nome || p.programa_id),
+            quantidade: Number(p.quantidade ?? 0),
+            valor_unitario: Number(p.valor_unitario || 0),
+            valor_unitario_fmt: fmtBRL(p.valor_unitario),
+            valor_total: Number(p.valor_total || 0),
+            valor_total_fmt: fmtBRL(p.valor_total),
+        }))
+        const cursosTpl = (cursos as any[]).map(c => ({
+            curso_nome: String(c.curso_nome || c.curso_id),
+            quantidade: Number(c.quantidade ?? 0),
+            valor_unitario: Number(c.valor_unitario || 0),
+            valor_unitario_fmt: fmtBRL(c.valor_unitario),
+            valor_total: Number(c.valor_total || 0),
+            valor_total_fmt: fmtBRL(c.valor_total),
+        }))
+        const quimicosTpl = (quimicos as any[]).map(q => ({
+            grupo: String(q.grupo || q.descricao || '—'),
+            pontos: Number(q.pontos ?? 0),
+            valor_unitario: Number(q.valor_unitario || 0),
+            valor_unitario_fmt: fmtBRL(q.valor_unitario),
+            valor_total: Number(q.valor_total || 0),
+            valor_total_fmt: fmtBRL(q.valor_total),
+        }))
+        const produtosTpl = (produtos as any[]).map(p => ({
+            produto_nome: String(p.produto_nome || p.produto_id),
+            quantidade: Number(p.quantidade ?? 0),
+            valor_unitario: Number(p.valor_unitario || 0),
+            valor_unitario_fmt: fmtBRL(p.valor_unitario),
+            valor_total: Number(p.valor_total || 0),
+            valor_total_fmt: fmtBRL(p.valor_total),
+        }))
+
+        // Unified items array (programas + quimicos + produtos) with normalized fields for table rendering
+        const itensTpl = [
+            ...programasTpl.map(p => ({
+                tipo: 'Programa',
+                nome: p.programa_nome,
+                qtd_ou_pontos: String(p.quantidade),
+                valor_unitario_fmt: p.valor_unitario_fmt,
+                valor_total_fmt: p.valor_total_fmt,
+            })),
+            ...quimicosTpl.map(q => ({
+                tipo: 'Químico',
+                nome: q.grupo,
+                qtd_ou_pontos: String(q.pontos),
+                valor_unitario_fmt: q.valor_unitario_fmt,
+                valor_total_fmt: q.valor_total_fmt,
+            })),
+            ...produtosTpl.map(p => ({
+                tipo: 'Produto',
+                nome: p.produto_nome,
+                qtd_ou_pontos: String(p.quantidade),
+                valor_unitario_fmt: p.valor_unitario_fmt,
+                valor_total_fmt: p.valor_total_fmt,
+            })),
+        ]
+
+        const totalProgramas = programasTpl.reduce((a, b) => a + Number(b.valor_total || 0), 0)
+        const totalCursos = cursosTpl.reduce((a, b) => a + Number(b.valor_total || 0), 0)
+        const totalQuimicos = quimicosTpl.reduce((a, b) => a + Number(b.valor_total || 0), 0)
+        const totalProdutos = produtosTpl.reduce((a, b) => a + Number(b.valor_total || 0), 0)
+        const totalGeral = totalProgramas + totalCursos + totalQuimicos + totalProdutos
+
+    // Conditional wrapper arrays to allow hiding whole sections (tables) without plugins
+    const programasBlock = programasTpl.length > 0 ? [1] : []
+    const cursosBlock = cursosTpl.length > 0 ? [1] : []
+    const quimicosBlock = quimicosTpl.length > 0 ? [1] : []
+    const produtosBlock = produtosTpl.length > 0 ? [1] : []
+
+        // Try multiple template locations to support ts-node (src) and build (dist) runs
+        const candidateTemplatePaths = [
+            path.resolve(__dirname, '..', 'templates', 'proposal.docx'),
+            path.resolve(__dirname, '../..', 'templates', 'proposal.docx'),
+            path.resolve(process.cwd(), 'server', 'templates', 'proposal.docx'),
+        ]
+        let templateBuffer: Buffer | null = null
+        for (const pth of candidateTemplatePaths) {
+            try {
+                if (fs.existsSync(pth)) {
+                    templateBuffer = fs.readFileSync(pth)
+                    break
+                }
+            } catch {}
+        }
+
+        if (templateBuffer) {
+            const zip = new PizZip(templateBuffer)
+            const doc = new Docxtemplater(zip, {
+                paragraphLoop: true,
+                linebreaks: true,
+                // If a tag is missing, render it as empty string instead of 'undefined'
+                nullGetter() { return '' },
+            })
+            const templateData = {
+                proposta: {
+                    id,
+                    titulo: r.titulo || '',
+                    cliente,
+                    status: String(r.status || ''),
+                    data: dataStr,
+                    responsavel: resp || '—',
+                    indicacao: indic || '—',
+                },
+                empresa: empresaData,
+                itens: itensTpl,
+                // Section wrapper arrays (render once when list has items, hide entirely when empty)
+                programas_block: programasBlock,
+                cursos_block: cursosBlock,
+                quimicos_block: quimicosBlock,
+                produtos_block: produtosBlock,
+                // Flat aliases for convenience (allow using {cliente}, {data}, {empresa_cnpj}, ...)
+                id,
+                titulo: r.titulo || '',
+                cliente,
+                status: String(r.status || ''),
+                data: dataStr,
+                responsavel: resp || '—',
+                indicacao: indic || '—',
+                empresa_cnpj: empresaData.cnpj,
+                empresa_cnpj_fmt: empresaData.cnpj_fmt,
+                empresa_cidade: empresaData.cidade,
+                empresa_razaoSocial: empresaData.razaoSocial,
+                empresa_razao_social: empresaData.razao_social,
+                empresa_nomeFantasia: empresaData.nomeFantasia,
+                empresa_nome_fantasia: empresaData.nome_fantasia,
+                empresa_nome: empresaData.nome,
+                empresa_telefone: empresaData.telefone,
+                empresa_email: empresaData.email,
+                empresa_contabilidade: empresaData.contabilidade,
+                programas: programasTpl,
+                cursos: cursosTpl,
+                quimicos: quimicosTpl,
+                produtos: produtosTpl,
+                totais: {
+                    programas: totalProgramas,
+                    programas_fmt: fmtBRL(totalProgramas),
+                    cursos: totalCursos,
+                    cursos_fmt: fmtBRL(totalCursos),
+                    quimicos: totalQuimicos,
+                    quimicos_fmt: fmtBRL(totalQuimicos),
+                    produtos: totalProdutos,
+                    produtos_fmt: fmtBRL(totalProdutos),
+                    geral: totalGeral,
+                    geral_fmt: fmtBRL(totalGeral),
+                },
+            }
+            try {
+                doc.render(templateData)
+            } catch (e: any) {
+                const details = e?.properties?.errors ? JSON.stringify(e.properties.errors, null, 2) : undefined
+                console.error('Erro ao renderizar template DOCX:', e?.message || e)
+                if (details) console.error('Detalhes do template DOCX:', details)
+                res.status(500).json({ message: 'Erro ao processar template DOCX', error: e?.message, details })
+                return
+            }
+            const out = doc.getZip().generate({ type: 'nodebuffer' })
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+            res.setHeader('Content-Disposition', `attachment; filename=\"Proposta-${id}.docx\"`)
+            res.status(200).send(out)
+            return
+        }
+
+        // Fallback: minimal programmatic doc if template missing
+        const headerLines: Paragraph[] = []
+        headerLines.push(new Paragraph({ text: `Proposta #${r.id}`, heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER }))
+        headerLines.push(new Paragraph({ text: r.titulo ? String(r.titulo) : '', spacing: { after: 200 }, alignment: AlignmentType.CENTER }))
+        const infoPairs: Array<[string, string]> = [
+            ['Cliente', cliente],
+            ['Razão Social', empresaData.razaoSocial || '—'],
+            ['Nome Fantasia', empresaData.nomeFantasia || '—'],
+            ['CNPJ', empresaData.cnpj_fmt || empresaData.cnpj || '—'],
+            ['Cidade', empresaData.cidade || '—'],
+            ['Status', String(r.status || '')],
+            ['Data', dataStr],
+            ['Responsável', resp || '—'],
+            ['Indicação', indic || '—'],
+        ]
+        infoPairs.forEach(([k, v]) => { headerLines.push(new Paragraph({ children: [new TextRun({ text: `${k}: `, bold: true }), new TextRun({ text: v || '—' })] })) })
+        const makeTable = (headers: string[], rows: Array<string[]>): Table => {
+            const headerRow = new TableRow({ children: headers.map((h) => new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })] })) })
+            const bodyRows = rows.map((r) => new TableRow({ children: r.map((cell) => new TableCell({ children: [new Paragraph(String(cell))] })) }))
+            return new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...bodyRows] })
+        }
+        const content: (Paragraph | Table)[] = []
+        if (programasTpl.length) {
+            const rows = programasTpl.map(p => [p.programa_nome, String(p.quantidade), p.valor_unitario_fmt, p.valor_total_fmt])
+            rows.push(['Total', '', '', fmtBRL(totalProgramas)])
+            content.push(makeTable(['Nome', 'Qtd', 'Valor Unit. (mês)', 'Valor Total (anual)'], rows))
+        }
+        if (cursosTpl.length) {
+            const rows = cursosTpl.map(c => [c.curso_nome, String(c.quantidade), c.valor_unitario_fmt, c.valor_total_fmt])
+            rows.push(['Total', '', '', fmtBRL(totalCursos)])
+            content.push(makeTable(['Nome', 'Qtd', 'Valor Unit.', 'Valor Total'], rows))
+        }
+        if (quimicosTpl.length) {
+            const rows = quimicosTpl.map(q => [q.grupo, String(q.pontos), q.valor_unitario_fmt, q.valor_total_fmt])
+            rows.push(['Total', '', '', fmtBRL(totalQuimicos)])
+            content.push(makeTable(['Grupo', 'Pontos', 'Valor Unit.', 'Valor Total'], rows))
+        }
+        if (produtosTpl.length) {
+            const rows = produtosTpl.map(p => [p.produto_nome, String(p.quantidade), p.valor_unitario_fmt, p.valor_total_fmt])
+            rows.push(['Total', '', '', fmtBRL(totalProdutos)])
+            content.push(makeTable(['Nome', 'Qtd', 'Valor Unit.', 'Valor Total'], rows))
+        }
+        content.push(new Paragraph({
+            children: [new TextRun({ text: 'Valor Total da Proposta: ', bold: true }), new TextRun({ text: fmtBRL(totalGeral) })],
+        }))
+        const fallbackDoc = new Document({ sections: [{ properties: {}, children: [...headerLines, new Paragraph({ text: '' }), ...content] }] })
+        const buffer = await Packer.toBuffer(fallbackDoc)
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        res.setHeader('Content-Disposition', `attachment; filename=\"Proposta-${id}.docx\"`)
+        res.status(200).send(buffer)
+    } catch (error) {
+        console.error('Erro ao exportar proposta para DOCX:', error)
+        res.status(500).json({ message: 'Erro ao exportar proposta para DOCX' })
+    }
+}
 
 // Create a new proposal
 export const createProposal = async (
@@ -805,6 +1119,20 @@ export const deleteProposal = async (
             res.status(400).json({ message: 'ID da proposta inválido' })
             return
         }
+        // Attempt to fetch and unlink files from disk before deleting DB rows
+        try {
+            const [fileRows] = await pool.query<RowDataPacket[]>(`SELECT caminho FROM arquivos WHERE proposta_id = ?`, [id])
+            for (const r of (fileRows as any[])) {
+                const publicPath = String(r.caminho || '')
+                if (publicPath && publicPath.startsWith('/uploads/')) {
+                    const fileAbs = path.join(PUBLIC_UPLOADS_DIR, publicPath.replace('/uploads/', ''))
+                    const resolved = path.resolve(fileAbs)
+                    if (resolved.startsWith(PUBLIC_UPLOADS_DIR)) {
+                        try { fs.unlinkSync(resolved) } catch {}
+                    }
+                }
+            }
+        } catch {}
         await pool.query('DELETE FROM propostas_cursos WHERE proposta_id = ?', [id])
         await pool.query('DELETE FROM propostas_quimicos WHERE proposta_id = ?', [id])
         await pool.query('DELETE FROM propostas_produtos WHERE proposta_id = ?', [id])
@@ -1749,7 +2077,7 @@ export const uploadArquivoProposta = async (
             return
         }
         const nome = file.originalname
-        const caminhoPublico = `/uploads/propostas/${id}/${file.filename}`
+        const caminhoPublico = `/uploads/proposal-${id}/${file.filename}`
         const [result] = await pool.query<OkPacket>(
             `INSERT INTO arquivos (proposta_id, nome_arquivo, caminho, created_at) VALUES (?, ?, ?, NOW())`,
             [id, nome, caminhoPublico]
@@ -1769,14 +2097,26 @@ export const deleteArquivoProposta = async (
         const id = Number(req.params.id)
         const arquivoId = Number(req.params.arquivo_id)
         const [rows] = await pool.query<RowDataPacket[]>(
-            `SELECT id FROM arquivos WHERE id = ? AND proposta_id = ? LIMIT 1`,
+            `SELECT id, caminho FROM arquivos WHERE id = ? AND proposta_id = ? LIMIT 1`,
             [arquivoId, id]
         )
         if (!rows || rows.length === 0) {
             res.status(404).json({ message: 'Arquivo não encontrado' })
             return
         }
+        const fileRow: any = rows[0]
         await pool.query<OkPacket>(`DELETE FROM arquivos WHERE id = ?`, [arquivoId])
+        // Safe unlink within uploads dir
+        try {
+            const publicPath = String(fileRow.caminho || '')
+            if (publicPath.startsWith('/uploads/')) {
+                const fileAbs = path.join(PUBLIC_UPLOADS_DIR, publicPath.replace('/uploads/', ''))
+                const resolved = path.resolve(fileAbs)
+                if (resolved.startsWith(PUBLIC_UPLOADS_DIR)) {
+                    fs.unlink(resolved, () => { /* ignore */ })
+                }
+            }
+        } catch {}
         res.status(200).json({ deleted: true, id: arquivoId })
     } catch (error) {
         console.error('Erro ao excluir arquivo da proposta:', error)

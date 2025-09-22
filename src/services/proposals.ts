@@ -323,3 +323,9 @@ export async function deleteProposalFile(propostaId: number, arquivoId: number) 
   const res = await api.delete(`/propostas/${propostaId}/arquivos/${arquivoId}`)
   return res.data as { deleted: boolean; id: number }
 }
+
+// Export DOCX
+export async function exportProposalDocx(propostaId: number): Promise<Blob> {
+  const res = await api.get(`/propostas/${propostaId}/export/docx`, { responseType: 'blob' })
+  return res.data as Blob
+}
