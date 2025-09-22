@@ -22,6 +22,8 @@ import CommercialProposalNew from '@/pages/CommercialProposalNew';
 
 //Página de Administração
 import AdminDashboard from './pages/AdminDashboard';
+import AdminUsers from './pages/AdminUsers';
+import AdminUsersDetails from './pages/AdminUsersDetails';
 import './App.css';
 import { useAuth } from './hooks/use-auth';
 
@@ -51,6 +53,8 @@ function AppContent() {
           >
             <Route path="technical/dashboard" element={<TecnicoDashboard />} />
             <Route path="admin/dashboard" element={<AdminDashboard />} />
+            <Route path="admin/usuarios" element={<AdminUsers />} />
+            <Route path="admin/usuario/:id" element={<AdminUsersDetails />} />
             <Route path="comercial/dashboard" element={<ComercialDashboard />} />
             <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
             <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />

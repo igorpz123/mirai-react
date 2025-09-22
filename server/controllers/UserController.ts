@@ -315,3 +315,164 @@ export const getUserByCargo = async (
     res.status(500).json({ message: 'Erro ao buscar usuário' })
   }
 }
+
+/**
+ * Inativar um usuário (status = 'inativo')
+ */
+export const inactivateUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    // Verifica se usuário existe
+    const [exists] = await pool.query(
+      'SELECT id, status FROM usuarios WHERE id = ? LIMIT 1',
+      [id]
+    ) as [Array<{ id: number; status: string }>, any]
+
+    if (!exists || exists.length === 0) {
+      res.status(404).json({ message: 'Usuário não encontrado' })
+      return
+    }
+
+    if (exists[0].status === 'inativo') {
+      res.status(200).json({ message: 'Usuário já está inativo' })
+      return
+    }
+
+    await pool.query(
+      "UPDATE usuarios SET status = 'inativo' WHERE id = ?",
+      [id]
+    )
+
+    res.status(200).json({ message: 'Usuário inativado com sucesso' })
+  } catch (error) {
+    console.error('Erro ao inativar usuário:', error)
+    res.status(500).json({ message: 'Erro ao inativar usuário' })
+  }
+}
+
+/**
+ * Atualizar dados básicos do usuário
+ */
+export const updateUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    const { nome, sobrenome, email, cargo_id, foto_url } = req.body as Partial<UserRecord> & { foto_url?: string }
+
+    const fields: string[] = []
+    const values: any[] = []
+    if (typeof nome === 'string') { fields.push('nome = ?'); values.push(nome) }
+    if (typeof sobrenome === 'string') { fields.push('sobrenome = ?'); values.push(sobrenome) }
+    if (typeof email === 'string') { fields.push('email = ?'); values.push(email) }
+    if (typeof cargo_id !== 'undefined') { fields.push('cargo_id = ?'); values.push(cargo_id) }
+    if (typeof foto_url === 'string') { fields.push('foto_url = ?'); values.push(foto_url) }
+
+    if (fields.length === 0) {
+      res.status(400).json({ message: 'Nenhum campo para atualizar' })
+      return
+    }
+
+    values.push(id)
+    await pool.query(`UPDATE usuarios SET ${fields.join(', ')} WHERE id = ?`, values)
+    res.status(200).json({ message: 'Usuário atualizado com sucesso' })
+  } catch (error) {
+    console.error('Erro ao atualizar usuário:', error)
+    res.status(500).json({ message: 'Erro ao atualizar usuário' })
+  }
+}
+
+/**
+ * Adicionar setores ao usuário (não remove os existentes)
+ * Body: { setorIds: number[] }
+ */
+export const addUserSetores = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    const { setorIds } = req.body as { setorIds?: number[] }
+    if (!Array.isArray(setorIds) || setorIds.length === 0) {
+      res.status(400).json({ message: 'setorIds inválido' })
+      return
+    }
+
+    // inserir ignorando duplicatas
+    const values = setorIds.map(sid => [id, sid])
+    await pool.query(
+      'INSERT IGNORE INTO usuario_setores (usuario_id, setor_id) VALUES ?',
+      [values]
+    )
+    res.status(200).json({ message: 'Setores adicionados ao usuário' })
+  } catch (error) {
+    console.error('Erro ao adicionar setores ao usuário:', error)
+    res.status(500).json({ message: 'Erro ao adicionar setores' })
+  }
+}
+
+/**
+ * Adicionar unidades ao usuário (não remove as existentes)
+ * Body: { unidadeIds: number[] }
+ */
+export const addUserUnidades = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    const { unidadeIds } = req.body as { unidadeIds?: number[] }
+    if (!Array.isArray(unidadeIds) || unidadeIds.length === 0) {
+      res.status(400).json({ message: 'unidadeIds inválido' })
+      return
+    }
+
+    const values = unidadeIds.map(uid => [id, uid])
+    await pool.query(
+      'INSERT IGNORE INTO usuario_unidades (usuario_id, unidade_id) VALUES ?',
+      [values]
+    )
+    res.status(200).json({ message: 'Unidades adicionadas ao usuário' })
+  } catch (error) {
+    console.error('Erro ao adicionar unidades ao usuário:', error)
+    res.status(500).json({ message: 'Erro ao adicionar unidades' })
+  }
+}
+
+/**
+ * Remover vínculo de setor do usuário
+ */
+export const removeUserSetor = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id, setorId } = req.params
+    await pool.query('DELETE FROM usuario_setores WHERE usuario_id = ? AND setor_id = ?', [id, setorId])
+    res.status(200).json({ message: 'Setor removido do usuário' })
+  } catch (error) {
+    console.error('Erro ao remover setor do usuário:', error)
+    res.status(500).json({ message: 'Erro ao remover setor' })
+  }
+}
+
+/**
+ * Remover vínculo de unidade do usuário
+ */
+export const removeUserUnidade = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id, unidadeId } = req.params
+    await pool.query('DELETE FROM usuario_unidades WHERE usuario_id = ? AND unidade_id = ?', [id, unidadeId])
+    res.status(200).json({ message: 'Unidade removida do usuário' })
+  } catch (error) {
+    console.error('Erro ao remover unidade do usuário:', error)
+    res.status(500).json({ message: 'Erro ao remover unidade' })
+  }
+}

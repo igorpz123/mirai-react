@@ -7,19 +7,21 @@ import {
   getUserBySetor,
   getUserByUnidadeSetor,
   getUserByCargo,
-  getUsersByDepartmentAndUnit
+  getUsersByDepartmentAndUnit,
+  inactivateUser,
+  updateUser,
+  addUserSetores,
+  addUserUnidades
 } from '../controllers/UserController'
+import { removeUserSetor, removeUserUnidade } from '../controllers/UserController'
 
 const router: Router = Router()
 
 // Listar todos os usuários
 router.get('/', getAllUsers)
 
-// Buscar usuário por ID
-router.get('/:id', getUserById)
-
 // Buscar usuários pela unidade
-router.get('/unidade/:unidade_id', getUserByUnidade) 
+router.get('/unidade/:unidade_id', getUserByUnidade)
 
 // Buscar usuários pelo setor
 router.get('/setor/:setor_id', getUserBySetor)
@@ -27,9 +29,29 @@ router.get('/setor/:setor_id', getUserBySetor)
 // Buscar usuários pela unidade e setor
 router.get('/unidade/:unidade_id/setor/:setor_id', getUsersByDepartmentAndUnit)
 
-router.get('/usuarios/by-department-unit', getUsersByDepartmentAndUnit);
+// Alternativa via query
+router.get('/usuarios/by-department-unit', getUsersByDepartmentAndUnit)
 
 // Buscar usuários pelo cargo
 router.get('/cargo/:cargo_id', getUserByCargo)
+
+// Inativar usuário (deve vir antes de ":id")
+router.patch('/:id/inactivate', inactivateUser)
+
+// Atualizar dados do usuário
+router.put('/:id', updateUser)
+
+// Adicionar setores ao usuário
+router.post('/:id/setores', addUserSetores)
+
+// Adicionar unidades ao usuário
+router.post('/:id/unidades', addUserUnidades)
+
+// Remover setor e unidade
+router.delete('/:id/setores/:setorId', removeUserSetor)
+router.delete('/:id/unidades/:unidadeId', removeUserUnidade)
+
+// Buscar usuário por ID (genérica por último)
+router.get('/:id', getUserById)
 
 export default router

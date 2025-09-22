@@ -7,6 +7,7 @@ import empresaRoutes from './empresas'
 import setorRoutes from './setores'
 import tipoTarefaRoutes from './tipo_tarefa'
 import propostaRoutes from './propostas'
+import unidadeRoutes from './unidades'
 
 const router = Router()
 
@@ -18,5 +19,6 @@ router.use('/empresas', empresaRoutes)
 router.use('/setores', setorRoutes)
 router.use('/tipo_tarefa', tipoTarefaRoutes)
 router.use('/propostas', propostaRoutes)
+router.use('/unidades', unidadeRoutes)
 
 export default router
