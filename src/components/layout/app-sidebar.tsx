@@ -57,8 +57,15 @@ const navComercialDataOutside = [
 
 const navAdminData = [
   { title: "Dashboard", url: "/admin/dashboard", icon: ClipboardCheck },
-  { title: "Usuários", url: "/admin/usuarios", icon: User },
-  { title: "Unidades", url: "/admin/unidades", icon: GalleryVerticalEnd },
+  {
+    title: "Gerenciar", url: "#", icon: HardHat, items: [
+      { title: "Usuários", url: "/admin/usuarios" },
+      { title: "Unidades", url: "/admin/unidades" },
+      { title: "Setores", url: "/admin/setores" },
+      { title: "Cargos", url: "/admin/cargos" },
+      { title: "Empresas", url: "/empresas" },
+    ]
+  },
   { title: "Changelog", url: "/admin/changelog", icon: FileSliders },
 ]
 
