@@ -22,6 +22,7 @@ import {
 
 interface NavUserProps {
   user: {
+    id?: number;
     nome: string;
     email: string;
     avatar?: string;
@@ -38,6 +39,10 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
   const handleLogout = () => {
     onSignOut();
     navigate("/login");
+  };
+
+  const userInfo = () => {
+    navigate(`/admin/usuario/${user.id}`);
   };
 
   return (
@@ -83,10 +88,10 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
+                <DropdownMenuItem onClick={userInfo} className="cursor-pointer">
+                  <BadgeCheck />
+                  Account
+                </DropdownMenuItem>
               <DropdownMenuItem>
                 <CreditCard />
                 Billing

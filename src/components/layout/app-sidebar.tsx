@@ -62,7 +62,6 @@ const navAdminData = [
       { title: "Usuários", url: "/admin/usuarios" },
       { title: "Unidades", url: "/admin/unidades" },
       { title: "Setores", url: "/admin/setores" },
-      { title: "Cargos", url: "/admin/cargos" },
       { title: "Empresas", url: "/empresas" },
     ]
   },
@@ -210,7 +209,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarFooter>
         {user ? (
           <NavUser
-            user={{ nome: user.nome, email: user.email, avatar: user.fotoUrl, cargoId: user.cargoId, cargo: user.cargo }}
+            user={{ id: user.id, nome: user.nome, email: user.email, avatar: user.fotoUrl, cargoId: user.cargoId, cargo: user.cargo }}
             onSignOut={signOut}
           />
         ) : null}
