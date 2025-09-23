@@ -266,14 +266,6 @@ export function TaskInfo({
                             <Input disabled id="task-info-usuario" defaultValue={responsavel} />
                         </div>
                     </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="task-info-arquivos">Arquivos</Label>
-                        <div id="task-info-arquivos" className="flex flex-col gap-1"></div>
-                    </div>
-                    <div className="grid gap-3">
-                        <Label htmlFor="task-info-historico">Histórico</Label>
-                        <div id="task-info-historico" className="flex flex-col gap-1"></div>
-                    </div>
                 </div>
                 <div className="px-4 space-y-3">
                     {errorMsg ? (
