@@ -9,6 +9,7 @@ export type Proposal = {
   comissao?: number
   criadoEm?: string
   dataAlteracao?: string
+  updatedAt?: string
   unidade_id?: number
   titulo?: string
   responsavel?: string
@@ -115,6 +116,16 @@ export async function getProposalsByUser(userId: number | null) {
   } catch (err) {
     // fallback: return empty list to avoid crashing UI
     return { proposals: [] }
+  }
+}
+
+export async function getRecentProposalsByUser(userId: number | null, limit: number = 10) {
+  if (!userId) return { proposals: [] as Proposal[] }
+  try {
+    const res = await api.get(`/propostas/recentes`, { params: { userId, limit } })
+    return res.data as { proposals: Proposal[] }
+  } catch (err) {
+    return { proposals: [] as Proposal[] }
   }
 }
 

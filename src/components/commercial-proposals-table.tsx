@@ -248,6 +248,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
       <TableCell>{p.titulo ?? '—'}</TableCell>
       <TableCell>{p.responsavel ?? '—'}</TableCell>
       <TableCell>{p.criadoEm ? new Date(p.criadoEm).toLocaleDateString('pt-BR') : '—'}</TableCell>
+      <TableCell>{(p.updatedAt || p.dataAlteracao) ? new Date((p.updatedAt || p.dataAlteracao) as string).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}</TableCell>
       <TableCell>
         <ProposalStatusBadge status={p.status} />
       </TableCell>
@@ -324,6 +325,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
               <TableHead>Título</TableHead>
               <TableHead>Responsável</TableHead>
               <TableHead>Data de Elaboração</TableHead>
+              <TableHead>Última Atualização</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Valor Total</TableHead>
               <TableHead>Ação</TableHead>

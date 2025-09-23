@@ -106,6 +106,7 @@ interface TableTask {
   prazo: string
   limit: string
   responsavel: string
+  updatedAt?: string | null
 }
 
 interface TechnicalTaskTableProps {
@@ -128,10 +129,14 @@ export const schema = z.object({
   responsavel: z.string(),
   // responsavelId is optional and may be present in raw data
   responsavelId: z.number().nullable().optional(),
+  updatedAt: z.string().nullable().optional(),
 })
 
 const formatDate = (dateString: string): string =>
   new Date(dateString).toLocaleDateString('pt-BR')
+
+const formatDateTime = (dateString: string): string =>
+  new Date(dateString).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
 const getStatusText = (status: string): string => {
   switch (status) {
@@ -365,7 +370,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   responsavelId: (task as any).responsavel_id ?? (task as any).usuario_id ?? (task as any).usuarioId ?? (task as any).responsavelId ?? undefined,
       prazo: task.prazo || '',
       limit: task.prazo || '',
-      responsavel: task.responsavel || 'Não atribuído'
+      responsavel: task.responsavel || 'Não atribuído',
+      updatedAt: (task as any).updatedAt ?? (task as any).dataAlteracao ?? null,
     })),
     [tasks]
   )
@@ -531,6 +537,14 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
             <ResponsibleSelect task={row.original} />
           </>
         )
+      },
+    },
+    {
+      accessorKey: "updatedAt",
+      header: () => <div className="w-full text-left">Atualizado</div>,
+      cell: ({ row }) => {
+        const v = row.original.updatedAt
+        return v ? <span className="pl-2">{formatDateTime(v)}</span> : <span className="pl-2 text-muted-foreground">—</span>
       },
     },
     {

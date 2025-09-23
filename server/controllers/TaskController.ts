@@ -1128,3 +1128,77 @@ export const updateTask = async (
     res.status(500).json({ message: 'Erro ao atualizar tarefa' });
   }
 };
+
+// Tarefas recentemente alteradas por um usuário (com base no historico_alteracoes)
+export const getRecentTasksByUsuario = async (
+  req: Request<{ usuario_id: string }, {}, {}, { limit?: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { usuario_id } = req.params
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit ?? 10)))
+
+    if (!usuario_id) {
+      res.status(400).json({ message: 'ID do usuário é obrigatório' })
+      return
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `
+      SELECT 
+        tsk.id AS tarefa_id,
+        tpt.tipo AS finalidade,
+        tsk.prioridade,
+        tsk.status,
+        tsk.setor_id,
+        tsk.responsavel_id,
+        tsk.unidade_id,
+        tsk.prazo,
+        emp.nome_fantasia AS empresa_nome,
+        emp.razao_social AS empresa_social,
+        emp.cnpj AS empresa_cnpj,
+        emp.cidade AS empresa_cidade,
+        usr_tarefa.nome AS responsavel_nome,
+        str.nome AS setor_nome,
+        und.nome AS unidade_nome,
+        MAX(h.data_alteracao) AS ultima_alteracao
+      FROM historico_alteracoes h
+      JOIN tarefas tsk ON tsk.id = h.tarefa_id
+      LEFT JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
+      LEFT JOIN empresas emp ON tsk.empresa_id = emp.id
+      LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
+      LEFT JOIN setor str ON tsk.setor_id = str.id
+      LEFT JOIN unidades und ON tsk.unidade_id = und.id
+      WHERE h.usuario_id = ?
+      GROUP BY 
+        tsk.id, tpt.tipo, tsk.prioridade, tsk.status, tsk.setor_id, tsk.responsavel_id, tsk.unidade_id, tsk.prazo,
+        emp.nome_fantasia, emp.razao_social, emp.cnpj, emp.cidade,
+        usr_tarefa.nome, str.nome, und.nome
+      ORDER BY ultima_alteracao DESC
+      LIMIT ?
+      `,
+      [usuario_id, limit]
+    )
+
+    const response = {
+      tasks: (rows as any[]).map(row => ({
+        id: row.tarefa_id,
+        empresa: row.empresa_nome,
+        unidade: row.unidade_nome,
+        finalidade: row.finalidade,
+        status: row.status,
+        prioridade: row.prioridade,
+        setor: row.setor_nome,
+        prazo: row.prazo,
+        responsavel: row.responsavel_nome || 'Não atribuído',
+        updatedAt: row.ultima_alteracao || null,
+      })),
+      total: (rows as any[]).length,
+    }
+
+    res.status(200).json(response)
+  } catch (error) {
+    console.error('Erro ao buscar tarefas recentes por usuário:', error)
+    res.status(500).json({ message: 'Erro ao buscar tarefas' })
+  }
+}

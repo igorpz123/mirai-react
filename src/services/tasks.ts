@@ -10,6 +10,7 @@ export interface Task {
     setor: string;
     prazo: string;
     responsavel: string;
+    updatedAt?: string | null;
 
 }
 
@@ -260,6 +261,25 @@ export async function getTasksByResponsavel(userId: number): Promise<TasksRespon
     if (!res.ok) {
         const err = await res.json();
         throw new Error(err.message || 'Erro ao buscar tarefas do usuário');
+    }
+
+    return res.json();
+}
+
+export async function getRecentTasksByUser(userId: number, limit: number = 10): Promise<TasksResponse> {
+    const token = localStorage.getItem('token');
+
+    const res = await fetch(`${API_URL}/tarefas/usuario/${userId}/recentes?limit=${encodeURIComponent(String(limit))}` , {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Erro ao buscar tarefas recentes do usuário' }));
+        throw new Error(err.message || 'Erro ao buscar tarefas recentes do usuário');
     }
 
     return res.json();

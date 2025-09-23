@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { uploadProposta } from '../middleware/upload'
-import { getProposalsByUnidade, getProposalsByUser, getProposalStats, deleteProposal, getProposalById, getCursosByProposal, getQuimicosByProposal, getProdutosByProposal, getCoursesCatalog, getChemicalsCatalog, getProductsCatalog, getProductPriceRule, addCourseToProposal, addChemicalToProposal, addProductToProposal, updateProposalStatus, getProposalHistory, createProposal, getProgramsCatalog, getProgramPriceRule, getProgramasByProposal, addProgramToProposal, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, getArquivosByProposta, uploadArquivoProposta, deleteArquivoProposta, exportProposalDocx } from '../controllers/ProposalController'
+import { getProposalsByUnidade, getProposalsByUser, getProposalStats, deleteProposal, getProposalById, getCursosByProposal, getQuimicosByProposal, getProdutosByProposal, getCoursesCatalog, getChemicalsCatalog, getProductsCatalog, getProductPriceRule, addCourseToProposal, addChemicalToProposal, addProductToProposal, updateProposalStatus, getProposalHistory, createProposal, getProgramsCatalog, getProgramPriceRule, getProgramasByProposal, addProgramToProposal, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, getArquivosByProposta, uploadArquivoProposta, deleteArquivoProposta, exportProposalDocx, getRecentProposalsByUser } from '../controllers/ProposalController'
 
 const router = Router()
 
@@ -12,6 +12,9 @@ router.get('/unidade/:unidade_id', getProposalsByUnidade)
 
 // New: stats for commercial dashboard (counts + MoM trend)
 router.get('/stats', getProposalStats)
+
+// New: proposals recently updated by user
+router.get('/recentes', getRecentProposalsByUser)
 
 // Catalogs
 router.get('/catalog/cursos', getCoursesCatalog)

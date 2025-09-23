@@ -13,6 +13,7 @@ import {
   getCompletedTasksByDayByUnidade,
   getTaskStatsByUsuario,
   getCompletedTasksByDayByUsuario,
+  getRecentTasksByUsuario,
   getArquivosByTarefa,
   getTaskHistory,
   newTask,
@@ -61,6 +62,9 @@ router.get('/usuario/:usuario_id/stats', getTaskStatsByUsuario)
 
 // Tarefas concluídas por dia (por usuário)
 router.get('/usuario/:usuario_id/completadas-dia', getCompletedTasksByDayByUsuario)
+
+// Tarefas recentemente alteradas pelo usuário (actor no histórico)
+router.get('/usuario/:usuario_id/recentes', getRecentTasksByUsuario)
 
 // Coletar tarefas por unidade e setor
 router.get('/unidade/:unidade_id/setor/:setor_id', getTaskByUnidadeSetor)

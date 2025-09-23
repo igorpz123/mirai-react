@@ -77,7 +77,7 @@ export const getProposalsByUser = async (
             const empresaNome = r.empresa_nome || r.empresa_razaoSocial || null
             // Datas: usar p.data como criadoEm e p.data_alteracao como dataAlteracao
             const createdAt = r.data ? (r.data instanceof Date ? r.data.toISOString() : String(r.data)) : undefined
-            const updatedAt = r.data_alteracao ? (r.data_alteracao instanceof Date ? r.data_alteracao.toISOString() : String(r.data_alteracao)) : undefined
+            const updatedAt = r.ultima_alteracao ? (r.ultima_alteracao instanceof Date ? r.ultima_alteracao.toISOString() : String(r.ultima_alteracao)) : (r.data_alteracao ? (r.data_alteracao instanceof Date ? r.data_alteracao.toISOString() : String(r.data_alteracao)) : undefined)
             const cursoTotal = Number(r.curso_total ?? 0)
             const quimicoTotal = Number(r.quimico_total ?? 0)
             const produtoTotal = Number(r.produto_total ?? 0)
@@ -2121,5 +2121,86 @@ export const deleteArquivoProposta = async (
     } catch (error) {
         console.error('Erro ao excluir arquivo da proposta:', error)
         res.status(500).json({ message: 'Erro ao excluir arquivo' })
+    }
+}
+
+// Propostas recentemente alteradas por um usuário (com base no historico_alteracoes)
+export const getRecentProposalsByUser = async (
+    req: Request<{}, {}, {}, { userId?: string | null; limit?: string | null }>,
+    res: Response
+): Promise<void> => {
+    try {
+        const userId = req.query.userId ? Number(req.query.userId) : null
+        const limit = Math.max(1, Math.min(100, Number(req.query.limit ?? 10)))
+        if (!userId) {
+            res.status(200).json({ proposals: [] })
+            return
+        }
+
+        const [rows] = await pool.query<RowDataPacket[]>(
+            `
+            SELECT 
+                p.*, 
+                usr_responsavel.nome AS responsavel_nome, 
+                usr_responsavel.sobrenome AS responsavel_sobrenome, 
+                e.nome_fantasia AS empresa_nome,
+                e.razao_social AS empresa_razaoSocial,
+                e.cnpj AS empresa_cnpj,
+                e.cidade AS empresa_cidade,
+                MAX(h.data_alteracao) AS ultima_alteracao,
+                (SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id) AS curso_total,
+                (SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id) AS quimico_total,
+                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
+                (SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id) AS programa_total,
+                (
+                  COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
+                + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
+                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
+                + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
+                ) AS total_itens
+            FROM historico_alteracoes h
+            JOIN propostas p ON p.id = h.proposta_id
+            LEFT JOIN usuarios usr_responsavel ON p.responsavel_id = usr_responsavel.id
+            LEFT JOIN empresas e ON p.empresa_id = e.id
+            WHERE h.usuario_id = ?
+            GROUP BY p.id
+            ORDER BY ultima_alteracao DESC
+            LIMIT ?
+            `,
+            [userId, limit]
+        )
+
+        const proposals = (rows || []).map((r: any) => {
+            const resp = [r.responsavel_nome, r.responsavel_sobrenome].filter(Boolean).join(' ').trim() || undefined
+            const empresaNome = r.empresa_nome || r.empresa_razaoSocial || null
+            const createdAt = r.data ? (r.data instanceof Date ? r.data.toISOString() : String(r.data)) : undefined
+            const updatedAt = r.data_alteracao ? (r.data_alteracao instanceof Date ? r.data_alteracao.toISOString() : String(r.data_alteracao)) : undefined
+            const cursoTotal = Number(r.curso_total ?? 0)
+            const quimicoTotal = Number(r.quimico_total ?? 0)
+            const produtoTotal = Number(r.produto_total ?? 0)
+            const programaTotal = Number(r.programa_total ?? 0)
+            const totalItens = Number(r.total_itens ?? (cursoTotal + quimicoTotal + produtoTotal + programaTotal))
+            const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
+            return {
+                id: r.id,
+                cliente: empresaNome || '-',
+                valor: r.valor ?? undefined,
+                valor_total: valorTotal,
+                status: r.status,
+                comissao: r.comissao ?? undefined,
+                criadoEm: createdAt,
+                dataAlteracao: updatedAt,
+                updatedAt,
+                unidade_id: r.unidade_id ?? undefined,
+                responsavel_id: r.responsavel_id ?? undefined,
+                titulo: r.titulo ?? undefined,
+                responsavel: resp,
+            }
+        })
+
+        res.status(200).json({ proposals })
+    } catch (error) {
+        console.error('Erro ao buscar propostas recentes por usuário:', error)
+        res.status(500).json({ proposals: [] })
     }
 }

@@ -9,9 +9,14 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { getSetores, type Setor } from '@/services/setores'
 import { getUnidades, type Unidade } from '@/services/unidades'
+import { getCargos, type Cargo } from '@/services/cargos'
 import { updateUser as updateUserSvc, addUserSetores as addUserSetoresSvc, addUserUnidades as addUserUnidadesSvc, removeUserSetor as removeUserSetorSvc, removeUserUnidade as removeUserUnidadeSvc, getUserById as fetchUserById } from '@/services/users'
 import { toastError, toastSuccess } from '@/lib/customToast'
 import { IconLoader2 } from '@tabler/icons-react'
+import { TechnicalTaskTable } from '@/components/technical-task-table'
+import { getRecentTasksByUser, type Task } from '@/services/tasks'
+import { CommercialProposalsTable } from '@/components/commercial-proposals-table'
+import { getRecentProposalsByUser, type Proposal } from '@/services/proposals'
 
 export default function AdminUsersDetails() {
 	const { id } = useParams()
@@ -25,12 +30,16 @@ export default function AdminUsersDetails() {
 	const [saving, setSaving] = useState(false)
 	const [setores, setSetores] = useState<Setor[]>([])
 	const [unidades, setUnidades] = useState<Unidade[]>([])
+	const [cargos, setCargos] = useState<Cargo[]>([])
 	const [newSetorId, setNewSetorId] = useState<string>('')
 	const [newUnidadeId, setNewUnidadeId] = useState<string>('')
 	const [addingSetor, setAddingSetor] = useState(false)
 	const [addingUnidade, setAddingUnidade] = useState(false)
 	const [removingSetorNames, setRemovingSetorNames] = useState<Set<string>>(new Set())
 	const [removingUnidadeNames, setRemovingUnidadeNames] = useState<Set<string>>(new Set())
+	const [recentTasks, setRecentTasks] = useState<Task[] | null>(null)
+	const [recentProposals, setRecentProposals] = useState<Proposal[] | null>(null)
+	const [loadingRecent, setLoadingRecent] = useState(false)
 
 	useEffect(() => {
 		let mounted = true
@@ -62,19 +71,42 @@ export default function AdminUsersDetails() {
 		return () => { mounted = false }
 	}, [uid])
 
+	// Load recent tasks and proposals for this user
 	useEffect(() => {
 		let mounted = true
 		;(async () => {
+			if (!uid || Number.isNaN(uid)) return
+			setLoadingRecent(true)
 			try {
-				const [s, u] = await Promise.all([
-					getSetores().catch(() => ({ setores: [], total: 0 })),
-					getUnidades().catch(() => ({ unidades: [], total: 0 }))
+				const [tasksRes, propsRes] = await Promise.all([
+					getRecentTasksByUser(uid, 15).catch(() => ({ tasks: [], total: 0 })),
+					getRecentProposalsByUser(uid, 10).catch(() => ({ proposals: [] }))
 				])
 				if (!mounted) return
-				setSetores(s.setores)
-				setUnidades(u.unidades)
-			} catch {}
+				setRecentTasks(tasksRes.tasks || [])
+				setRecentProposals(propsRes.proposals || [])
+			} finally {
+				if (mounted) setLoadingRecent(false)
+			}
 		})()
+		return () => { mounted = false }
+	}, [uid])
+
+	useEffect(() => {
+		let mounted = true
+			; (async () => {
+				try {
+					const [s, u, c] = await Promise.all([
+						getSetores().catch(() => ({ setores: [], total: 0 })),
+						getUnidades().catch(() => ({ unidades: [], total: 0 })),
+						getCargos().catch(() => ({ cargos: [], total: 0 }))
+					])
+					if (!mounted) return
+					setSetores(s.setores)
+					setUnidades(u.unidades)
+					setCargos(c.cargos)
+				} catch { }
+			})()
 		return () => { mounted = false }
 	}, [])
 
@@ -236,12 +268,16 @@ export default function AdminUsersDetails() {
 								<AvatarFallback className="text-lg">{(user.nome || 'U').charAt(0)}</AvatarFallback>
 							</Avatar>
 							<div>
-								<div className="text-xl font-semibold">{user.nome} {user.sobrenome}</div>
+								<div className="text-xl font-semibold">{user.nome} {user.sobrenome} {(user as any).status ? (
+									<Badge className={(user as any).status === 'ativo' ? 'button-success' : 'button-remove'}>{(user as any).status}</Badge>
+								) : (
+									<Badge className="button-success">Ativo</Badge>
+								)}</div>
 								<div className="text-sm opacity-80">{user.email}</div>
 							</div>
 						</div>
-						<div className="space-y-3">
-							<div>
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							<div className='md:col-span-2'>
 								<div className="text-sm opacity-70">Nome</div>
 								<div className="flex gap-2">
 									<Input value={edit.nome} onChange={(e) => setEdit(v => ({ ...v, nome: e.target.value }))} placeholder="Nome" className="max-w-xs" />
@@ -256,13 +292,11 @@ export default function AdminUsersDetails() {
 								<div className="text-sm opacity-70">Cargo</div>
 								<div className="flex items-center gap-2">
 									<Select value={edit.cargo_id} onValueChange={(v) => setEdit(s => ({ ...s, cargo_id: v }))}>
-										<SelectTrigger className="w-[220px]"><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
+										<SelectTrigger className="w-[260px]"><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
 										<SelectContent>
-											<SelectItem value="1">Administrador</SelectItem>
-											<SelectItem value="2">Gestor</SelectItem>
-											<SelectItem value="3">Coordenador</SelectItem>
-											<SelectItem value="13">Comercial</SelectItem>
-											<SelectItem value="99">Técnico</SelectItem>
+											{cargos.map(c => (
+												<SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
+											))}
 										</SelectContent>
 									</Select>
 								</div>
@@ -274,10 +308,10 @@ export default function AdminUsersDetails() {
 								</Button>
 							</div>
 						</div>
-						<div className="space-y-3">
-							<div>
+						<div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 md:col-span-2">
+							<div className='w-full'>
 								<div className="text-sm opacity-70">Unidades</div>
-								<div className="text-base break-words mb-2">
+								<div className="text-base break-words mb-2 w-full">
 									{((user as any).unidade_nomes || '').split(',').filter(Boolean).map((n: string) => n.trim()).filter(Boolean).length > 0 ? (
 										<div className="flex flex-wrap gap-2">
 											{((user as any).unidade_nomes || '').split(',').map((n: string) => n.trim()).filter(Boolean).map((n: string) => (
@@ -308,7 +342,7 @@ export default function AdminUsersDetails() {
 									</Button>
 								</div>
 							</div>
-							<div>
+							<div className='w-full'>
 								<div className="text-sm opacity-70">Setores</div>
 								<div className="text-base break-words mb-2">
 									{((user as any).setor_nomes || '').split(',').filter(Boolean).map((n: string) => n.trim()).filter(Boolean).length > 0 ? (
@@ -341,13 +375,27 @@ export default function AdminUsersDetails() {
 									</Button>
 								</div>
 							</div>
+						</div>
+
+						{/* Recent activity: tasks and proposals */}
+						<div className="md:col-span-2 flex flex-col gap-6">
 							<div>
-								<div className="text-sm opacity-70">Status</div>
-								<div className="text-base">
-									{(user as any).status ? (
-										<Badge className={(user as any).status === 'ativo' ? 'button-success' : 'button-remove'}>{(user as any).status}</Badge>
+								<h3 className="px-1 pb-2 text-lg font-semibold">Tarefas recentes deste usuário</h3>
+								<div>
+									{loadingRecent && !recentTasks ? (
+										<div className="p-4 text-sm text-muted-foreground">Carregando...</div>
 									) : (
-										<Badge className="button-success">Ativo</Badge>
+										<TechnicalTaskTable tasks={(recentTasks ?? []) as Task[]} />
+									)}
+								</div>
+							</div>
+							<div>
+								<h3 className="px-1 pb-2 text-lg font-semibold">Propostas recentes deste usuário</h3>
+								<div>
+									{loadingRecent && !recentProposals ? (
+										<div className="p-4 text-sm text-muted-foreground">Carregando...</div>
+									) : (
+										<CommercialProposalsTable proposals={(recentProposals ?? []) as Proposal[]} />
 									)}
 								</div>
 							</div>
