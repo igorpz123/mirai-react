@@ -17,16 +17,20 @@ import { TechnicalTaskTable } from '@/components/technical-task-table'
 import { getRecentTasksByUser, type Task } from '@/services/tasks'
 import { CommercialProposalsTable } from '@/components/commercial-proposals-table'
 import { getRecentProposalsByUser, type Proposal } from '@/services/proposals'
+import { useAuth } from '@/hooks/use-auth'
 
 export default function AdminUsersDetails() {
 	const { id } = useParams()
 	const uid = id ? Number(id) : NaN
 	const navigate = useNavigate()
+		const { user: logged } = useAuth()
+	const isAdmin = logged ? (logged.cargoId === 1 || logged.cargoId === 2 || logged.cargoId === 3) : false
+	const canEditAdminFields = isAdmin // only admins can edit cargo/unidades/setores
 
 	const [user, setUser] = useState<User | null>(null)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
-	const [edit, setEdit] = useState({ nome: '', sobrenome: '', email: '', cargo_id: '' as any, foto_url: '' })
+		const [edit, setEdit] = useState({ nome: '', sobrenome: '', email: '', cargo_id: '' as any, foto_url: '' })
 	const [saving, setSaving] = useState(false)
 	const [setores, setSetores] = useState<Setor[]>([])
 	const [unidades, setUnidades] = useState<Unidade[]>([])
@@ -152,24 +156,35 @@ export default function AdminUsersDetails() {
 		}
 	}, [availableSetores])
 
-	async function saveBasic() {
+		async function saveBasic() {
 		try {
 			setSaving(true)
-			await updateUserSvc(uid, {
+				// if not admin (self), do not send cargo change
+				const payload: any = {
 				nome: edit.nome,
 				email: edit.email,
 				...(edit.sobrenome ? { sobrenome: edit.sobrenome } : {}),
-				...(edit.cargo_id ? { cargoId: Number(edit.cargo_id) as any } : {}),
-			}) as any
+				}
+				if (canEditAdminFields && edit.cargo_id) {
+					payload.cargoId = Number(edit.cargo_id)
+				}
+				await updateUserSvc(uid, payload) as any
 			// Atualiza UI local
-			setUser(prev => prev ? ({ ...prev, nome: edit.nome, sobrenome: edit.sobrenome, email: edit.email, cargo_id: Number(edit.cargo_id) as any } as any) : prev)
+				setUser(prev => prev ? ({
+					...prev,
+					nome: edit.nome,
+					sobrenome: edit.sobrenome,
+					email: edit.email,
+					...(canEditAdminFields ? { cargo_id: Number(edit.cargo_id) as any } : {})
+				} as any) : prev)
 			toastSuccess('Informações atualizadas')
 		} finally {
 			setSaving(false)
 		}
 	}
 
-	async function addSetor() {
+		async function addSetor() {
+			if (!canEditAdminFields) return
 		if (!newSetorId) return
 		try {
 			setAddingSetor(true)
@@ -186,7 +201,8 @@ export default function AdminUsersDetails() {
 		}
 	}
 
-	async function addUnidade() {
+		async function addUnidade() {
+			if (!canEditAdminFields) return
 		if (!newUnidadeId) return
 		try {
 			setAddingUnidade(true)
@@ -203,7 +219,8 @@ export default function AdminUsersDetails() {
 		}
 	}
 
-	async function removeSetor(setorNome: string) {
+		async function removeSetor(setorNome: string) {
+			if (!canEditAdminFields) return
 		const nome = String(setorNome).trim()
 		const found = setores.find(s => s.nome === nome)
 		if (!found) return
@@ -225,7 +242,8 @@ export default function AdminUsersDetails() {
 		}
 	}
 
-	async function removeUnidade(unidadeNome: string) {
+		async function removeUnidade(unidadeNome: string) {
+			if (!canEditAdminFields) return
 		const nome = String(unidadeNome).trim()
 		const found = unidades.find(s => s.nome === nome)
 		if (!found) return
@@ -291,8 +309,8 @@ export default function AdminUsersDetails() {
 							<div>
 								<div className="text-sm opacity-70">Cargo</div>
 								<div className="flex items-center gap-2">
-									<Select value={edit.cargo_id} onValueChange={(v) => setEdit(s => ({ ...s, cargo_id: v }))}>
-										<SelectTrigger className="w-[260px]"><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
+									<Select value={edit.cargo_id} onValueChange={(v) => setEdit(s => ({ ...s, cargo_id: v }))} disabled={!canEditAdminFields}>
+										<SelectTrigger className="w-[260px]" disabled={!canEditAdminFields}><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
 										<SelectContent>
 											{cargos.map(c => (
 												<SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
@@ -328,15 +346,15 @@ export default function AdminUsersDetails() {
 									)}
 								</div>
 								<div className="flex items-center gap-2">
-									<Select value={newUnidadeId} onValueChange={setNewUnidadeId}>
-										<SelectTrigger className="w-[260px]"><SelectValue placeholder="Adicionar unidade" /></SelectTrigger>
+									<Select value={newUnidadeId} onValueChange={setNewUnidadeId} disabled={!canEditAdminFields}>
+										<SelectTrigger className="w-[260px]" disabled={!canEditAdminFields}><SelectValue placeholder="Adicionar unidade" /></SelectTrigger>
 										<SelectContent>
 											{availableUnidades.map(u => (
 												<SelectItem key={u.id} value={String(u.id)}>{u.nome}</SelectItem>
 											))}
 										</SelectContent>
 									</Select>
-									<Button onClick={addUnidade} disabled={!newUnidadeId || addingUnidade} className="button-primary flex items-center gap-2">
+									<Button onClick={addUnidade} disabled={!canEditAdminFields || !newUnidadeId || addingUnidade} className="button-primary flex items-center gap-2">
 										{addingUnidade && <IconLoader2 className="size-4 animate-spin" />}
 										<span>Adicionar</span>
 									</Button>
@@ -361,15 +379,15 @@ export default function AdminUsersDetails() {
 									)}
 								</div>
 								<div className="flex items-center gap-2">
-									<Select value={newSetorId} onValueChange={setNewSetorId}>
-										<SelectTrigger className="w-[260px]"><SelectValue placeholder="Adicionar setor" /></SelectTrigger>
+									<Select value={newSetorId} onValueChange={setNewSetorId} disabled={!canEditAdminFields}>
+										<SelectTrigger className="w-[260px]" disabled={!canEditAdminFields}><SelectValue placeholder="Adicionar setor" /></SelectTrigger>
 										<SelectContent>
 											{availableSetores.map(s => (
 												<SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
 											))}
 										</SelectContent>
 									</Select>
-									<Button onClick={addSetor} disabled={!newSetorId || addingSetor} className="button-primary flex items-center gap-2">
+									<Button onClick={addSetor} disabled={!canEditAdminFields || !newSetorId || addingSetor} className="button-primary flex items-center gap-2">
 										{addingSetor && <IconLoader2 className="size-4 animate-spin" />}
 										<span>Adicionar</span>
 									</Button>

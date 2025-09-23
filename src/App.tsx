@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './contexts/AuthContext';
 import { UnitProvider } from './contexts/UnitContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { AdminRoute, AdminOrSelfRoute } from './components/auth/AdminRoute';
 import { SidebarProvider, useSidebar, SidebarInset } from "@/components/ui/sidebar";
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
@@ -56,11 +57,11 @@ function AppContent() {
             }
           >
             <Route path="technical/dashboard" element={<TecnicoDashboard />} />
-            <Route path="admin/dashboard" element={<AdminDashboard />} />
-            <Route path="admin/usuarios" element={<AdminUsers />} />
-            <Route path="admin/usuario/:id" element={<AdminUsersDetails />} />
-            <Route path="admin/unidades" element={<AdminUnidades />} />
-            <Route path="admin/setores" element={<AdminSetores />} />
+            <Route path="admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+            <Route path="admin/usuario/:id" element={<AdminOrSelfRoute><AdminUsersDetails /></AdminOrSelfRoute>} />
+            <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
+            <Route path="admin/setores" element={<AdminRoute><AdminSetores /></AdminRoute>} />
             <Route path="comercial/dashboard" element={<ComercialDashboard />} />
             <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
             <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />

@@ -6,6 +6,7 @@ import { CommercialProposalsTable } from '@/components/commercial-proposals-tabl
 import { useAuth } from '@/hooks/use-auth'
 import { getProposalsByUser, getProposalStatsByUser, getProposalsByUnit, type Proposal } from '@/services/proposals'
 import { useUnit } from '@/contexts/UnitContext'
+import { QuickIdSearch } from '@/components/quick-id-search'
 
 export default function ComercialDashboard(): ReactElement {
   const { user } = useAuth()
@@ -90,6 +91,9 @@ export default function ComercialDashboard(): ReactElement {
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="px-4 lg:px-6 flex items-center justify-end">
+              <QuickIdSearch kind="proposal" placeholder="Nº da proposta" />
+            </div>
             <ComercialDashboardCards stats={stats} loading={loading} />
             <div className="px-4 lg:px-6">
               {/* Reuse existing chart component later; placeholder for now */}

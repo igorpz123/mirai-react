@@ -8,6 +8,7 @@ import { TechnicalTaskTable } from "@/components/technical-task-table"
 import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
 import { getTaskStatsByUser } from '@/services/tasks'
+import { QuickIdSearch } from '@/components/quick-id-search'
 
 export default function TechnicalDashboard(): ReactElement {
 
@@ -51,6 +52,9 @@ export default function TechnicalDashboard(): ReactElement {
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="px-4 lg:px-6 flex items-center justify-end">
+              <QuickIdSearch kind="task" placeholder="Nº da tarefa" />
+            </div>
             <TechnicalDashboardCards stats={stats} loading={loadingStats} error={errorStats} />
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive data={completedByDay} />
