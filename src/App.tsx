@@ -24,6 +24,10 @@ import CommercialProposalNew from '@/pages/CommercialProposalNew';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminUsersDetails from './pages/AdminUsersDetails';
+import AdminUnidades from './pages/AdminUnidades';
+import AdminSetores from './pages/AdminSetores';
+import Empresas from './pages/Empresas';
+import EmpresaDetails from './pages/EmpresaDetails';
 import './App.css';
 import { useAuth } from './hooks/use-auth';
 
@@ -55,6 +59,8 @@ function AppContent() {
             <Route path="admin/dashboard" element={<AdminDashboard />} />
             <Route path="admin/usuarios" element={<AdminUsers />} />
             <Route path="admin/usuario/:id" element={<AdminUsersDetails />} />
+            <Route path="admin/unidades" element={<AdminUnidades />} />
+            <Route path="admin/setores" element={<AdminSetores />} />
             <Route path="comercial/dashboard" element={<ComercialDashboard />} />
             <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
             <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />
@@ -65,6 +71,8 @@ function AppContent() {
             <Route path="technical/mapa/:usuarioId" element={<TechnicalMapUser />} />
             <Route path="technical/tarefa/:id" element={<TechnicalTaskDetail />} />
             <Route path="nova-tarefa" element={<NewTaskForm />} />
+            <Route path="empresas" element={<Empresas />} />
+            <Route path="empresa/:id" element={<EmpresaDetails />} />
           </Route>
         </Routes>
       </Router>

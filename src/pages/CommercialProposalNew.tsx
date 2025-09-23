@@ -13,6 +13,7 @@ import { getProductsCatalog, getCoursesCatalog, getChemicalsCatalog, type Curso,
 import { getUsersByUnitId } from '@/services/users'
 import { SiteHeader } from '@/components/layout/site-header'
 import { IconTrash, IconPlus } from '@tabler/icons-react'
+import { onlyDigits, formatCNPJ, validateCNPJ } from '@/lib/utils'
 
 export default function CommercialProposalNew() {
   const navigate = useNavigate()
@@ -38,6 +39,8 @@ export default function CommercialProposalNew() {
 
   // Step 1: CNPJ
   const [cnpj, setCnpj] = React.useState('')
+  const cnpjDigits = React.useMemo(() => onlyDigits(cnpj), [cnpj])
+  const cnpjIsValid = React.useMemo(() => validateCNPJ(cnpjDigits), [cnpjDigits])
 
   // Step 2: Company info
   const [company, setCompany] = React.useState<Company | null>(null)
@@ -170,19 +173,29 @@ export default function CommercialProposalNew() {
             <h2 className="text-lg font-semibold">Consulta da Empresa</h2>
             <div className="max-w-md">
               <div className="text-sm mb-1">CNPJ</div>
-              <Input value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
+              <Input
+                value={cnpj}
+                onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
+                placeholder="00.000.000/0000-00"
+                aria-invalid={cnpj.length > 0 && !cnpjIsValid}
+                className={cnpj.length > 0 && !cnpjIsValid ? 'border-destructive focus-visible:ring-destructive' : ''}
+              />
+              {cnpj.length > 0 && !cnpjIsValid && (
+                <p className="text-destructive text-xs mt-1">CNPJ inválido</p>
+              )}
             </div>
             <div>
-              <Button onClick={async () => {
+              <Button disabled={!cnpjIsValid} onClick={async () => {
                 try {
-                  const cmp = await getCompanyByCNPJ(cnpj)
+                  const cmp = await getCompanyByCNPJ(onlyDigits(cnpj))
                   if (cmp) {
                     setCompany(cmp)
-                    setEmpresaForm({ cnpj: cmp.cnpj || cnpj, razao_social: cmp.razao_social || '', nome_fantasia: cmp.nome || '', cidade: cmp.cidade || '' })
+                    setEmpresaForm({ cnpj: formatCNPJ(cmp.cnpj || cnpj), razao_social: cmp.razao_social || '', nome_fantasia: cmp.nome || '', cidade: cmp.cidade || '' })
+                    setCnpj(formatCNPJ(cmp.cnpj || cnpj))
                     toastSuccess('Empresa localizada')
                   } else {
                     setCompany(null)
-                    setEmpresaForm({ cnpj, razao_social: '', nome_fantasia: '', cidade: '' })
+                    setEmpresaForm({ cnpj: formatCNPJ(cnpj), razao_social: '', nome_fantasia: '', cidade: '' })
                     toastWarning('Empresa não cadastrada, preencha os dados na próxima etapa')
                   }
                   setStep(2)
@@ -218,7 +231,7 @@ export default function CommercialProposalNew() {
                 // if company not found, create
                 if (!company) {
                   try {
-                    const created = await createCompany({ cnpj: empresaForm.cnpj || cnpj, razao_social: empresaForm.razao_social, nome_fantasia: empresaForm.nome_fantasia, cidade: empresaForm.cidade })
+                    const created = await createCompany({ cnpj: onlyDigits(empresaForm.cnpj || cnpj), razao_social: empresaForm.razao_social, nome_fantasia: empresaForm.nome_fantasia, cidade: empresaForm.cidade })
                     setCompany({ ...created, nome: created.nome })
                     toastSuccess('Empresa cadastrada')
                   } catch (e: any) {

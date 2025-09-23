@@ -2,7 +2,7 @@
 "use client"
 
 import { useNavigate } from "react-router-dom";
-import { BadgeCheck, Bell, ChevronsUpDown, CreditCard, LogOut } from "lucide-react";
+import { BadgeCheck, Bell, ChevronsUpDown, LogOut } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -92,10 +92,6 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
                   <BadgeCheck />
                   Account
                 </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
               <DropdownMenuItem>
                 <Bell />
                 Notifications

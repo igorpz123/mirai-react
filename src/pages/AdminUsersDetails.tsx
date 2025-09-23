@@ -378,7 +378,7 @@ export default function AdminUsersDetails() {
 						</div>
 
 						{/* Recent activity: tasks and proposals */}
-						<div className="md:col-span-2 flex flex-col gap-6">
+						<div className="md:col-span-2 flex flex-col gap-6 mt-4">
 							<div>
 								<h3 className="px-1 pb-2 text-lg font-semibold">Tarefas recentes deste usuário</h3>
 								<div>

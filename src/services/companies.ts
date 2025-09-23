@@ -5,6 +5,9 @@ export interface Company {
   cidade?: string
   telefone?: string
   tecnico_responsavel?: number | null
+  tecnico_nome?: string | null
+  unidade_id?: number | null
+  unidade_nome?: string | null
   [key: string]: any
 }
 
@@ -122,6 +125,38 @@ export async function getCompaniesByUnit(unitId: number): Promise<CompaniesRespo
   }
 }
 
+export async function getAllCompanies(): Promise<CompaniesResponse> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/empresas`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao buscar empresas' }))
+    throw new Error(err.message || 'Erro ao buscar empresas')
+  }
+  return res.json()
+}
+
+export async function getCompanyById(id: number): Promise<Company> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/empresas/${id}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao buscar empresa' }))
+    throw new Error(err.message || 'Erro ao buscar empresa')
+  }
+  return res.json()
+}
+
 export async function getCompanyByCNPJ(cnpj: string): Promise<Company | null> {
   const token = localStorage.getItem('token')
   const res = await fetch(`${API_URL}/empresas/cnpj/${cnpj}`, {
@@ -152,6 +187,40 @@ export async function createCompany(payload: { cnpj: string; razao_social: strin
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Erro ao criar empresa' }))
     throw new Error(err.message || 'Erro ao criar empresa')
+  }
+  return res.json()
+}
+
+export async function updateCompany(id: number, payload: Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null }>): Promise<Company> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/empresas/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao atualizar empresa' }))
+    throw new Error(err.message || 'Erro ao atualizar empresa')
+  }
+  return res.json()
+}
+
+export type CompanyProposalsResponse = { proposals: Array<{ id: number; titulo?: string; status: string; valor_total?: number; criadoEm?: string; dataAlteracao?: string; responsavel?: string }> }
+export async function getProposalsByCompany(id: number): Promise<CompanyProposalsResponse> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/propostas/empresa/${id}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao buscar propostas da empresa' }))
+    throw new Error(err.message || 'Erro ao buscar propostas da empresa')
   }
   return res.json()
 }

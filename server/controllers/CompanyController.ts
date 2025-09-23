@@ -9,10 +9,103 @@ type CompanyRow = RowDataPacket & {
   razao_social?: string
   cnpj?: string
   cidade?: string
-  endereco?: string
   telefone?: string
   tecnico_responsavel?: number | null
   unidade_id?: number
+}
+
+// List all companies (admin)
+export const getAllCompanies = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT e.id,
+              e.nome_fantasia,
+              e.razao_social,
+              e.cnpj,
+              e.cidade,
+              e.telefone,
+              e.tecnico_responsavel,
+              e.unidade_responsavel,
+              u.nome AS tecnico_nome,
+              u.sobrenome AS tecnico_sobrenome
+         FROM empresas e
+    LEFT JOIN usuarios u ON u.id = e.tecnico_responsavel
+        WHERE e.status = 'ativo'
+        ORDER BY e.nome_fantasia ASC`
+    )
+
+    const companies = (rows || []).map((r: any) => ({
+      id: r.id,
+      nome: r.nome_fantasia,
+      razao_social: r.razao_social,
+      cnpj: r.cnpj,
+      cidade: r.cidade,
+      telefone: r.telefone,
+      tecnico_responsavel: r.tecnico_responsavel,
+      tecnico_nome: [r.tecnico_nome, r.tecnico_sobrenome].filter(Boolean).join(' ').trim() || null,
+      unidade_id: r.unidade_responsavel,
+    }))
+
+    res.status(200).json({ companies, total: companies.length })
+  } catch (error) {
+    console.error('Erro ao buscar todas as empresas:', error)
+    res.status(500).json({ message: 'Erro ao buscar empresas' })
+  }
+}
+
+// Get company by ID (admin)
+export const getCompanyById = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params
+    if (!id) {
+      res.status(400).json({ message: 'id é obrigatório' })
+      return
+    }
+
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT e.id,
+              e.nome_fantasia,
+              e.razao_social,
+              e.cnpj,
+              e.cidade,
+              e.telefone,
+              e.tecnico_responsavel,
+              e.unidade_responsavel AS unidade_id,
+              uu.nome AS unidade_nome,
+              u.nome AS tecnico_nome,
+              u.sobrenome AS tecnico_sobrenome
+         FROM empresas e
+    LEFT JOIN usuarios u ON u.id = e.tecnico_responsavel
+    LEFT JOIN unidades uu ON uu.id = e.unidade_responsavel
+        WHERE e.id = ?
+        LIMIT 1`,
+      [id]
+    )
+
+    if (!rows || rows.length === 0) {
+      res.status(404).json({ message: 'Empresa não encontrada' })
+      return
+    }
+
+    const r: any = rows[0]
+    const empresa = {
+      id: r.id,
+      nome: r.nome_fantasia,
+      razao_social: r.razao_social,
+      cnpj: r.cnpj,
+      cidade: r.cidade,
+      telefone: r.telefone,
+      tecnico_responsavel: r.tecnico_responsavel,
+      tecnico_nome: [r.tecnico_nome, r.tecnico_sobrenome].filter(Boolean).join(' ').trim() || null,
+      unidade_id: r.unidade_id,
+      unidade_nome: r.unidade_nome,
+    }
+
+    res.status(200).json(empresa)
+  } catch (error) {
+    console.error('Erro ao buscar empresa por id:', error)
+    res.status(500).json({ message: 'Erro ao buscar empresa' })
+  }
 }
 
 export const getCompaniesByResponsavel = async (req: Request<{ responsavel_id: string }>, res: Response): Promise<void> => {
@@ -168,5 +261,61 @@ export const createCompany = async (
   } catch (error) {
     console.error('Erro ao criar empresa:', error)
     res.status(500).json({ message: 'Erro ao criar empresa' })
+  }
+}
+
+// Update company details (admin)
+export const updateCompany = async (
+  req: Request<{ id: string }, {}, Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null }>>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    if (!id) {
+      res.status(400).json({ message: 'id é obrigatório' })
+      return
+    }
+
+    const payload = req.body || {}
+    const updates: string[] = []
+    const values: any[] = []
+
+    const fieldsMap: Record<string, string> = {
+      nome_fantasia: 'nome_fantasia',
+      razao_social: 'razao_social',
+      cnpj: 'cnpj',
+      cidade: 'cidade',
+      telefone: 'telefone',
+      tecnico_responsavel: 'tecnico_responsavel',
+      unidade_responsavel: 'unidade_responsavel',
+    }
+
+    for (const key of Object.keys(fieldsMap)) {
+      if (Object.prototype.hasOwnProperty.call(payload, key)) {
+        updates.push(`${fieldsMap[key]} = ?`)
+        // allow null for tecnico/unidade
+        values.push((payload as any)[key])
+      }
+    }
+
+    if (updates.length === 0) {
+      res.status(400).json({ message: 'Nenhum campo para atualizar' })
+      return
+    }
+
+    const sql = `UPDATE empresas SET ${updates.join(', ')} WHERE id = ?`
+    values.push(id)
+
+    const [result] = await pool.query<OkPacket>(sql, values)
+    if (!result.affectedRows) {
+      res.status(404).json({ message: 'Empresa não encontrada' })
+      return
+    }
+
+    // return fresh data
+    await getCompanyById({ ...req, params: { id } } as any, res)
+  } catch (error) {
+    console.error('Erro ao atualizar empresa:', error)
+    res.status(500).json({ message: 'Erro ao atualizar empresa' })
   }
 }
