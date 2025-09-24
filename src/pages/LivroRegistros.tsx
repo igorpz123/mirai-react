@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { listLivroRegistros, createLivroRegistro, deleteLivroRegistro } from '@/services/livroRegistros'
 import type { LivroRegistro } from '@/services/livroRegistros'
 import { toast } from 'sonner'
@@ -9,8 +9,23 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
-import { IconDownload, IconArrowsSort, IconFilter, IconTrash, IconCopy, IconDotsVertical } from '@tabler/icons-react'
+import { IconDownload, IconTrash, IconCopy, IconDotsVertical, IconSearch, IconX } from '@tabler/icons-react'
 import { getAllCompanies } from '@/services/companies'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 // Cursos: criar fallback rápido através do catálogo de propostas se existir endpoint (usando /propostas/catalog/cursos)
 
 interface Curso { id: number; nome: string }
@@ -69,10 +84,13 @@ export default function LivroRegistrosPage() {
   const [cursos, setCursos] = useState<Curso[]>([])
   const [filters, setFilters] = useState({ participante: '', modalidade: '', sesmo: 'all', empresa_id: '', curso_id: '' })
   const [dateRange, setDateRange] = useState({ inicio: '', fim: '' })
-  const [pagination, setPagination] = useState({ limit: 25, offset: 0 })
-  const [sort, setSort] = useState<{ col: string; dir: 'ASC' | 'DESC' }>({ col: 'data_conclusao', dir: 'DESC' })
+  // pagination + local table state (client-side paging for the already-filtered server result)
+  const [pageIndex, setPageIndex] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
+  const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [rows, setRows] = useState<LivroRegistro[]>([])
   const [confirmDelete, setConfirmDelete] = useState<{ id: number | null; open: boolean }>({ id: null, open: false })
-  const [menuOpenId, setMenuOpenId] = useState<number | null>(null)
   // estado 'duplicating' removido (não utilizado diretamente)
   // const [duplicating, setDuplicating] = useState<LivroRegistro | null>(null)
 
@@ -87,36 +105,18 @@ export default function LivroRegistrosPage() {
         curso_id: filters.curso_id ? Number(filters.curso_id) : undefined,
         data_conclusao_inicio: dateRange.inicio || undefined,
         data_conclusao_fim: dateRange.fim || undefined,
-        limit: pagination.limit,
-        offset: pagination.offset,
-        sort: sort.col,
-        order: sort.dir
+        limit: pageSize,
+        offset: pageIndex * pageSize
       })
       setData(res.registros)
+      setRows(res.registros)
     } catch (e: any) {
       toast.error(e.message || 'Erro ao carregar')
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { load() }, [filters, pagination.offset, pagination.limit, sort, dateRange])
-
-  // Fecha menu de ações ao clicar fora ou pressionar ESC
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (!(e.target instanceof HTMLElement)) return
-      const actionsCell = e.target.closest('[data-actions-menu]')
-      if (!actionsCell) setMenuOpenId(null)
-    }
-    function handleKey(e: KeyboardEvent) { if (e.key === 'Escape') setMenuOpenId(null) }
-    if (menuOpenId !== null) {
-      document.addEventListener('click', handleClick)
-      window.addEventListener('keydown', handleKey)
-    }
-    return () => {
-      document.removeEventListener('click', handleClick)
-      window.removeEventListener('keydown', handleKey)
-    }
-  }, [menuOpenId])
+  // load data when filters/dateRange or pagination change
+  useEffect(() => { load() }, [filters, dateRange, pageIndex, pageSize])
 
   useEffect(() => {
     async function fetchAux() {
@@ -135,6 +135,15 @@ export default function LivroRegistrosPage() {
     }
     fetchAux()
   }, [])
+
+  // keep local rows in sync with loaded data
+  useEffect(() => { setRows(data); setPageIndex(0) }, [data])
+
+  // debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim().toLowerCase()), 150)
+    return () => clearTimeout(t)
+  }, [search])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const target = e.target as HTMLInputElement | HTMLSelectElement
@@ -176,9 +185,7 @@ export default function LivroRegistrosPage() {
     }
   }
 
-  function toggleSort(col: string) {
-    setSort(s => ({ col, dir: s.col === col ? (s.dir === 'ASC' ? 'DESC' : 'ASC') : 'ASC' }))
-  }
+  // sort not implemented for this table (server-side sorting could be added)
 
   function exportCSV() {
     if (!data.length) { toast.error('Nada para exportar'); return }
@@ -225,6 +232,42 @@ export default function LivroRegistrosPage() {
   }
 
   function escapeCSV(v: string) { return /[",;\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v }
+
+  // client-side filtered + paginated list
+  const filtered = useMemo(() => {
+    const q = debouncedSearch
+    return rows.filter(r => {
+      if (q.length === 0) return true
+      const participante = (r.participante || '').toString().toLowerCase()
+      const empresa = (r.empresa_nome || String(r.empresa_id || '')).toString().toLowerCase()
+      const curso = (r.curso_nome || String(r.curso_id || '')).toString().toLowerCase()
+      return participante.includes(q) || empresa.includes(q) || curso.includes(q)
+    })
+  }, [rows, debouncedSearch])
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filtered.length / pageSize)), [filtered.length, pageSize])
+  const safePageIndex = useMemo(() => Math.min(Math.max(0, pageIndex), totalPages - 1), [pageIndex, totalPages])
+  const pageItems = useMemo(() => filtered.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize), [filtered, safePageIndex, pageSize])
+
+  const LivroActionsMenu: React.FC<{ r: LivroRegistro }> = ({ r }) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="data-[state=open]:bg-muted text-muted-foreground">
+          <IconDotsVertical />
+          <span className="sr-only">Abrir menu</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuItem onClick={() => { duplicate(r) }}>
+          <IconCopy className="mr-2" /> Duplicar
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => { setConfirmDelete({ id: r.id, open: true }) }}>
+          <IconTrash className="mr-2 text-destructive" /> Remover
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 
   return (
     <div className="p-4 space-y-4">
@@ -358,93 +401,119 @@ export default function LivroRegistrosPage() {
           <label className="text-xs">Conclusão Fim</label>
           <Input type="date" value={dateRange.fim} onChange={e=> setDateRange(r=>({...r, fim: e.target.value}))} className="h-8" />
         </div>
-        <Button variant="outline" size="sm" onClick={()=> { setPagination(p=>({...p, offset:0})); load() }} className="flex items-center gap-1"><IconFilter size={14}/>Aplicar</Button>
+        <Button variant="outline" size="sm" onClick={()=> { setPageIndex(0); load() }} className="flex items-center gap-1">Aplicar</Button>
       </div>
-      <div className="overflow-auto border rounded">
-        <table className="min-w-full text-sm">
-          <thead className="">
-            <tr>
-              {['numero','data_aquisicao','participante','empresa','curso','instrutor','carga_horaria','data_conclusao','modalidade','sesmo'].map(col => (
-                <th key={col} className="p-2 text-left cursor-pointer select-none" onClick={()=> toggleSort(col === 'empresa' ? 'participante' : col)}>
-                  <span className="inline-flex items-center gap-1">
-                    {col.replace('_',' ').toUpperCase()}
-                    {sort.col === (col === 'empresa' ? 'participante' : col) && <IconArrowsSort size={14} className={sort.dir==='ASC'?'rotate-180 transition':'transition'} />}
-                  </span>
-                </th>
-              ))}
-              <th className="p-2 text-left">OBS</th>
-              <th className="p-2 text-left">AÇÕES</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && Array.from({ length: 6 }).map((_,i)=>(
-              <tr key={i} className="border-t">
-                <td colSpan={12} className="p-2"><Skeleton className="h-5 w-full" /></td>
-              </tr>
-            ))}
-            {!loading && data.length === 0 && (
-              <tr><td colSpan={12} className="p-4 text-center">Nenhum registro</td></tr>
-            )}
-            {data.map(r => (
-              <tr key={r.id} className="border-t hover:bg-foreground/10">
-                <td className="p-2">{r.numero || '-'}</td>
-                <td className="p-2">{formatDateBR(r.data_aquisicao) || '-'}</td>
-                <td className="p-2">{r.participante}</td>
-                <td className="p-2">{r.empresa_nome || r.empresa_id}</td>
-                <td className="p-2">{r.curso_nome || r.curso_id}</td>
-                <td className="p-2">{r.instrutor || '-'}</td>
-                <td className="p-2">{r.carga_horaria}</td>
-                <td className="p-2">{formatDateBR(r.data_conclusao)}</td>
-                <td className="p-2">{r.modalidade}</td>
-                <td className="p-2">{r.sesmo ? 'Sim' : 'Não'}</td>
-                <td className="p-2 max-w-[160px] truncate" title={r.observacoes || ''}>{r.observacoes? r.observacoes : '-'}</td>
-                <td className="relative p-2" data-actions-menu>
-                  <button
-                    onClick={(e)=> { e.stopPropagation(); setMenuOpenId(menuOpenId === r.id ? null : r.id) }}
-                    className="h-7 w-7 inline-flex items-center justify-center rounded hover:bg-accent focus:outline-none border"
-                    aria-haspopup="menu"
-                    aria-expanded={menuOpenId === r.id}
-                    aria-label="Ações"
-                  >
-                    <IconDotsVertical size={16} />
-                  </button>
-                  {menuOpenId === r.id && (
-                    <div
-                      className="absolute right-0 mt-1 w-36 bg-popover/95 backdrop-blur-sm border rounded shadow-md z-20 py-1 text-xs animate-in fade-in"
-                      role="menu"
-                    >
-                      <button
-                        className="w-full flex items-center gap-1 px-3 py-1 hover:bg-accent text-left"
-                        onClick={()=> { duplicate(r); setMenuOpenId(null) }}
-                        role="menuitem"
-                      >
-                        <IconCopy size={14}/> Duplicar
-                      </button>
-                      <button
-                        className="w-full flex items-center gap-1 px-3 py-1 hover:bg-accent text-left text-red-600"
-                        onClick={()=> { setConfirmDelete({ id: r.id, open: true }); setMenuOpenId(null) }}
-                        role="menuitem"
-                      >
-                        <IconTrash size={14}/> Remover
-                      </button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Table (styled) */}
+      <div className="rounded-lg border bg-card">
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Livro de Registros</h3>
+          <div />
+        </div>
+        <div className="px-4 pb-4">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative w-full sm:w-64">
+              <Input
+                placeholder="Pesquisar participante, empresa ou curso"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setPageIndex(0) }}
+                className="pr-8"
+              />
+              {search ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => { setSearch(''); setPageIndex(0) }}
+                  className="absolute right-1 top-1/2 -translate-y-1/2"
+                  aria-label="Limpar pesquisa"
+                >
+                  <IconX />
+                </Button>
+              ) : (
+                <IconSearch className="pointer-events-none absolute right-2 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow>
+                <TableHead>Número</TableHead>
+                <TableHead>Data Aquisição</TableHead>
+                <TableHead>Participante</TableHead>
+                <TableHead>Empresa</TableHead>
+                <TableHead>Curso</TableHead>
+                <TableHead>Instrutor</TableHead>
+                <TableHead>Carga Horária</TableHead>
+                <TableHead>Data Conclusão</TableHead>
+                <TableHead>Modalidade</TableHead>
+                <TableHead>SESMO</TableHead>
+                <TableHead>Obs</TableHead>
+                <TableHead>Ação</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={12} className="h-24 w-full text-center">
+                    <Skeleton className="h-6 w-full" />
+                  </TableCell>
+                </TableRow>
+              ) : pageItems.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={12} className="h-24 w-full text-center text-muted-foreground">Nenhum registro</TableCell>
+                </TableRow>
+              ) : (
+                pageItems.map(r => (
+                  <TableRow key={r.id} className="align-top">
+                    <TableCell>{r.numero || '-'}</TableCell>
+                    <TableCell>{formatDateBR(r.data_aquisicao) || '-'}</TableCell>
+                    <TableCell>{r.participante}</TableCell>
+                    <TableCell>{r.empresa_nome || r.empresa_id}</TableCell>
+                    <TableCell>{r.curso_nome || r.curso_id}</TableCell>
+                    <TableCell>{r.instrutor || '-'}</TableCell>
+                    <TableCell>{r.carga_horaria}</TableCell>
+                    <TableCell>{formatDateBR(r.data_conclusao)}</TableCell>
+                    <TableCell>{r.modalidade}</TableCell>
+                    <TableCell>{r.sesmo ? 'Sim' : 'Não'}</TableCell>
+                    <TableCell className="max-w-[160px] truncate" title={r.observacoes || ''}>{r.observacoes ? r.observacoes : '-'}</TableCell>
+                    <TableCell>
+                      <LivroActionsMenu r={r} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Pagination controls */}
+          <div className="mt-3 flex flex-col items-center justify-between gap-3 sm:flex-row">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Linhas por página</span>
+              <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPageIndex(0) }}>
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[5, 10, 20, 50].map(n => (
+                    <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <span className="text-sm">Página {safePageIndex + 1} de {totalPages}</span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPageIndex(0)} disabled={safePageIndex === 0}>{'<<'}</Button>
+                <Button variant="outline" size="sm" onClick={() => setPageIndex((p) => Math.max(0, p - 1))} disabled={safePageIndex === 0}>{'<'}</Button>
+                <Button variant="outline" size="sm" onClick={() => setPageIndex((p) => Math.min(totalPages - 1, p + 1))} disabled={safePageIndex >= totalPages - 1}>{'>'}</Button>
+                <Button variant="outline" size="sm" onClick={() => setPageIndex(totalPages - 1)} disabled={safePageIndex >= totalPages - 1}>{'>>'}</Button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      {/* Paginação simples */}
-      <div className="flex items-center gap-4 justify-end">
-        <span className="text-xs text-muted-foreground">Limit:
-          <select value={pagination.limit} onChange={e=> setPagination(p=>({ ...p, limit: Number(e.target.value), offset:0 }))} className="ml-1 border rounded px-1 py-0.5 text-xs">
-            {[10,25,50,100].map(n=> <option key={n} value={n}>{n}</option>)}
-          </select>
-        </span>
-        <Button size="sm" variant="outline" disabled={pagination.offset===0} onClick={()=> setPagination(p=> ({ ...p, offset: Math.max(p.offset - p.limit, 0) }))}>Anterior</Button>
-        <Button size="sm" variant="outline" onClick={()=> setPagination(p=> ({ ...p, offset: p.offset + p.limit }))}>Próxima</Button>
-      </div>
+      
       <Dialog open={confirmDelete.open} onOpenChange={(o)=> !o && setConfirmDelete({ id: null, open: false })}>
         <DialogContent>
           <DialogHeader>
