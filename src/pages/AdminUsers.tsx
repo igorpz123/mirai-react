@@ -81,7 +81,7 @@ export default function AdminUsers() {
     <div className="container-main">
       <SiteHeader title="Usuários | Administrativo" />
 
-      <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6 mx-6">
+  <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6">
         <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
           <Input
             value={query}
@@ -107,8 +107,8 @@ export default function AdminUsers() {
         {loading && <div>Carregando usuários...</div>}
         {error && <div className="text-destructive">{error}</div>}
 
-        <div className="rounded-md border">
-          <Table>
+        <div className="rounded-md border overflow-x-auto">
+          <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Usuário</TableHead>

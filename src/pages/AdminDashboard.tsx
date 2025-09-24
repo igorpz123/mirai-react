@@ -54,7 +54,9 @@ export default function AdminDashboard(): ReactElement {
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive data={completedByDay} />
             </div>
-            <TechnicalTaskTable tasks={tasks} onRefresh={refetchTasks} />
+            <div className="px-4 lg:px-6 overflow-x-auto">
+              <TechnicalTaskTable tasks={tasks} onRefresh={refetchTasks} />
+            </div>
           </div>
         </div>
       </div>

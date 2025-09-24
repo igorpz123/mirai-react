@@ -158,18 +158,26 @@ h1 {
   }
 }
 
-.button-success {
-  @apply text-success bg-success/10 hover:bg-success/20 cursor-pointer;
+/* Container principal com largura consistente */
+.container-main {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.button-primary {
-  @apply text-primary bg-primary/15 hover:bg-primary/25 cursor-pointer;
+html {
+  /* Força reserva de espaço da scrollbar vertical para evitar diferença de largura entre páginas/usuários */
+  overflow-y: scroll;
 }
 
-.button-progress {
-  @apply text-secondary bg-secondary/15 hover:bg-secondary/25 cursor-pointer;
-}
+.button-success { color: var(--success); background-color: color-mix(in oklab, var(--success) 10%, transparent); cursor: pointer; }
+.button-success:hover { background-color: color-mix(in oklab, var(--success) 20%, transparent); }
 
-.button-remove {
-  @apply text-destructive bg-destructive/20 hover:bg-destructive/20 cursor-pointer;
-}
+.button-primary { color: var(--primary); background-color: color-mix(in oklab, var(--primary) 15%, transparent); cursor: pointer; }
+.button-primary:hover { background-color: color-mix(in oklab, var(--primary) 25%, transparent); }
+
+.button-progress { color: var(--secondary); background-color: color-mix(in oklab, var(--secondary) 15%, transparent); cursor: pointer; }
+.button-progress:hover { background-color: color-mix(in oklab, var(--secondary) 25%, transparent); }
+
+.button-remove { color: var(--destructive); background-color: color-mix(in oklab, var(--destructive) 20%, transparent); cursor: pointer; }
+.button-remove:hover { background-color: color-mix(in oklab, var(--destructive) 20%, transparent); }

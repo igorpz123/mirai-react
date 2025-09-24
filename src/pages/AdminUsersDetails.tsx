@@ -269,7 +269,7 @@ export default function AdminUsersDetails() {
 		<div className="container-main">
 			<SiteHeader title={user?.nome ? `Usuário | ${user.nome}` : 'Usuário'} />
 
-			<div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6">
+			<div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6 overflow-x-hidden">
 				<div>
 					<Button variant="secondary" onClick={() => navigate(-1)}>Voltar</Button>
 				</div>
@@ -279,7 +279,7 @@ export default function AdminUsersDetails() {
 				) : error ? (
 					<div className="text-destructive">{error}</div>
 				) : user ? (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
 						<div className="flex items-center gap-4">
 							<Avatar className="size-16">
 								<AvatarImage src={(user as any).foto_url || (user as any).fotoUrl || undefined} alt={`${user.nome} ${user.sobrenome || ''}`} />
@@ -326,7 +326,7 @@ export default function AdminUsersDetails() {
 								</Button>
 							</div>
 						</div>
-						<div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 md:col-span-2">
+						<div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 md:col-span-2 overflow-x-hidden">
 							<div className='w-full'>
 								<div className="text-sm opacity-70">Unidades</div>
 								<div className="text-base break-words mb-2 w-full">
@@ -396,7 +396,7 @@ export default function AdminUsersDetails() {
 						</div>
 
 						{/* Recent activity: tasks and proposals */}
-						<div className="md:col-span-2 flex flex-col gap-6 mt-4">
+						<div className="md:col-span-2 flex flex-col gap-6 mt-4 overflow-x-hidden">
 							<div>
 								<h3 className="px-1 pb-2 text-lg font-semibold">Tarefas recentes deste usuário</h3>
 								<div>

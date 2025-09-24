@@ -49,3 +49,12 @@ export async function loginRequest(credentials: LoginCredentials): Promise<AuthR
   
   return res.json();
 }
+
+export async function renewRequest(token: string): Promise<AuthResponse> {
+  const res = await fetch(`${API_URL}/auth/renew`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + token }
+  })
+  if (!res.ok) throw new Error('Falha ao renovar sessão')
+  return res.json()
+}

@@ -40,6 +40,81 @@ export interface Setor {
   nome: string;
 }
 
+/** Recupera o usuário (com unidades e setores) pelo ID sem exigir senha */
+export async function getUserById(id: number): Promise<User | null> {
+  const [rows] = await db.query<DbUserRow[]>(
+    `
+    SELECT
+      u.id,
+      u.email,
+      u.senha,
+      u.nome,
+      u.sobrenome,
+      u.cargo_id     AS cargoId,
+      c.nome         AS cargo,
+      u.foto_url     AS fotoUrl,
+      CONCAT(
+        '[',
+        GROUP_CONCAT(
+          DISTINCT CONCAT(
+            '{"id":', uu.unidade_id,
+            ',"nome":"', REPLACE(un.nome, '"', '\\"'), '"}'
+          )
+          ORDER BY uu.unidade_id
+          SEPARATOR ','
+        ),
+        ']'
+      ) AS unidades,
+      CONCAT(
+        '[',
+        GROUP_CONCAT(
+          DISTINCT CONCAT(
+            '{"id":', us.setor_id,
+            ',"nome":"', REPLACE(ss.nome, '"', '\\"'), '"}'
+          )
+          ORDER BY us.setor_id
+          SEPARATOR ','
+        ),
+        ']'
+      ) AS setores
+    FROM usuarios u
+      LEFT JOIN cargos c            ON u.cargo_id    = c.id
+      LEFT JOIN usuario_unidades uu ON uu.usuario_id  = u.id
+      LEFT JOIN unidades un         ON uu.unidade_id  = un.id
+      LEFT JOIN usuario_setores  us ON us.usuario_id  = u.id
+      LEFT JOIN setor ss         ON us.setor_id     = ss.id
+    WHERE u.id = ? AND u.status = 'ativo'
+    GROUP BY u.id, u.email, u.senha, u.nome, u.sobrenome,
+             u.cargo_id, c.nome, u.foto_url;
+    `,
+    [id]
+  )
+  if (!rows.length) return null
+  const raw = rows[0]
+  const unidades: Unidade[] = JSON.parse(raw.unidades || '[]')
+  const setores: Setor[] = JSON.parse(raw.setores || '[]')
+  return {
+    id: raw.id,
+    email: raw.email,
+    nome: raw.nome,
+    sobrenome: raw.sobrenome ?? undefined,
+    cargoId: raw.cargoId,
+    cargo: raw.cargo,
+    fotoUrl: raw.fotoUrl ?? undefined,
+    unidades,
+    setores
+  }
+}
+
+export function signUserToken(user: User): string {
+  const signOptions: SignOptions = { expiresIn: authConfig.jwtExpiresIn as any };
+  return jwt.sign(
+    { userId: user.id, ...user },
+    authConfig.jwtSecret as Secret,
+    signOptions
+  );
+}
+
 export async function authenticateUser(
   email: string,
   password: string
@@ -136,12 +211,7 @@ export async function authenticateUser(
   };
 
   // 6) Gera o JWT
-  const signOptions: SignOptions = { expiresIn: authConfig.jwtExpiresIn as any };
-  const token = jwt.sign(
-    { userId: user.id, ...user },
-    authConfig.jwtSecret as Secret,
-    signOptions
-  );
+  const token = signUserToken(user)
 
   return { token, user };
 }

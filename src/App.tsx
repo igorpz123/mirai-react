@@ -1,9 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import { UnitProvider } from './contexts/UnitContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { AdminRoute, AdminOrSelfRoute } from './components/auth/AdminRoute';
-import { SidebarProvider, useSidebar, SidebarInset } from "@/components/ui/sidebar";
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
 //Páginas do Setor Técnico
@@ -35,50 +32,41 @@ import { useAuth } from './hooks/use-auth';
 // Separa a lógica que utiliza o hook, garantindo que ela será renderizada
 // dentro do SidebarProvider.
 function AppContent() {
-  const { open, isMobile } = useSidebar();
-
-  // Se estiver em mobile ou se a sidebar estiver oculta, utiliza 93vw.
-  // Se a sidebar estiver aberta no desktop, subtrai a largura da sidebar.
-  const contentWidth =
-    isMobile || !open ? "93vw" : "calc(98vw - var(--sidebar-width))";
-
   return (
-    <SidebarInset style={{ width: contentWidth } as React.CSSProperties}>
-      <Router>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<HomeRedirect />} />
-          <Route
-            path="/*"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route path="technical/dashboard" element={<TecnicoDashboard />} />
-            <Route path="admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
-            <Route path="admin/usuario/:id" element={<AdminOrSelfRoute><AdminUsersDetails /></AdminOrSelfRoute>} />
-            <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
-            <Route path="admin/setores" element={<AdminRoute><AdminSetores /></AdminRoute>} />
-            <Route path="comercial/dashboard" element={<ComercialDashboard />} />
-            <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
-            <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />
-            <Route path="technical/fluxograma/setor/:setorSlug" element={<TechnicalFluxogramaSetor />} />
-            <Route path="technical/agenda" element={<TechnicalAgenda />} />
-            <Route path="technical/agenda/:usuarioId" element={<TechnicalAgendaUser />} />
-            <Route path="technical/mapa" element={<TechnicalMap />} />
-            <Route path="technical/mapa/:usuarioId" element={<TechnicalMapUser />} />
-            <Route path="technical/tarefa/:id" element={<TechnicalTaskDetail />} />
-            <Route path="nova-tarefa" element={<NewTaskForm />} />
-            <Route path="empresas" element={<Empresas />} />
-            <Route path="empresa/:id" element={<EmpresaDetails />} />
-          </Route>
-        </Routes>
-      </Router>
-    </SidebarInset>
-  );
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<HomeRedirect />} />
+        <Route
+          path="/*"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="technical/dashboard" element={<TecnicoDashboard />} />
+          <Route path="admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
+          <Route path="admin/usuario/:id" element={<AdminOrSelfRoute><AdminUsersDetails /></AdminOrSelfRoute>} />
+          <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
+          <Route path="admin/setores" element={<AdminRoute><AdminSetores /></AdminRoute>} />
+          <Route path="comercial/dashboard" element={<ComercialDashboard />} />
+          <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
+          <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />
+          <Route path="technical/fluxograma/setor/:setorSlug" element={<TechnicalFluxogramaSetor />} />
+          <Route path="technical/agenda" element={<TechnicalAgenda />} />
+          <Route path="technical/agenda/:usuarioId" element={<TechnicalAgendaUser />} />
+          <Route path="technical/mapa" element={<TechnicalMap />} />
+          <Route path="technical/mapa/:usuarioId" element={<TechnicalMapUser />} />
+          <Route path="technical/tarefa/:id" element={<TechnicalTaskDetail />} />
+          <Route path="nova-tarefa" element={<NewTaskForm />} />
+          <Route path="empresas" element={<Empresas />} />
+          <Route path="empresa/:id" element={<EmpresaDetails />} />
+        </Route>
+      </Routes>
+    </Router>
+  )
 }
 
 // Redireciona o usuário logado para a dashboard correta com base no cargoId.
@@ -102,16 +90,7 @@ function HomeRedirect() {
   return <Navigate to="/technical/dashboard" replace />;
 }
 
-function App() {
-  return (
-    <AuthProvider>
-      <UnitProvider>
-        <SidebarProvider>
-          <AppContent />
-        </SidebarProvider>
-      </UnitProvider>
-    </AuthProvider>
-  );
-}
+// App agora não recria Providers já existentes em main.tsx
+function App() { return <AppContent /> }
 
 export default App;

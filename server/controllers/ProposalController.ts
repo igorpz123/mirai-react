@@ -5,6 +5,8 @@ import { RowDataPacket, OkPacket } from 'mysql2'
 import pool from '../config/db'
 import jwt from 'jsonwebtoken'
 import authConfig from '../config/auth'
+import { createNotification } from '../services/notificationService'
+import { getIO } from '../realtime'
 import type { Request as ExpressRequest } from 'express'
 import { PUBLIC_UPLOADS_DIR } from '../middleware/upload'
 import { Document, Packer, Paragraph, HeadingLevel, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType } from 'docx'
@@ -1048,6 +1050,37 @@ export const updateProposalStatus = async (
         }
 
         res.status(200).json({ id, status, dataAlteracao: new Date().toISOString() })
+
+        // If approved, notify indication user (indicacao_id) if exists and not same as actor
+        if (status === 'aprovada') {
+            try {
+                const [prRows] = await pool.query<RowDataPacket[]>(`SELECT indicacao_id FROM propostas WHERE id = ?`, [id])
+                const indicId = (prRows as any[])[0]?.indicacao_id
+                if (indicId && Number(indicId) !== Number(actorId)) {
+                    const notif = await createNotification({
+                        user_id: Number(indicId),
+                        actor_id: actorId ? Number(actorId) : null,
+                        type: 'proposal_approved',
+                        body: 'Uma proposta indicada por você foi aprovada',
+                        entity_type: 'proposal',
+                        entity_id: id,
+                        metadata: { proposta_id: id, link: `/comercial/proposta/${id}` },
+                    })
+                    const legacyPayload = {
+                        id: notif.id,
+                        user_id: notif.user_id,
+                        type: notif.type,
+                        entity: notif.entity_type,
+                        entity_id: notif.entity_id,
+                        message: notif.body,
+                        metadata: notif.metadata,
+                        created_at: notif.created_at,
+                        read_at: notif.read_at,
+                    }
+                    try { getIO().to(`user:${indicId}`).emit('notification:new', legacyPayload) } catch {}
+                }
+            } catch (e) { console.warn('Falha ao notificar aprovação de proposta:', e) }
+        }
     } catch (error) {
         console.error('Erro ao atualizar status da proposta:', error)
         res.status(500).json({ message: 'Erro ao atualizar status' })

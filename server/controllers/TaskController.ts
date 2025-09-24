@@ -6,6 +6,8 @@ import { RowDataPacket, OkPacket } from 'mysql2';
 import pool from '../config/db';
 import jwt from 'jsonwebtoken';
 import authConfig from '../config/auth';
+import { createNotification } from '../services/notificationService'
+import { getIO } from '../realtime'
 
 type TaskRow = RowDataPacket & {
   tarefa_id: number;
@@ -595,9 +597,34 @@ export const newTask = async (
       // don't block the main response — log and continue
     }
 
-    res
-      .status(201)
-      .json({ message: 'Tarefa criada com sucesso', tarefa_id: insertedId });
+    // Notify responsible if assigned
+    if (responsavel_id) {
+      try {
+        const notif = await createNotification({
+          user_id: Number(responsavel_id),
+          actor_id: created_by ? Number(created_by) : null,
+          type: 'task_assigned',
+          body: 'Nova tarefa atribuída a você',
+          entity_type: 'task',
+          entity_id: insertedId,
+          metadata: { tarefa_id: insertedId, prioridade, prazo, link: `/technical/tarefa/${insertedId}` },
+        })
+        const legacyPayload = {
+          id: notif.id,
+          user_id: notif.user_id,
+          type: notif.type,
+          entity: notif.entity_type,
+          entity_id: notif.entity_id,
+          message: notif.body,
+          metadata: notif.metadata,
+          created_at: notif.created_at,
+          read_at: notif.read_at,
+        }
+        try { getIO().to(`user:${responsavel_id}`).emit('notification:new', legacyPayload) } catch {}
+      } catch (e) { console.warn('Falha ao criar notificação de nova tarefa:', e) }
+    }
+
+    res.status(201).json({ message: 'Tarefa criada com sucesso', tarefa_id: insertedId });
   } catch (error) {
     console.error('Erro ao criar tarefa:', error);
     res.status(500).json({ message: 'Erro ao criar tarefa' });
@@ -626,6 +653,30 @@ export const updateTaskResponsible = async (
     const [result] = await pool.query<OkPacket>(updateQuery, [usuarioId, tarefa_id]);
 
     if (result.affectedRows && result.affectedRows > 0) {
+      // Create notification for new responsible
+      try {
+        const notif = await createNotification({
+          user_id: Number(usuarioId),
+          actor_id: null,
+          type: 'task_assigned',
+          body: 'Você foi designado como responsável por uma tarefa',
+          entity_type: 'task',
+          entity_id: Number(tarefa_id),
+          metadata: { tarefa_id: Number(tarefa_id), link: `/technical/tarefa/${tarefa_id}` },
+        })
+        const legacyPayload = {
+          id: notif.id,
+          user_id: notif.user_id,
+          type: notif.type,
+          entity: notif.entity_type,
+          entity_id: notif.entity_id,
+          message: notif.body,
+          metadata: notif.metadata,
+          created_at: notif.created_at,
+          read_at: notif.read_at,
+        }
+        try { getIO().to(`user:${usuarioId}`).emit('notification:new', legacyPayload) } catch {}
+      } catch (e) { console.warn('Falha ao criar notificação de designação:', e) }
       res.status(200).json({ message: 'Responsável atualizado com sucesso' });
     } else {
       res.status(404).json({ message: 'Tarefa não encontrada' });
@@ -976,6 +1027,35 @@ export const addTaskObservation = async (
 
     const [result] = await pool.query<OkPacket>(insertSql, [tarefa_id, usuario_id, observacoes.trim()]);
 
+    // Notify current responsible (if any and not same as actor)
+    try {
+      const [respRows] = await pool.query<RowDataPacket[]>(`SELECT responsavel_id FROM tarefas WHERE id = ?`, [tarefa_id])
+      const respId = (respRows as any[])[0]?.responsavel_id
+      if (respId && Number(respId) !== Number(usuario_id)) {
+        const notif = await createNotification({
+          user_id: Number(respId),
+          actor_id: Number(usuario_id),
+          type: 'task_observation',
+          body: 'Nova observação adicionada à sua tarefa',
+          entity_type: 'task',
+          entity_id: Number(tarefa_id),
+          metadata: { tarefa_id: Number(tarefa_id), observacao_id: (result as any).insertId, link: `/technical/tarefa/${tarefa_id}` },
+        })
+        const legacyPayload = {
+          id: notif.id,
+          user_id: notif.user_id,
+          type: notif.type,
+          entity: notif.entity_type,
+          entity_id: notif.entity_id,
+          message: notif.body,
+          metadata: notif.metadata,
+          created_at: notif.created_at,
+          read_at: notif.read_at,
+        }
+        try { getIO().to(`user:${respId}`).emit('notification:new', legacyPayload) } catch {}
+      }
+    } catch (e) { console.warn('Falha ao notificar observação de tarefa:', e) }
+
     res.status(201).json({ message: 'Observação adicionada com sucesso', id: result.insertId });
   } catch (error) {
     console.error('Erro ao adicionar observação:', error);
@@ -1122,7 +1202,38 @@ export const updateTask = async (
       // don't block the response
     }
 
+    // Caso tenha havido mudança de responsável via updateTask (PUT)
+    try {
+      const responsavelMudou = Object.prototype.hasOwnProperty.call(req.body, 'usuarioId') && usuarioId != null && Number(usuarioId) !== Number(existing.responsavel_id)
+      if (responsavelMudou) {
+        const notif = await createNotification({
+          user_id: Number(usuarioId),
+          actor_id: actorId || null,
+          type: 'task_assigned',
+          body: 'Você foi designado como responsável por uma tarefa',
+          entity_type: 'task',
+          entity_id: Number(tarefa_id),
+          metadata: { tarefa_id: Number(tarefa_id), link: `/technical/tarefa/${tarefa_id}` },
+        })
+        const legacyPayload = {
+          id: notif.id,
+          user_id: notif.user_id,
+          type: notif.type,
+          entity: notif.entity_type,
+          entity_id: notif.entity_id,
+          message: notif.body,
+          metadata: notif.metadata,
+          created_at: notif.created_at,
+          read_at: notif.read_at,
+        }
+        try { getIO().to(`user:${usuarioId}`).emit('notification:new', legacyPayload) } catch {}
+      }
+    } catch (notifyErr) {
+      console.warn('Falha ao notificar mudança de responsável (updateTask):', notifyErr)
+    }
+
     res.status(200).json({ message: 'Tarefa atualizada com sucesso' });
+    // If status changed to something near deadline or conclude etc., we can add future hooks here.
   } catch (error) {
     console.error('Erro ao atualizar tarefa:', error);
     res.status(500).json({ message: 'Erro ao atualizar tarefa' });

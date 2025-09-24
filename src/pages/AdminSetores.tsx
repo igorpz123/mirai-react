@@ -89,7 +89,7 @@ export default function AdminSetores() {
   return (
     <div className="container-main">
       <SiteHeader title="Setores | Administrativo" />
-      <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6 mx-6">
+  <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6">
         <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
           <Input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder="Buscar por nome ou descrição..." className="max-w-xl" />
           <div className="flex items-center gap-2">
@@ -117,8 +117,8 @@ export default function AdminSetores() {
         {loading && <div>Carregando...</div>}
         {error && <div className="text-destructive">{error}</div>}
 
-        <div className="rounded-md border">
-          <Table>
+        <div className="rounded-md border overflow-x-auto">
+          <Table className="min-w-[600px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
