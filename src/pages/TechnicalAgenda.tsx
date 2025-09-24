@@ -3,7 +3,9 @@ import { SiteHeader } from '@/components/layout/site-header'
 // ...existing code...
 import { useUnit } from '@/contexts/UnitContext'
 import { useUsers } from '@/contexts/UsersContext'
-import { Link } from 'react-router-dom'
+import { isTecnicoUser } from '@/lib/roles'
+import { getAllUsers } from '@/services/users'
+import { TechUserCard } from '@/components/technical-user-card'
 
 export default function TechnicalAgenda() {
   // no need for the current user here
@@ -28,7 +30,25 @@ export default function TechnicalAgenda() {
           await usersCtx.ensureUsersForUnit(Number(unitId))
           const { users: all } = usersCtx.getFilteredUsersForTask({ unidadeId: Number(unitId) })
           if (!mounted) return
-          setUsers((all || []).filter((u: any) => Number(u.cargo_id) === 4))
+          let list = (all || []).filter(isTecnicoUser)
+          if (list.length === 0) {
+            try {
+              const global = await getAllUsers().catch(() => ({ users: [] }))
+              const uid = Number(unitId)
+              if (!Number.isNaN(uid) && uid > 0) {
+                list = (global.users || []).filter(u => {
+                  if (!isTecnicoUser(u)) return false
+                  const csv = (u as any).unidades
+                  if (typeof csv === 'string' && csv.trim()) {
+                    const ids = csv.split(',').map(p => Number(p.trim())).filter(n => !isNaN(n))
+                    return ids.includes(uid)
+                  }
+                  return false
+                })
+              }
+            } catch { /* ignore fallback errors */ }
+          }
+          setUsers(list)
         } catch (e) {
           if (!mounted) return
           setUsers([])
@@ -59,12 +79,9 @@ export default function TechnicalAgenda() {
         ) : users.length === 0 ? (
           <div>Nenhum técnico encontrado.</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
             {users.map(u => (
-              <Link key={u.id} to={`/technical/agenda/${u.id}`} className="block p-4 border rounded hover:shadow">
-                <div className="font-semibold">{u.nome}</div>
-                <div className="text-sm text-muted-foreground">{u.email}</div>
-              </Link>
+              <TechUserCard key={u.id} user={u} to={`/technical/agenda/${u.id}`} />
             ))}
           </div>
         )}

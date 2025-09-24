@@ -45,7 +45,7 @@ export default function AdminDashboard(): ReactElement {
   }, [unitId])
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title='Dashboard | Administrativo' />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">

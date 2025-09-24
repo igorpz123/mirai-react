@@ -86,7 +86,7 @@ export default function ComercialDashboard(): ReactElement {
   useEffect(() => { if (!userId && !unitId) return; fetchAll(); }, [userId, unitId])
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title='Comercial - Dashboard' />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">

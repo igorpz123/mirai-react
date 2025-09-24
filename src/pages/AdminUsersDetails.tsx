@@ -266,7 +266,7 @@ export default function AdminUsersDetails() {
 	}
 
 	return (
-		<div className="w-full">
+		<div className="container-main">
 			<SiteHeader title={user?.nome ? `Usuário | ${user.nome}` : 'Usuário'} />
 
 			<div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6">

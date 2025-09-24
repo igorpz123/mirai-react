@@ -172,7 +172,7 @@ export default function CommercialProposalDetail() {
 
     return (
         <>
-            <div className='w-full'>
+            <div className='container-main'>
                 <SiteHeader title='Detalhes da Proposta' />
                 <div className="p-4 space-y-6 mx-4">
                     <div className="flex items-center justify-between">

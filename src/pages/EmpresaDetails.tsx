@@ -140,7 +140,7 @@ export default function EmpresaDetails() {
   }
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title={`Empresa #${id}`} />
       <div className="flex flex-col gap-6 py-4 md:py-6 px-4 lg:px-6 mx-6">
         {loading && <div>Carregando...</div>}

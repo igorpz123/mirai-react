@@ -105,7 +105,7 @@ export default function Empresas() {
   const arrow = (key: 'nome' | 'razao_social' | 'cnpj' | 'tecnico') => (sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '')
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title="Empresas" />
       <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6 mx-6">
         <div className="flex flex-col gap-3">

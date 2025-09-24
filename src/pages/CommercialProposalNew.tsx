@@ -114,7 +114,7 @@ export default function CommercialProposalNew() {
   const fmtBRL = (n?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(n || 0))
 
   return (
-    <div className='w-full'>
+    <div className='container-main'>
       <SiteHeader title="Nova Proposta Comercial" />
       <div className="p-4 space-y-6 mx-4">
 

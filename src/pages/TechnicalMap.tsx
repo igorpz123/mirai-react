@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useUnit } from '@/contexts/UnitContext'
 import { useUsers } from '@/contexts/UsersContext'
-import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/use-auth'
 import { getCompaniesByResponsible } from '@/services/companies'
 import type { Company } from '@/services/companies'
+import { isTecnicoUser } from '@/lib/roles'
+import { getAllUsers } from '@/services/users'
+import { TechUserCard } from '@/components/technical-user-card'
 
 export default function TechnicalMap() {
 	const { user } = useAuth()
@@ -39,7 +41,27 @@ export default function TechnicalMap() {
 					await usersCtx.ensureUsersForUnit(Number(unitId))
 					const { users: all } = usersCtx.getFilteredUsersForTask({ unidadeId: Number(unitId) })
 					if (!mounted) return
-					setTechs((all || []).filter((u: any) => Number(u.cargo_id) === 4))
+					let list = (all || []).filter(isTecnicoUser)
+					// Fallback: se não veio nenhum técnico, tentar pegar todos os usuários e filtrar manualmente
+					if (list.length === 0) {
+						try {
+							const global = await getAllUsers().catch(() => ({ users: [] }))
+							const uid = Number(unitId)
+							if (!Number.isNaN(uid) && uid > 0) {
+								list = (global.users || []).filter(u => {
+									if (!isTecnicoUser(u)) return false
+									// Campo 'unidades' CSV: "1,2,3"
+									const csv = (u as any).unidades
+									if (typeof csv === 'string' && csv.trim()) {
+										const ids = csv.split(',').map(p => Number(p.trim())).filter(n => !isNaN(n))
+										return ids.includes(uid)
+									}
+									return false
+								})
+							}
+						} catch { /* ignore fallback errors */ }
+					}
+					setTechs(list)
 				} catch (e) {
 					// fallback to empty list
 					setTechs([])
@@ -84,7 +106,7 @@ export default function TechnicalMap() {
 	}, [user, unitId])
 
 	return (
-		<div className="w-full">
+		<div className="container-main">
 			<SiteHeader title="Mapa de Empresas" />
 			<div className="p-4 space-y-6">
 				<section>
@@ -98,12 +120,9 @@ export default function TechnicalMap() {
 					) : techs.length === 0 ? (
 						<div>Nenhum técnico encontrado.</div>
 					) : (
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
 							{techs.map(t => (
-								<Link key={t.id} to={`/technical/mapa/${t.id}`} className="block p-4 border rounded hover:shadow">
-									<div className="font-semibold">{t.nome}</div>
-									<div className="text-sm text-muted-foreground">{t.email}</div>
-								</Link>
+								<TechUserCard key={t.id} user={t} to={`/technical/mapa/${t.id}`} />
 							))}
 						</div>
 					)}

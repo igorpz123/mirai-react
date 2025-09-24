@@ -109,7 +109,7 @@ export default function TechnicalAgendaUser() {
   }
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title={user?.nome ? `Agenda | ${user.nome}` : `Agenda | Usuário ${usuarioId}`} />
 
       <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6">

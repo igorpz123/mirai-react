@@ -61,7 +61,7 @@ export default function TechnicalFluxogramaSetor() {
   }, [fetch])
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title={`Fluxograma | Setor ${setorSlug}`} />
 
       <div className="flex flex-1 flex-col">

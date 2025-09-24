@@ -47,7 +47,7 @@ export default function TechnicalDashboard(): ReactElement {
   }, [userId])
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title='Meu Dashboard' />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">

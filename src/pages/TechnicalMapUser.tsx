@@ -182,7 +182,7 @@ export default function TechnicalMapUser() {
   }, [uid])
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title={user?.nome ? `Mapa | ${user.nome}` : `Mapa | Usuário ${usuarioId}`} />
 
       <div className="p-4">

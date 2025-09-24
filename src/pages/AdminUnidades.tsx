@@ -87,7 +87,7 @@ export default function AdminUnidades() {
   }
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title="Unidades | Administrativo" />
       <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6 mx-6">
         <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">

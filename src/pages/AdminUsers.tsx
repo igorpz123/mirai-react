@@ -78,7 +78,7 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="w-full">
+    <div className="container-main">
       <SiteHeader title="Usuários | Administrativo" />
 
       <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6 mx-6">
