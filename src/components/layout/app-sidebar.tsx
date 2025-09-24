@@ -36,9 +36,7 @@ const navComercialData = [
     title: "CRM", url: "", icon: Wallet, items: [
       { title: "Criar proposta", url: "/comercial/proposta/nova" },
       { title: "Cursos", url: "/comercial/cursos" },
-      { title: "Programas", url: "/comercial/programas" },
-      { title: "Químicos", url: "/comercial/quimicos" },
-      { title: "Produtos", url: "/comercial/produtos" },
+      { title: "Items", url: "/comercial/items" },
     ]
   },
   { title: "Livro de Registros", url: "/comercial/livro-de-registros", icon: FileSliders },
@@ -101,7 +99,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     let mounted = true
     async function fetchCounts() {
       try {
-        const uid = user?.unidades?.[0]?.id
+        const uid = unitId || user?.unidades?.[0]?.id
         if (!uid) return
         const res = await getTasksByUnitId(uid)
         const all = res.tasks || []
@@ -118,22 +116,20 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         all.forEach((t: any) => {
           const s = t.setor || t.setorNome || t.setor_nome || ''
           const slug = normalize(s)
-          const status = (t.status || '').toString()
-          const open = status === 'pendente' || status === 'progress' || status === 'pending' || status === 'open'
+          const status = (t.status || '').toString().toLowerCase()
+          const open = ['pendente','progress','pending','open','andamento'].some(st => status.includes(st))
           if (!slug) return
           if (open) counts[slug] = (counts[slug] || 0) + 1
         })
 
         if (mounted) setPendingCounts(counts)
       } catch (err) {
-        // ignore errors for sidebar counts
         console.debug('Erro ao buscar contagem de tarefas para sidebar', err)
       }
     }
-
     fetchCounts()
     return () => { mounted = false }
-  }, [user])
+  }, [user, unitId])
 
   const NavTechnicalData = [
     {
