@@ -15,4 +15,17 @@ const poolOptions: PoolOptions = {
 // Cria o pool e exporta com tipagem Pool
 const pool: Pool = createPool(poolOptions);
 
+// Test connection on startup to provide a clearer error early in Codespaces
+;(async () => {
+  try {
+    const conn = await pool.getConnection()
+    await conn.ping()
+    conn.release()
+    console.log('[db] conexão com MySQL estabelecida')
+  } catch (err) {
+    console.error('[db] não foi possível conectar ao MySQL - verifique variáveis de ambiente e rede')
+    console.error(err)
+  }
+})()
+
 export default pool;

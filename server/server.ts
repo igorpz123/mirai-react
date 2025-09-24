@@ -62,7 +62,14 @@ app.post('/api/presenca/ping', async (req: Request, res: Response) => {
     presence.set(userId, { userId, lastPing: Date.now() })
     res.json({ ok: true })
   } catch (e) {
-    res.status(500).json({ message: 'Erro no ping' })
+    // Log the real error so we can debug in Codespaces / CI environments
+    console.error('[POST /api/presenca/ping] erro:', e)
+    if (process.env.NODE_ENV !== 'production') {
+      const message = e instanceof Error ? e.message : String(e)
+      res.status(500).json({ message: 'Erro no ping', error: message })
+    } else {
+      res.status(500).json({ message: 'Erro no ping' })
+    }
   }
 })
 
@@ -94,7 +101,13 @@ app.get('/api/presenca', async (req: Request, res: Response) => {
     })
     res.json({ users: result })
   } catch (e) {
-    res.status(500).json({ message: 'Erro ao consultar presença' })
+    console.error('[GET /api/presenca] erro:', e)
+    if (process.env.NODE_ENV !== 'production') {
+      const message = e instanceof Error ? e.message : String(e)
+      res.status(500).json({ message: 'Erro ao consultar presença', error: message })
+    } else {
+      res.status(500).json({ message: 'Erro ao consultar presença' })
+    }
   }
 })
 
