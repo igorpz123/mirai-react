@@ -26,7 +26,7 @@ export default function ProposalStatusPie({ proposals = [], counts }: Props): Re
       const st = lower(p.status)
       if (st.includes('pend')) pending += 1
       else if (st.includes('anal')) analysis += 1
-      else if (st.includes('andam') || st.includes('andamento') || st.includes('exec')) inProgress += 1
+      else if (st.includes('progre') || st.includes('progress') || st.includes('exec')) inProgress += 1
       else {
         // fallback: treat unknown as analysis so it surfaces in the chart
         analysis += 1
@@ -40,10 +40,14 @@ export default function ProposalStatusPie({ proposals = [], counts }: Props): Re
 
   const animatedTotal = useCountUp(total || 0, 900)
 
+  // Match badge colors:
+  // - Pendentes: uses --primary (button-primary)
+  // - Em análise: Tailwind amber-700 (#b45309)
+  // - Em andamento: Tailwind blue-600 (#2563eb)
   const data = [
-    { name: 'Pendentes', value: resolved.pending, color: '#f97316' }, // orange
-    { name: 'Em análise', value: resolved.analysis, color: '#60a5fa' }, // blue
-    { name: 'Em andamento', value: resolved.inProgress, color: '#34d399' }, // green
+    { name: 'Pendentes', value: resolved.pending, color: 'var(--primary)' },
+  { name: 'Em análise', value: resolved.analysis, color: '#7c3aed' },
+    { name: 'Em andamento', value: resolved.inProgress, color: '#2563eb' },
   ].filter(d => d.value > 0)
 
   const COLORS = data.map(d => d.color)
@@ -100,9 +104,9 @@ export default function ProposalStatusPie({ proposals = [], counts }: Props): Re
 
       <div className="mt-4 grid grid-cols-3 gap-2">
         {[
-          { key: 'pending', label: 'Pendentes', value: resolved.pending, color: '#f97316' },
-          { key: 'analysis', label: 'Em análise', value: resolved.analysis, color: '#60a5fa' },
-          { key: 'inProgress', label: 'Em andamento', value: resolved.inProgress, color: '#34d399' },
+          { key: 'pending', label: 'Pendentes', value: resolved.pending, color: 'var(--primary)' },
+          { key: 'analysis', label: 'Em análise', value: resolved.analysis, color: '#b45309' },
+          { key: 'inProgress', label: 'Em andamento', value: resolved.inProgress, color: '#2563eb' },
         ].map((row) => (
           <div key={row.key} className="flex items-center gap-3">
             <span className="w-3 h-3 rounded-full" style={{ background: row.color }} />

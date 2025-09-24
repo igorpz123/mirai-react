@@ -98,12 +98,12 @@ export default function ComercialDashboard(): ReactElement {
             </div>
             <ComercialDashboardCards stats={stats} loading={loading} />
             <div className="px-4 lg:px-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-1">
                   <ProposalStatusPie proposals={proposals} />
                 </div>
-                <div className="md:col-span-2">
-                  <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <div className="gap-6">
                     {/* summary stat cards */}
                     {(() => {
                       const lower = (s?: string | null) => (s ?? '').toString().toLowerCase()
@@ -114,33 +114,33 @@ export default function ComercialDashboard(): ReactElement {
                         const st = lower(p.status)
                         if (st.includes('pend')) pending += 1
                         else if (st.includes('anal')) analysis += 1
-                        else if (st.includes('andam') || st.includes('andamento') || st.includes('exec')) inProgress += 1
+                        else if (st.includes('progre') || st.includes('progress') || st.includes('exec')) inProgress += 1
                         else analysis += 1
                       }
                       const total = pending + analysis + inProgress || 1
                       const rows = [
-                        { key: 'pending', label: 'Pendentes', value: pending, color: '#f97316', tail: 'bg-amber-400' },
-                        { key: 'analysis', label: 'Em análise', value: analysis, color: '#60a5fa', tail: 'bg-sky-400' },
-                        { key: 'inProgress', label: 'Em andamento', value: inProgress, color: '#34d399', tail: 'bg-emerald-400' },
+                        { key: 'pending', label: 'Pendentes', value: pending, color: 'var(--primary)', tail: 'var(--primary)' },
+                        { key: 'analysis', label: 'Em análise', value: analysis, color: '#7c3aed', tail: '#7c3aed' },
+                        { key: 'inProgress', label: 'Em andamento', value: inProgress, color: '#2563eb', tail: '#2563eb' },
                       ]
 
                       return rows.map((r) => {
                         const animated = useCountUp(r.value, 900)
                         return (
-                          <div key={r.key} className="bg-card rounded-lg p-4 shadow-sm animate-fade-in-up">
+                          <div key={r.key} className="bg-card rounded-lg p-4 shadow-sm animate-fade-in-up mt-4">
                             <div className="flex items-center justify-between">
                               <div>
                                 <div className="text-sm font-medium">{r.label}</div>
                                 <div className="text-xs text-muted-foreground">{r.value} no total</div>
                               </div>
-                              <div className="text-2xl font-semibold">{animated}</div>
+                                  <div className="text-2xl font-semibold">{animated}</div>
                             </div>
-                            <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div
-                                className={`${r.tail} h-full rounded-full transition-all duration-700`}
-                                style={{ width: `${Math.round((r.value / total) * 100)}%`, backgroundColor: undefined }}
-                              />
-                            </div>
+                                <div className="mt-3 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full transition-all duration-700`}
+                                    style={{ width: `${Math.round((r.value / total) * 100)}%`, backgroundColor: r.tail }}
+                                  />
+                                </div>
                           </div>
                         )
                       })

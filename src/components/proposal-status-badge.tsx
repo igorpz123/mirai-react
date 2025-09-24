@@ -48,7 +48,7 @@ export const ProposalStatusBadge: React.FC<ProposalStatusBadgeProps> = ({ status
     variantClass = 'text-blue-600 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-900/50'
     icon = <IconProgress className="mr-1 size-4" />
   } else if (key === 'analise' || key === 'análise') {
-    variantClass = 'text-amber-700 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50'
+    variantClass = 'text-violet-700 bg-violet-100 dark:bg-violet-900/30 hover:bg-violet-200 dark:hover:bg-violet-900/50'
     icon = <IconAlertTriangle className="mr-1 size-4" />
   } else if (key === 'pendente') {
     variantClass = 'button-primary'
