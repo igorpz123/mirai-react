@@ -49,7 +49,17 @@ export interface TaskResponse {
     message?: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || '/api'
+// Define API base prioritizing explicit env; if running via Vite (5173) without VITE_API_URL, fallback to backend 5000
+const API_URL = (() => {
+    const envUrl = import.meta.env.VITE_API_URL as string | undefined
+    if (envUrl && envUrl.trim().length) return envUrl.replace(/\/$/, '')
+    // If current origin is localhost:5173 assume backend at :5000
+    if (typeof window !== 'undefined' && window.location.port === '5173') {
+        return 'http://localhost:5000/api'
+    }
+    // default relative (could be proxied in production config)
+    return '/api'
+})()
 // const API_URL = import.meta.env.VITE_API_URL || 'https://psychic-yodel-p9jw56vx476f6wj4-5000.app.github.dev/api';
 
 export async function getTasksByUnitId(unitId: number): Promise<TasksResponse> {
@@ -386,17 +396,32 @@ export async function addTaskObservation(taskId: number, usuarioId: number, obse
     export interface Arquivo { id: number; nome_arquivo: string; caminho: string }
     export async function listTaskFiles(taskId: number): Promise<Arquivo[]> {
         const token = localStorage.getItem('token');
-        const res = await fetch(`${API_URL}/tarefas/arquivos/${taskId}`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`
+
+        async function attempt(url: string): Promise<Arquivo[] | null> {
+            const res = await fetch(url, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            if (res.status === 404) {
+                // Sem arquivos (tratamos como lista vazia em vez de erro)
+                return []
             }
-        })
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ message: 'Erro ao buscar arquivos' }))
-            throw new Error(err.message || 'Erro ao buscar arquivos')
+            if (!res.ok) {
+                return null
+            }
+            return res.json().catch(() => [])
         }
-        return res.json()
+
+        // 1. Tenta rota consistente com upload (/tarefas/:id/arquivos)
+        let data = await attempt(`${API_URL}/tarefas/${taskId}/arquivos`)
+        if (data === null) {
+            // 2. Fallback para rota antiga (/tarefas/arquivos/:id)
+            data = await attempt(`${API_URL}/tarefas/arquivos/${taskId}`)
+        }
+        if (data === null) {
+            throw new Error('Erro ao buscar arquivos')
+        }
+        return data
     }
 
     export async function uploadTaskFile(taskId: number, file: File): Promise<Arquivo> {

@@ -1,12 +1,17 @@
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTaskById, getTaskHistory, addTaskObservation, listTaskFiles, uploadTaskFile, deleteTaskFile, type Arquivo } from '@/services/tasks'
+import { getTaskById, getTaskHistory, addTaskObservation, listTaskFiles, uploadTaskFile, deleteTaskFile, updateTask, type Arquivo } from '@/services/tasks'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import TaskStatusBadge from '@/components/task-status-badge'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/use-auth'
 import { SiteHeader } from '@/components/layout/site-header'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
+import { getSetores } from '@/services/setores'
+import { getUsersByDepartmentAndUnit } from '@/services/users'
+import { useUnit } from '@/contexts/UnitContext'
+import { toastSuccess } from '@/lib/customToast'
 
 export default function TechnicalTaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -21,6 +26,19 @@ export default function TechnicalTaskDetail() {
   const [files, setFiles] = React.useState<Arquivo[] | null>(null)
   const [uploading, setUploading] = React.useState(false)
   const { user } = useAuth()
+  const { unitId } = useUnit()
+
+  // Estados e lógica para iniciar / transferir tarefa
+  const [actionLoading, setActionLoading] = React.useState(false)
+  const [transfering, setTransfering] = React.useState(false)
+  const [setores, setSetores] = React.useState<{ id: number; nome: string }[]>([])
+  const [setoresLoading, setSetoresLoading] = React.useState(false)
+  const [setoresError, setSetoresError] = React.useState<string | null>(null)
+  const [selectedSetorId, setSelectedSetorId] = React.useState<number | null>(null)
+  const [usersForSetor, setUsersForSetor] = React.useState<any[] | null>(null)
+  const [usersForSetorLoading, setUsersForSetorLoading] = React.useState(false)
+  const [selectedUserId, setSelectedUserId] = React.useState<number | null>(null)
+  const [transferError, setTransferError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (!id) return
@@ -63,6 +81,56 @@ export default function TechnicalTaskDetail() {
     return () => { mounted = false }
   }, [id])
 
+  // Carregar setores ao montar (mover antes dos returns para manter ordem de hooks estável)
+  React.useEffect(() => {
+    let mounted = true
+      ; (async () => {
+        try {
+          setSetoresLoading(true)
+          const res = await getSetores().catch(() => ({ setores: [] }))
+          if (!mounted) return
+          setSetores(res.setores || [])
+        } catch (e) {
+          if (mounted) setSetoresError(e instanceof Error ? e.message : 'Erro ao carregar setores')
+        } finally {
+          if (mounted) setSetoresLoading(false)
+        }
+      })()
+    return () => { mounted = false }
+  }, [])
+
+  // Quando setor muda, carregar usuários (também antes dos returns)
+  React.useEffect(() => {
+    let mounted = true
+    if (!selectedSetorId) { setUsersForSetor(null); return }
+    ; (async () => {
+      try {
+        setUsersForSetorLoading(true)
+        if (!unitId) { setUsersForSetor([]); return }
+        const res = await getUsersByDepartmentAndUnit(Number(selectedSetorId), Number(unitId))
+        if (!mounted) return
+        setUsersForSetor(res.users || [])
+      } catch {
+        if (mounted) setUsersForSetor([])
+      } finally {
+        if (mounted) setUsersForSetorLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [selectedSetorId, unitId])
+
+  // Helper para montar URL de arquivo SEM usar hook (evita alterar contagem de hooks entre renders)
+  function buildFileUrl(path: string) {
+    if (!path) return '#'
+    if (/^https?:\/\//i.test(path)) return path
+    const rawBase = (import.meta as any).env?.VITE_API_PUBLIC_BASE || (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api'
+    const base = rawBase.startsWith('http') ? rawBase : 'http://localhost:5000/api'
+    if (base.endsWith('/api') && path.startsWith('/api')) {
+      return base.replace(/\/api$/, '') + path
+    }
+    return base.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path)
+  }
+
   if (loading) return <div>Carregando...</div>
   if (error) return <div className="text-destructive">{error}</div>
   if (!task) return <div>Nenhuma tarefa encontrada.</div>
@@ -80,7 +148,68 @@ export default function TechnicalTaskDetail() {
     }
   }
 
+  // ----- Fluxo de status (similar ao sheet lateral) -----
+  const normalizedStatus = (task.status || '').toString().toLowerCase()
+  const isPending = normalizedStatus.includes('pend') || normalizedStatus.includes('pending')
+  const isProgress = normalizedStatus.includes('progress') || normalizedStatus.includes('andament') || normalizedStatus.includes('prog')
+
+  // Determinar se usuário é responsável
+  let isResponsible = false
+  if (user) {
+    const respId = task.responsavel_id || task.responsavelId || task.usuario_id
+    if (respId != null) {
+      isResponsible = Number(user.id) === Number(respId)
+    }
+    if (!isResponsible && task.responsavel) {
+      const respStr = String(task.responsavel).toLowerCase()
+      const userFullName = `${(user as any).nome || ''} ${(user as any).sobrenome || ''}`.toLowerCase().trim()
+      if (respStr.includes(userFullName) || respStr.includes(String(user.id))) isResponsible = true
+    }
+  }
+  const canTransferAny = user && [1, 2, 3].includes(Number((user as any).cargoId))
+  const showStart = isPending && isResponsible
+  const showTransferSection = isProgress && (isResponsible || canTransferAny)
+
+
+  async function handleStart() {
+    if (!id) return
+    try {
+      setActionLoading(true)
+      await updateTask(Number(id), { status: 'progress' } as any)
+      try { toastSuccess('Tarefa iniciada') } catch { /* ignore */ }
+      setTask((prev: any) => prev ? { ...prev, status: 'progress' } : prev)
+      getTaskHistory(Number(id)).then(h => setHistory(h)).catch(() => { })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleTransfer() {
+    if (!id) return
+    try {
+      setActionLoading(true)
+      setTransferError(null)
+      const payload: any = {
+        status: 'pendente',
+        setorId: selectedSetorId ?? null,
+        usuarioId: selectedUserId ?? null,
+      }
+      await updateTask(Number(id), payload)
+      try { toastSuccess('Tarefa transferida') } catch { /* ignore */ }
+      setTask((prev: any) => prev ? { ...prev, status: 'pendente', setor_id: selectedSetorId ?? prev.setor_id, responsavel_id: selectedUserId ?? prev.responsavel_id } : prev)
+      getTaskHistory(Number(id)).then(h => setHistory(h)).catch(() => { })
+      setTransfering(false)
+      setSelectedSetorId(null)
+      setSelectedUserId(null)
+    } catch (e: any) {
+      setTransferError(e?.message || 'Erro ao transferir tarefa')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
   // render fields based on controller's row shape
+
   return (
     <div className="container-main">
       <SiteHeader title="Detalhes da Tarefa" />
@@ -104,6 +233,64 @@ export default function TechnicalTaskDetail() {
           </Button>
         </div>
 
+        {/* Ações de fluxo */}
+        <div className="mb-8 space-y-4">
+          {showStart && (
+            <Button onClick={handleStart} disabled={actionLoading} className="button-primary">
+              {actionLoading ? 'Processando...' : 'Iniciar Tarefa'}
+            </Button>
+          )}
+          {!showStart && showTransferSection && (
+            <div className="flex items-center gap-3">
+              <Button variant="secondary" disabled={actionLoading} onClick={() => setTransfering(v => !v)}>
+                {transfering ? 'Cancelar Transferência' : 'Transferir Tarefa'}
+              </Button>
+            </div>
+          )}
+          {transfering && showTransferSection && (
+            <div className="rounded-md border p-4 space-y-4">
+              <h3 className="font-medium text-sm">Transferir Tarefa</h3>
+              {transferError && <div className="text-sm text-destructive">{transferError}</div>}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Setor (opcional)</label>
+                  <Select value={selectedSetorId ? String(selectedSetorId) : ''} onValueChange={(v) => setSelectedSetorId(v === '' || v === '__none' ? null : Number(v))}>
+                    <SelectTrigger className="w-full" disabled={setoresLoading}>
+                      <SelectValue placeholder={setoresLoading ? 'Carregando...' : 'Selecionar setor'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">-- Nenhum --</SelectItem>
+                      {!setoresLoading && setores.map(s => (
+                        <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {setoresError && <div className="text-destructive text-xs">{setoresError}</div>}
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium">Usuário (opcional)</label>
+                  <Select value={selectedUserId ? String(selectedUserId) : ''} onValueChange={(v) => setSelectedUserId(v === '' || v === '__none' ? null : Number(v))}>
+                    <SelectTrigger className="w-full" disabled={usersForSetorLoading}>
+                      <SelectValue placeholder={usersForSetorLoading ? 'Carregando...' : (usersForSetor ? 'Selecionar usuário' : 'Selecionar usuário')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">-- Nenhum --</SelectItem>
+                      {usersForSetor && usersForSetor.map((u: any) => (
+                        <SelectItem key={u.id} value={String(u.id)}>{u.nome || u.nome_completo || u.email}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button onClick={handleTransfer} disabled={actionLoading} className="button-primary">
+                  {actionLoading ? 'Transferindo...' : 'Confirmar Transferência'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="space-y-2">
           <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
             <div><strong>Unidade:</strong> {task.unidade_nome || task.unidade}</div>
@@ -118,102 +305,104 @@ export default function TechnicalTaskDetail() {
           </div>
         </div>
 
-        {/* Campo para adicionar observação */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-2">Adicionar observação</h2>
-          <div className="space-y-2">
-            <Textarea
-              placeholder="Escreva uma observação sobre esta tarefa..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              maxLength={1000}
-            />
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                disabled={saving || !note.trim()}
-                onClick={async () => {
-                  if (!id || !user?.id || !note.trim()) return
-                  try {
-                    setSaving(true)
-                    await addTaskObservation(Number(id), Number(user.id), note.trim())
-                    setNote('')
-                    // refresh history
-                    setHistoryLoading(true)
-                    const data = await getTaskHistory(Number(id))
-                    setHistory(data)
-                  } catch (err: any) {
-                    console.error(err)
-                    alert(err?.message || 'Erro ao salvar observação')
-                  } finally {
-                    setSaving(false)
-                    setHistoryLoading(false)
-                  }
-                }}
-              >
-                {saving ? 'Salvando...' : 'Salvar observação'}
-              </Button>
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mt-6'>
+          {/* Campo para adicionar observação */}
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold mb-2">Adicionar observação</h2>
+            <div className="space-y-2">
+              <Textarea
+                placeholder="Escreva uma observação sobre esta tarefa..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={1000}
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  disabled={saving || !note.trim()}
+                  onClick={async () => {
+                    if (!id || !user?.id || !note.trim()) return
+                    try {
+                      setSaving(true)
+                      await addTaskObservation(Number(id), Number(user.id), note.trim())
+                      setNote('')
+                      // refresh history
+                      setHistoryLoading(true)
+                      const data = await getTaskHistory(Number(id))
+                      setHistory(data)
+                    } catch (err: any) {
+                      console.error(err)
+                      alert(err?.message || 'Erro ao salvar observação')
+                    } finally {
+                      setSaving(false)
+                      setHistoryLoading(false)
+                    }
+                  }}
+                >
+                  {saving ? 'Salvando...' : 'Salvar observação'}
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Arquivos */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-2">Arquivos</h2>
-          <div className="rounded-md border p-3 bg-card/50 space-y-3">
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                disabled={uploading}
-                onChange={async (e) => {
-                  const inputEl = e.currentTarget
-                  const file = inputEl.files?.[0]
-                  if (!file || !id) return
-                  try {
-                    setUploading(true)
-                    await uploadTaskFile(Number(id), file)
-                    const lst = await listTaskFiles(Number(id))
-                    setFiles(lst)
-                  } catch (err) {
-                    alert('Erro ao enviar arquivo')
-                  } finally {
-                    // clear input safely without touching possibly nulled event
-                    try { inputEl.value = '' } catch { }
-                    setUploading(false)
-                  }
-                }}
-              />
+          {/* Arquivos */}
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold mb-2">Arquivos</h2>
+            <div className="rounded-md border p-3 bg-card/50 space-y-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  disabled={uploading}
+                  onChange={async (e) => {
+                    const inputEl = e.currentTarget
+                    const file = inputEl.files?.[0]
+                    if (!file || !id) return
+                    try {
+                      setUploading(true)
+                      await uploadTaskFile(Number(id), file)
+                      const lst = await listTaskFiles(Number(id))
+                      setFiles(lst)
+                    } catch (err) {
+                      alert('Erro ao enviar arquivo')
+                    } finally {
+                      // clear input safely without touching possibly nulled event
+                      try { inputEl.value = '' } catch { }
+                      setUploading(false)
+                    }
+                  }}
+                />
+              </div>
+              {!files || files.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Nenhum arquivo enviado.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {files.map((f) => (
+                    <li key={f.id} className="flex items-center justify-between gap-2">
+                      <a href={buildFileUrl(f.caminho)} className="text-primary hover:underline truncate max-w-[70%]" target="_blank" rel="noreferrer">{f.nome_arquivo}</a>
+                      <div className="flex items-center gap-2">
+                        <a href={buildFileUrl(f.caminho)} target="_blank" rel="noreferrer" className="inline-block">
+                          <button className="px-2 py-1 border rounded text-sm">Abrir</button>
+                        </a>
+                        <button
+                          className="px-2 py-1 border rounded text-sm text-red-600"
+                          onClick={async () => {
+                            if (!id) return
+                            const ok = window.confirm('Excluir este arquivo?')
+                            if (!ok) return
+                            try {
+                              await deleteTaskFile(Number(id), f.id)
+                              setFiles(prev => prev ? prev.filter(x => x.id !== f.id) : prev)
+                            } catch (err) {
+                              alert('Erro ao excluir arquivo')
+                            }
+                          }}
+                        >Excluir</button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            {!files || files.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Nenhum arquivo enviado.</div>
-            ) : (
-              <ul className="space-y-2">
-                {files.map((f) => (
-                  <li key={f.id} className="flex items-center justify-between gap-2">
-                    <a href={f.caminho} className="text-primary hover:underline truncate max-w-[70%]" target="_blank" rel="noreferrer">{f.nome_arquivo}</a>
-                    <div className="flex items-center gap-2">
-                      <a href={f.caminho} target="_blank" rel="noreferrer" className="inline-block">
-                        <button className="px-2 py-1 border rounded text-sm">Abrir</button>
-                      </a>
-                      <button
-                        className="px-2 py-1 border rounded text-sm text-red-600"
-                        onClick={async () => {
-                          if (!id) return
-                          const ok = window.confirm('Excluir este arquivo?')
-                          if (!ok) return
-                          try {
-                            await deleteTaskFile(Number(id), f.id)
-                            setFiles(prev => prev ? prev.filter(x => x.id !== f.id) : prev)
-                          } catch (err) {
-                            alert('Erro ao excluir arquivo')
-                          }
-                        }}
-                      >Excluir</button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
           </div>
         </div>
 
