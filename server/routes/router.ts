@@ -11,6 +11,7 @@ import unidadeRoutes from './unidades'
 import cargoRoutes from './cargos'
 import notificacaoRoutes from './notificacoes'
 import comercialItemsRoutes from './comercial_items'
+import livroRegistrosRoutes from './livro_registros'
 
 const router = Router()
 
@@ -26,5 +27,6 @@ router.use('/unidades', unidadeRoutes)
 router.use('/cargos', cargoRoutes)
 router.use('/notificacoes', notificacaoRoutes)
 router.use('/comercial', comercialItemsRoutes)
+router.use('/livro_registros', livroRegistrosRoutes)
 
 export default router

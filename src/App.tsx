@@ -27,6 +27,7 @@ import AdminUnidades from './pages/AdminUnidades';
 import AdminSetores from './pages/AdminSetores';
 import Empresas from './pages/Empresas';
 import EmpresaDetails from './pages/EmpresaDetails';
+import LivroRegistrosPage from './pages/LivroRegistros';
 import './App.css';
 import { useAuth } from './hooks/use-auth';
 
@@ -65,6 +66,7 @@ function AppContent() {
           <Route path="nova-tarefa" element={<NewTaskForm />} />
           <Route path="empresas" element={<Empresas />} />
           <Route path="empresa/:id" element={<EmpresaDetails />} />
+          <Route path="comercial/livro-de-registros" element={<LivroRegistrosPage />} />
         </Route>
       </Routes>
     </Router>
