@@ -3,7 +3,8 @@
 
 import { useNavigate } from "react-router-dom";
 import { BadgeCheck, Bell, ChevronsUpDown, LogOut } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNotificationsRT } from '@/contexts/RealtimeContext'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ interface NavUserProps {
 export function NavUser({ user, onSignOut }: NavUserProps) {
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
+  const { unread } = useNotificationsRT()
 
   const handleLogout = () => {
     onSignOut();
@@ -44,6 +46,10 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
   const userInfo = () => {
     navigate(`/admin/usuario/${user.id}`);
   };
+
+  const userNotifications = () => {
+    navigate("/notificacoes");
+  }
 
   return (
     <SidebarMenu>
@@ -55,10 +61,13 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                {/* Você pode pegar a imagem do avatar se houver */}
-                <AvatarFallback className="rounded-lg">
-                  {user.nome.substring(0, 2).toUpperCase()}
-                </AvatarFallback>
+                {user.avatar ? (
+                  <AvatarImage src={user.avatar} alt={`${user.nome}`} />
+                ) : (
+                  <AvatarFallback className="rounded-lg">
+                    {user.nome.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.nome}</span>
@@ -76,9 +85,13 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">
-                    {user.nome.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
+                  {user.avatar ? (
+                    <AvatarImage src={user.avatar} alt={`${user.nome}`} />
+                  ) : (
+                    <AvatarFallback className="rounded-lg">
+                      {user.nome.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.nome}</span>
@@ -90,17 +103,22 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
             <DropdownMenuGroup>
                 <DropdownMenuItem onClick={userInfo} className="cursor-pointer">
                   <BadgeCheck />
-                  Account
+                  Minha Conta
                 </DropdownMenuItem>
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={userNotifications} className="cursor-pointer flex items-center gap-2">
                 <Bell />
-                Notifications
+                <span className="flex-1">Notificações</span>
+                {unread > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    {unread > 99 ? '99+' : unread}
+                  </span>
+                )}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
-              Log out
+              Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

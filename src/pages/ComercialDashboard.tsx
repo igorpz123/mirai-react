@@ -96,8 +96,7 @@ export default function ComercialDashboard(): ReactElement {
             </div>
             <ComercialDashboardCards stats={stats} loading={loading} />
             <div className="px-4 lg:px-6">
-              {/* Reuse existing chart component later; placeholder for now */}
-              <div className="aspect-video w-full rounded-lg border border-dashed" />
+              <div className="h-2xl w-full rounded-lg border border-dashed" />
             </div>
             <CommercialProposalsTable proposals={proposals} />
           </div>
