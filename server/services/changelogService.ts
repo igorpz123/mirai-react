@@ -71,8 +71,9 @@ export async function createChangelog(entry: { title: string; body: string; vers
 
 export async function isAdminUser(userId: number): Promise<boolean> {
   try {
-    const [rows] = await pool.query('SELECT cargoId FROM usuarios WHERE id = ? LIMIT 1', [userId]) as [any[], any]
-    const cargoId = rows?.[0]?.cargoId ?? rows?.[0]?.cargo_id
+    // Use the real DB column name and alias for consistency
+    const [rows] = await pool.query('SELECT cargo_id AS cargoId FROM usuarios WHERE id = ? LIMIT 1', [userId]) as [any[], any]
+    const cargoId = rows?.[0]?.cargoId
     // Only cargo_id === 1 can publish changelog
     return Number(cargoId) === 1
   } catch {

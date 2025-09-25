@@ -1,7 +1,7 @@
 // src/services/export.ts
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 import type { Task } from './tasks'
+import { getTasksByResponsavel } from './tasks'
 
 export interface ExportOptions {
   title: string
@@ -10,26 +10,28 @@ export interface ExportOptions {
 }
 
 export async function exportTasksToPdf(tasks: Task[], options: ExportOptions): Promise<Blob> {
-  // Build a simple HTML structure for the PDF
-  const wrapper = document.createElement('div')
-  wrapper.style.width = '800px'
-  wrapper.style.padding = '20px'
-  wrapper.style.fontFamily = 'Arial, Helvetica, sans-serif'
-  wrapper.style.color = '#111827'
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  const margin = 40
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const contentWidth = pageWidth - margin * 2
+  let y = margin
 
-  const title = document.createElement('h1')
-  title.style.fontSize = '20px'
-  title.style.margin = '0 0 8px 0'
-  title.textContent = options.title
-  wrapper.appendChild(title)
-
-  if (options.from || options.to) {
-    const sub = document.createElement('div')
-    sub.style.fontSize = '12px'
-    sub.style.marginBottom = '12px'
-    sub.textContent = `${options.from || ''} ${options.from && options.to ? '—' : ''} ${options.to || ''}`.trim()
-    wrapper.appendChild(sub)
+  const fmtBR = (iso?: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('pt-BR')
   }
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  const titleBase = (options.title && options.title.trim()) ? options.title.trim() : 'Agenda'
+  const rangeText = (options.from || options.to)
+    ? ` (${fmtBR(options.from)}${options.from && options.to ? ' — ' : ''}${fmtBR(options.to)})`
+    : ''
+  doc.text(`${titleBase}${rangeText}`, margin, y)
+  y += 18
 
   // Group by date (prazo) in ascending order
   const grouped: Record<string, Task[]> = {}
@@ -38,46 +40,110 @@ export async function exportTasksToPdf(tasks: Task[], options: ExportOptions): P
     if (!grouped[d]) grouped[d] = []
     grouped[d].push(t)
   })
-
   const dates = Object.keys(grouped).sort((a,b)=> {
     if (a === 'Sem data') return 1
     if (b === 'Sem data') return -1
     return new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime()
   })
 
-  dates.forEach(date => {
-    const h = document.createElement('h2')
-    h.style.fontSize = '14px'
-    h.style.margin = '12px 0 6px 0'
-    h.textContent = date
-    wrapper.appendChild(h)
+  const addTextBlock = (text: string, fontSize = 10, bold = false, indent = 0) => {
+    if (bold) doc.setFont('helvetica', 'bold'); else doc.setFont('helvetica', 'normal')
+    doc.setFontSize(fontSize)
+    const lines = doc.splitTextToSize(text, contentWidth - indent)
+    for (const line of lines) {
+      if (y + 14 > pageHeight - margin) { doc.addPage(); y = margin }
+      doc.text(line, margin + indent, y)
+      y += 14
+    }
+  }
 
-    const list = document.createElement('ul')
-    list.style.margin = '0 0 8px 16px'
+  dates.forEach(date => {
+    // Section title (date)
+    addTextBlock(date, 12, true)
+    // Items
     grouped[date].forEach(t => {
-      const li = document.createElement('li')
-      li.style.marginBottom = '6px'
-      li.style.fontSize = '12px'
-      // Syntax: Nome da Empresa (Finalidade)
-      li.textContent = `${t.empresa || ''} (${t.finalidade || ''})`
-      list.appendChild(li)
+      const line = `${t.empresa || ''} (${t.finalidade || ''})`
+      addTextBlock(`• ${line}`, 10, false, 12)
     })
-    wrapper.appendChild(list)
+    y += 4
   })
 
-  document.body.appendChild(wrapper)
-  try {
-    const canvas = await html2canvas(wrapper, { scale: 2 })
-    const imgData = canvas.toDataURL('image PNG')
-    const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
-    const imgProps = (pdf as any).getImageProperties(imgData)
-    const pdfWidth = pdf.internal.pageSize.getWidth()
-    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
-    const blob = pdf.output('blob')
-    return blob
-  } finally {
-    // cleanup
-    wrapper.remove()
+  return doc.output('blob')
+}
+
+export async function exportMultipleUsersAgendaToPdf(userIds: Array<{ id: number; nome?: string }>, range?: { from?: string; to?: string }): Promise<Blob> {
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' })
+  const margin = 40
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const contentWidth = pageWidth - margin * 2
+  let y = margin
+
+  const addTextBlock = (text: string, fontSize = 10, bold = false, indent = 0) => {
+    if (bold) doc.setFont('helvetica', 'bold'); else doc.setFont('helvetica', 'normal')
+    doc.setFontSize(fontSize)
+    const lines = doc.splitTextToSize(text, contentWidth - indent)
+    for (const line of lines) {
+      if (y + 14 > pageHeight - margin) { doc.addPage(); y = margin }
+      doc.text(line, margin + indent, y)
+      y += 14
+    }
   }
+
+  // Title
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  const fmtBR = (iso?: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return iso
+    return d.toLocaleDateString('pt-BR')
+  }
+  const titleRange = (range?.from || range?.to)
+    ? ` (${fmtBR(range?.from)}${range?.from && range?.to ? ' — ' : ''}${fmtBR(range?.to)})`
+    : ''
+  doc.text(`Agenda por Técnico${titleRange}`, margin, y)
+  y += 18
+
+  for (const u of userIds) {
+    // Section Header
+  const header = u.nome ? `${u.nome}` : `Técnico`
+    addTextBlock(header, 12, true)
+
+    const res = await getTasksByResponsavel(u.id)
+    const tasks = (res.tasks || []).filter(t => {
+      if (!t.prazo) return false
+      const d = new Date(t.prazo)
+      if (isNaN(d.getTime())) return false
+      if (range?.from && d < new Date(range.from)) return false
+      if (range?.to && d > new Date(range.to)) return false
+      return true
+    })
+
+    const grouped: Record<string, Task[]> = {}
+    tasks.forEach(t => {
+      const key = t.prazo ? new Date(t.prazo).toLocaleDateString('pt-BR') : 'Sem data'
+      if (!grouped[key]) grouped[key] = []
+      grouped[key].push(t)
+    })
+    const dates = Object.keys(grouped).sort((a,b)=> {
+      if (a === 'Sem data') return 1
+      if (b === 'Sem data') return -1
+      return new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime()
+    })
+
+    dates.forEach(date => {
+      addTextBlock(date, 11, true)
+      grouped[date].forEach(t => {
+        const line = `${t.empresa || ''} (${t.finalidade || ''})`
+        addTextBlock(`• ${line}`, 10, false, 12)
+      })
+      y += 4
+    })
+
+    // small spacing between users
+    y += 6
+  }
+
+  return doc.output('blob')
 }

@@ -44,7 +44,7 @@ export default function CommercialProposalNew() {
 
   // Step 2: Company info
   const [company, setCompany] = React.useState<Company | null>(null)
-  const [empresaForm, setEmpresaForm] = React.useState({ cnpj: '', razao_social: '', nome_fantasia: '', cidade: '' })
+  const [empresaForm, setEmpresaForm] = React.useState({ cnpj: '', razao_social: '', nome_fantasia: '', cidade: '', periodicidade: '' as string | number, data_renovacao: '' as string })
 
   // Items buffers (for display before creation)
   type ProgramaItem = { programa_id: number; nome?: string; quantidade: number; desconto: number; descontoIsPercent?: boolean; valor_unitario?: number; acrescimo_mensal?: number }
@@ -190,12 +190,12 @@ export default function CommercialProposalNew() {
                   const cmp = await getCompanyByCNPJ(onlyDigits(cnpj))
                   if (cmp) {
                     setCompany(cmp)
-                    setEmpresaForm({ cnpj: formatCNPJ(cmp.cnpj || cnpj), razao_social: cmp.razao_social || '', nome_fantasia: cmp.nome || '', cidade: cmp.cidade || '' })
+                    setEmpresaForm({ cnpj: formatCNPJ(cmp.cnpj || cnpj), razao_social: cmp.razao_social || '', nome_fantasia: cmp.nome || '', cidade: cmp.cidade || '', periodicidade: (cmp as any).periodicidade ?? '', data_renovacao: (cmp as any).data_renovacao ? String((cmp as any).data_renovacao).slice(0,10) : '' })
                     setCnpj(formatCNPJ(cmp.cnpj || cnpj))
                     toastSuccess('Empresa localizada')
                   } else {
                     setCompany(null)
-                    setEmpresaForm({ cnpj: formatCNPJ(cnpj), razao_social: '', nome_fantasia: '', cidade: '' })
+                    setEmpresaForm({ cnpj: formatCNPJ(cnpj), razao_social: '', nome_fantasia: '', cidade: '', periodicidade: '', data_renovacao: '' })
                     toastWarning('Empresa não cadastrada, preencha os dados na próxima etapa')
                   }
                   setStep(2)
@@ -224,6 +224,14 @@ export default function CommercialProposalNew() {
                 <div className="text-sm mb-1">Cidade</div>
                 <Input value={empresaForm.cidade} onChange={(e) => setEmpresaForm(s => ({ ...s, cidade: e.target.value }))} />
               </div>
+              <div>
+                <div className="text-sm mb-1">Periodicidade (dias)</div>
+                <Input type="number" min={0} value={empresaForm.periodicidade} onChange={(e) => setEmpresaForm(s => ({ ...s, periodicidade: e.target.value }))} />
+              </div>
+              <div>
+                <div className="text-sm mb-1">Data de Renovação</div>
+                <Input type="date" value={empresaForm.data_renovacao} onChange={(e) => setEmpresaForm(s => ({ ...s, data_renovacao: e.target.value }))} />
+              </div>
             </div>
             <div className="flex gap-2 justify-between">
               <Button variant="secondary" onClick={() => setStep(1)}>Voltar</Button>
@@ -231,7 +239,14 @@ export default function CommercialProposalNew() {
                 // if company not found, create
                 if (!company) {
                   try {
-                    const created = await createCompany({ cnpj: onlyDigits(empresaForm.cnpj || cnpj), razao_social: empresaForm.razao_social, nome_fantasia: empresaForm.nome_fantasia, cidade: empresaForm.cidade })
+                    const created = await createCompany({
+                      cnpj: onlyDigits(empresaForm.cnpj || cnpj),
+                      razao_social: empresaForm.razao_social,
+                      nome_fantasia: empresaForm.nome_fantasia,
+                      cidade: empresaForm.cidade,
+                      periodicidade: String(empresaForm.periodicidade).trim() === '' ? null : Number(empresaForm.periodicidade),
+                      data_renovacao: (empresaForm.data_renovacao || '').trim() || null,
+                    })
                     setCompany({ ...created, nome: created.nome })
                     toastSuccess('Empresa cadastrada')
                   } catch (e: any) {

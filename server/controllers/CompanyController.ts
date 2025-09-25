@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { RowDataPacket } from 'mysql2'
 import pool from '../config/db'
 import { OkPacket } from 'mysql2'
+import { generateAutomaticTasksForCompany, purgeAutomaticTasksForCompany } from '../services/autoTasksService'
 
 type CompanyRow = RowDataPacket & {
   id: number
@@ -71,6 +72,8 @@ export const getCompanyById = async (req: Request<{ id: string }>, res: Response
               e.telefone,
               e.tecnico_responsavel,
               e.unidade_responsavel AS unidade_id,
+              e.periodicidade,
+              e.data_renovacao,
               uu.nome AS unidade_nome,
               u.nome AS tecnico_nome,
               u.sobrenome AS tecnico_sobrenome
@@ -99,6 +102,8 @@ export const getCompanyById = async (req: Request<{ id: string }>, res: Response
       tecnico_nome: [r.tecnico_nome, r.tecnico_sobrenome].filter(Boolean).join(' ').trim() || null,
       unidade_id: r.unidade_id,
       unidade_nome: r.unidade_nome,
+      periodicidade: r.periodicidade ?? null,
+      data_renovacao: r.data_renovacao ?? null,
     }
 
     res.status(200).json(empresa)
@@ -232,11 +237,11 @@ export const getCompanyByCNPJ = async (req: Request<{ cnpj: string }>, res: Resp
 
 // Create minimal company
 export const createCompany = async (
-  req: Request<{}, {}, { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string }>,
+  req: Request<{}, {}, { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string; periodicidade?: number | null; data_renovacao?: string | null; tecnico_responsavel?: number | null; unidade_responsavel?: number | null }>,
   res: Response
 ): Promise<void> => {
   try {
-    const { cnpj, razao_social, nome_fantasia, cidade } = req.body || ({} as any)
+    const { cnpj, razao_social, nome_fantasia, cidade, periodicidade = null, data_renovacao = null, tecnico_responsavel = null, unidade_responsavel = null } = req.body || ({} as any)
     if (!cnpj || !razao_social || !nome_fantasia) {
       res.status(400).json({ message: 'cnpj, razao_social e nome_fantasia são obrigatórios' })
       return
@@ -252,12 +257,14 @@ export const createCompany = async (
       return
     }
     const [ins] = await pool.query<OkPacket>(
-      `INSERT INTO empresas (cnpj, razao_social, nome_fantasia, cidade, status)
-       VALUES (?, ?, ?, ?, 'ativo')`,
-      [clean, razao_social, nome_fantasia, cidade || null]
+      `INSERT INTO empresas (cnpj, razao_social, nome_fantasia, cidade, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+      [clean, razao_social, nome_fantasia, cidade || null, periodicidade, data_renovacao || null, tecnico_responsavel, unidade_responsavel]
     )
     const id = (ins as any).insertId
-    res.status(201).json({ id, nome: nome_fantasia, razao_social, cnpj: clean, cidade: cidade || null })
+    // Try to generate automatic tasks (will no-op if lacks dates/periodicity)
+    try { await generateAutomaticTasksForCompany(Number(id)) } catch (e) { console.warn('autoTasks(createCompany) failed:', e) }
+    res.status(201).json({ id, nome: nome_fantasia, razao_social, cnpj: clean, cidade: cidade || null, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel })
   } catch (error) {
     console.error('Erro ao criar empresa:', error)
     res.status(500).json({ message: 'Erro ao criar empresa' })
@@ -266,7 +273,7 @@ export const createCompany = async (
 
 // Update company details (admin)
 export const updateCompany = async (
-  req: Request<{ id: string }, {}, Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null }>>,
+  req: Request<{ id: string }, {}, Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null; periodicidade: number | null; data_renovacao: string | null }>>,
   res: Response
 ): Promise<void> => {
   try {
@@ -288,6 +295,8 @@ export const updateCompany = async (
       telefone: 'telefone',
       tecnico_responsavel: 'tecnico_responsavel',
       unidade_responsavel: 'unidade_responsavel',
+      periodicidade: 'periodicidade',
+      data_renovacao: 'data_renovacao',
     }
 
     for (const key of Object.keys(fieldsMap)) {
@@ -310,6 +319,20 @@ export const updateCompany = async (
     if (!result.affectedRows) {
       res.status(404).json({ message: 'Empresa não encontrada' })
       return
+    }
+
+    // If periodicidade or data_renovacao changed, run generator
+    const changedKeys = Object.keys(payload)
+    if (
+      changedKeys.includes('periodicidade') ||
+      changedKeys.includes('data_renovacao') ||
+      changedKeys.includes('tecnico_responsavel') ||
+      changedKeys.includes('unidade_responsavel')
+    ) {
+      try {
+        await purgeAutomaticTasksForCompany(Number(id))
+        await generateAutomaticTasksForCompany(Number(id))
+      } catch (e) { console.warn('autoTasks(updateCompany) failed:', e) }
     }
 
     // return fresh data

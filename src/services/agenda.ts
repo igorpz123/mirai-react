@@ -7,11 +7,16 @@ export interface AgendaEvent {
   end_date: string;
   title: string;
   description?: string;
+  tipo_tarefa_id?: number; // finalidade_id da tarefa, quando vinculado
 }
 
-export async function getEventsByResponsavel(responsavelId: number): Promise<{ events: AgendaEvent[] }>{
+export async function getEventsByResponsavel(responsavelId: number, range?: { from?: string; to?: string }): Promise<{ events: AgendaEvent[] }> {
   const token = localStorage.getItem('token')
-  const res = await fetch(`${API_URL}/tarefas/agenda/responsavel/${responsavelId}`, {
+  const qs = new URLSearchParams()
+  if (range?.from) qs.set('from', range.from)
+  if (range?.to) qs.set('to', range.to)
+  const url = `${API_URL}/tarefas/agenda/responsavel/${responsavelId}${qs.toString() ? `?${qs.toString()}` : ''}`
+  const res = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -24,5 +29,33 @@ export async function getEventsByResponsavel(responsavelId: number): Promise<{ e
     throw new Error(err.message || 'Erro ao buscar eventos da agenda')
   }
 
+  const data = await res.json()
+  // Defensive mapping to ensure keys match AgendaEvent interface
+  const events = (data?.events || []).map((e: any) => ({
+    id: e.id,
+    tarefa_id: e.tarefa_id,
+    start_date: e.start_date || e.start,
+    end_date: e.end_date || e.end,
+    title: e.title,
+    description: e.description,
+    tipo_tarefa_id: e.tipo_tarefa_id ?? e.finalidade_id,
+  })) as AgendaEvent[]
+  return { events }
+}
+
+export async function updateAgendaEvent(id: number, payload: { start?: string; end?: string }): Promise<{ message: string }>{
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/tarefas/agenda/evento/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'Erro ao atualizar evento')
+  }
   return res.json()
 }

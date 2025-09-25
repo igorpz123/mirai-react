@@ -181,3 +181,77 @@ html {
 
 .button-remove { color: var(--destructive); background-color: color-mix(in oklab, var(--destructive) 20%, transparent); cursor: pointer; }
 .button-remove:hover { background-color: color-mix(in oklab, var(--destructive) 20%, transparent); }
+
+/* Futuristic, lightweight animated background with optional image */
+.auth-bg {
+  position: relative;
+  min-height: 100vh;
+  /* Layer 1: gradient, Layer 2: optional image via CSS var --auth-bg-url */
+  background-image: linear-gradient(180deg, rgba(11,16,32,0.92) 0%, rgba(10,15,28,0.9) 60%, rgba(9,14,25,0.88) 100%), var(--auth-bg-url, none);
+  background-size: auto, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+}
+.auth-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 24px);
+  opacity: 0.6;
+  pointer-events: none;
+  mask-image: radial-gradient(120% 80% at 50% 20%, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 60%);
+}
+.auth-bg::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 70vmin;
+  height: 70vmin;
+  transform: translate(-50%, -50%);
+  background: conic-gradient(from 0deg, rgba(34,211,238,0.35), rgba(139,92,246,0.35), rgba(34,211,238,0.35));
+  filter: blur(80px) saturate(120%);
+  opacity: 0.28;
+  border-radius: 50%;
+  animation: auth-rotate 48s linear infinite;
+  will-change: transform;
+  pointer-events: none;
+}
+@keyframes auth-rotate {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Light theme variant */
+:root .auth-bg {
+  background-image: linear-gradient(180deg, rgba(248,251,255,0.92) 0%, rgba(238,244,255,0.9) 60%, rgba(234,242,255,0.88) 100%), var(--auth-bg-url, none);
+}
+:root .auth-bg::before {
+  background:
+    repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.035) 0 1px, transparent 1px 24px);
+  opacity: 0.7;
+}
+:root .auth-bg::after {
+  background: conic-gradient(from 0deg, rgba(14,165,233,0.25), rgba(99,102,241,0.25), rgba(14,165,233,0.25));
+  filter: blur(70px) saturate(120%);
+  opacity: 0.25;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-bg::after { animation: none; opacity: 0.18; }
+}
+
+/* Modifier: image-only (no gradient overlay, no grid/glow) */
+.auth-bg--image-only {
+  background-image: var(--auth-bg-url, none) !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+.auth-bg--image-only::before,
+.auth-bg--image-only::after {
+  display: none !important;
+}

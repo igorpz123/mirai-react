@@ -30,7 +30,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 export default function LoginForm(): JSX.Element {
   const { signIn } = useAuth()
   const navigate = useNavigate()
-  const [loginError, setLoginError] = useState('')  
+  const [loginError, setLoginError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
   const {
@@ -51,21 +51,15 @@ export default function LoginForm(): JSX.Element {
     }
   }
 
-  const handleDemoLogin = () => {
-    // insira aqui as credenciais demo
-    onSubmit({ email: 'demo@exemplo.com', password: 'demopassword' })
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <Card className="w-full max-w-md">
+    <div
+      className="auth-bg auth-bg--image-only flex items-center justify-center p-4"
+      style={{ ['--auth-bg-url' as any]: "url('/login-bg.png')" }}
+    >
+      <Card className="relative z-[1] w-full max-w-md bg-background/75">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-2xl font-bold text-primary-foreground">
-                M
-              </span>
-            </div>
+            <img src="/logo-mirai.jpg" alt="Logo" className='rounded-lg h-22 w-48' />
           </div>
           <CardTitle className="text-2xl font-bold">MIRAI</CardTitle>
           <CardDescription>
@@ -137,28 +131,6 @@ export default function LoginForm(): JSX.Element {
             {/* Botão de submit */}
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Entrando...' : 'Entrar'}
-            </Button>
-
-            {/* Separador */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Ou
-                </span>
-              </div>
-            </div>
-
-            {/* Login Demo */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={handleDemoLogin}
-            >
-              Entrar como Demo
             </Button>
 
             <div className="text-center">

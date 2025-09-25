@@ -44,11 +44,10 @@ const navComercialData = [
 const navComercialDataOutside = [
   {
     title: "CRM", url: "/crm", icon: Wallet, items: [
-      { title: "Visualizar", url: "comercial/crm/" },
-      { title: "Criar proposta", url: "comercial/crm/criar-proposta" },
+      { title: "Visualizar", url: "/comercial/dashboard/" },
+      { title: "Criar proposta", url: "/comercial/proposta/nova" },
     ]
   },
-  { title: "Cursos", url: "/cursos", icon: Calendar },
 ];
 
 const navAdminData = [
@@ -61,7 +60,11 @@ const navAdminData = [
       { title: "Empresas", url: "/empresas" },
     ]
   },
-  { title: "Changelog", url: "/admin/changelog", icon: FileSliders },
+  { title: "Changelog", url: "/changelog", icon: FileSliders },
+]
+
+const navAdminDataOutside = [
+  { title: "Changelog", url: "/changelog", icon: FileSliders },
 ]
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
@@ -192,7 +195,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         )}
         {isAdmin ? (
           <NavAdmin items={navAdminData} />
-        ) : null}
+        ) : <NavAdmin items={navAdminDataOutside} />}
       </SidebarContent>
       <SidebarFooter>
         {user ? (

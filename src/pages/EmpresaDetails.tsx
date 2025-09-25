@@ -32,6 +32,8 @@ export default function EmpresaDetails() {
     telefone: '',
     unidade_responsavel: null as number | null,
     tecnico_responsavel: null as number | null,
+    periodicidade: null as number | null,
+    data_renovacao: '' as string,
   })
 
   const cnpjDigits = useMemo(() => onlyDigits(form.cnpj), [form.cnpj])
@@ -61,6 +63,8 @@ export default function EmpresaDetails() {
             telefone: (data as any).telefone || '',
             unidade_responsavel: (data as any).unidade_id ?? (data as any).unidade_responsavel ?? null,
             tecnico_responsavel: (data as any).tecnico_responsavel ?? null,
+            periodicidade: (data as any).periodicidade ?? null,
+            data_renovacao: (data as any).data_renovacao ?? '',
           })
         }
         // Load related tasks and proposals in parallel (best effort)
@@ -184,6 +188,29 @@ export default function EmpresaDetails() {
                   <Input id="telefone" value={form.telefone} onChange={(e) => setForm(f => ({ ...f, telefone: e.target.value }))} />
                 </div>
                 <div>
+                  <Label htmlFor="periodicidade">Periodicidade (dias)</Label>
+                  <Input
+                    id="periodicidade"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={form.periodicidade ?? ''}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setForm(f => ({ ...f, periodicidade: v === '' ? null : Number(v) }))
+                    }}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="data_renovacao">Data de renovação</Label>
+                  <Input
+                    id="data_renovacao"
+                    type="date"
+                    value={form.data_renovacao ? String(form.data_renovacao).slice(0, 10) : ''}
+                    onChange={(e) => setForm(f => ({ ...f, data_renovacao: e.target.value }))}
+                  />
+                </div>
+                <div>
                   <Label htmlFor="unidade">Unidade Responsável</Label>
                   <Select
                     value={form.unidade_responsavel ? String(form.unidade_responsavel) : ''}
@@ -224,6 +251,8 @@ export default function EmpresaDetails() {
                     telefone: (empresa as any).telefone || '',
                     unidade_responsavel: (empresa as any).unidade_id ?? (empresa as any).unidade_responsavel ?? null,
                     tecnico_responsavel: (empresa as any).tecnico_responsavel ?? null,
+                    periodicidade: (empresa as any).periodicidade ?? null,
+                    data_renovacao: (empresa as any).data_renovacao ?? '',
                   })
                 }}>Cancelar</Button>
                 <Button onClick={handleSave} disabled={!canSave || saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>

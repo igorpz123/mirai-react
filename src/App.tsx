@@ -55,7 +55,10 @@ function AppContent() {
           <Route path="admin/usuario/:id" element={<AdminOrSelfRoute><AdminUsersDetails /></AdminOrSelfRoute>} />
           <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
           <Route path="admin/setores" element={<AdminRoute><AdminSetores /></AdminRoute>} />
-          <Route path="admin/changelog" element={<AdminRoute><AdminChangelog /></AdminRoute>} />
+          {/* Changelog visível para todos os usuários autenticados */}
+          <Route path="changelog" element={<AdminChangelog />} />
+          {/* Rota antiga mantida como alias para compatibilidade */}
+          <Route path="admin/changelog" element={<AdminChangelog />} />
           <Route path="comercial/dashboard" element={<ComercialDashboard />} />
           <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
           <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />
