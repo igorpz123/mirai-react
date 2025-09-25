@@ -112,9 +112,11 @@ export default function ComercialDashboard(): ReactElement {
                       let inProgress = 0
                       for (const p of proposals) {
                         const st = lower(p.status)
+                        // Ignore approved so it doesn't inflate "Em análise"
+                        if (st.includes('aprov') || st.includes('rejeit')) continue
                         if (st.includes('pend')) pending += 1
-                        else if (st.includes('anal')) analysis += 1
-                        else if (st.includes('progre') || st.includes('progress') || st.includes('exec')) inProgress += 1
+                        else if (st.includes('analis') || st.includes('analise')) analysis += 1
+                        else if (st.includes('progre') || st.includes('progress') || st.includes('andam')) inProgress += 1
                         else analysis += 1
                       }
                       const total = pending + analysis + inProgress || 1
