@@ -67,7 +67,12 @@ export default function TechnicalAgendaUser() {
         setTasks(tResp.tasks || [])
 
         try {
-          const evResp = await getEventsByResponsavel(uid)
+          // fetch events for the visible month range
+          const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
+          const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
+          const from = monthStart.toISOString().slice(0, 10)
+          const to = monthEnd.toISOString().slice(0, 10)
+          const evResp = await getEventsByResponsavel(uid, { from, to })
           if (!mounted) return
           setEvents(evResp.events || [])
         } catch (err) {
@@ -84,7 +89,7 @@ export default function TechnicalAgendaUser() {
 
     fetch()
     return () => { mounted = false }
-  }, [uid])
+  }, [uid, selectedMonth])
 
   // (removed monthsWithCounts - we now use input type=month and allow free navigation)
 
@@ -164,7 +169,7 @@ export default function TechnicalAgendaUser() {
                 />
                 <Button size="sm" onClick={async () => {
                   // build title and filter tasks according to date range
-                  const title = `${fromDate || ''}${fromDate && toDate ? ' — ' : ''}${toDate || ''}` || `Agenda ${user?.nome || usuarioId}`
+                  const title = `Agenda ${user?.nome || usuarioId}`
                   const filtered = tasks.filter(t => {
                     if (!t.prazo) return false
                     const d = new Date(t.prazo)

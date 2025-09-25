@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import type { ReactElement } from 'react'
 import useCountUp from '@/hooks/use-countup'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
@@ -24,9 +24,13 @@ export default function ProposalStatusPie({ proposals = [], counts }: Props): Re
 
     for (const p of proposals) {
       const st = lower(p.status)
+      // Ignore approved proposals so they don't get counted as "Em análise"
+      if (st.includes('aprov') || st.includes('rejeit')) {
+        continue
+      }
       if (st.includes('pend')) pending += 1
-      else if (st.includes('anal')) analysis += 1
-      else if (st.includes('progre') || st.includes('progress') || st.includes('exec')) inProgress += 1
+      else if (st.includes('analise') || st.includes('analis')) analysis += 1
+      else if (st.includes('progre') || st.includes('progress') || st.includes('andam')) inProgress += 1
       else {
         // fallback: treat unknown as analysis so it surfaces in the chart
         analysis += 1
@@ -42,11 +46,11 @@ export default function ProposalStatusPie({ proposals = [], counts }: Props): Re
 
   // Match badge colors:
   // - Pendentes: uses --primary (button-primary)
-  // - Em análise: Tailwind amber-700 (#b45309)
+  // - Em análise: purple-600 (#7c3aed) to match cards
   // - Em andamento: Tailwind blue-600 (#2563eb)
   const data = [
     { name: 'Pendentes', value: resolved.pending, color: 'var(--primary)' },
-  { name: 'Em análise', value: resolved.analysis, color: '#7c3aed' },
+    { name: 'Em análise', value: resolved.analysis, color: '#7c3aed' },
     { name: 'Em andamento', value: resolved.inProgress, color: '#2563eb' },
   ].filter(d => d.value > 0)
 
@@ -105,7 +109,7 @@ export default function ProposalStatusPie({ proposals = [], counts }: Props): Re
       <div className="mt-4 grid grid-cols-3 gap-2">
         {[
           { key: 'pending', label: 'Pendentes', value: resolved.pending, color: 'var(--primary)' },
-          { key: 'analysis', label: 'Em análise', value: resolved.analysis, color: '#b45309' },
+          { key: 'analysis', label: 'Em análise', value: resolved.analysis, color: '#7c3aed' },
           { key: 'inProgress', label: 'Em andamento', value: resolved.inProgress, color: '#2563eb' },
         ].map((row) => (
           <div key={row.key} className="flex items-center gap-3">

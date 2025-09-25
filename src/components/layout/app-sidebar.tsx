@@ -4,7 +4,6 @@ import { useUnit } from '../../contexts/UnitContext';
 import {
   ClipboardCheck,
   FileSliders,
-  User,
   Wallet,
   HardHat,
   GalleryVerticalEnd,
@@ -15,7 +14,6 @@ import {
 import { NavTechnical } from "@/components/layout/nav-technical"
 import { NavComercial } from "./nav-comercial"
 import { NavAdmin } from "./nav-admin"
-import { NavUserInfo } from "@/components/layout/nav-user-info"
 import { NavUser } from "@/components/layout/nav-user"
 import { UnitSwitcher } from "@/components/layout/unit-switcher"
 import {
@@ -46,11 +44,10 @@ const navComercialData = [
 const navComercialDataOutside = [
   {
     title: "CRM", url: "/crm", icon: Wallet, items: [
-      { title: "Visualizar", url: "comercial/crm/" },
-      { title: "Criar proposta", url: "comercial/crm/criar-proposta" },
+      { title: "Visualizar", url: "/comercial/dashboard/" },
+      { title: "Criar proposta", url: "/comercial/proposta/nova" },
     ]
   },
-  { title: "Cursos", url: "/cursos", icon: Calendar },
 ];
 
 const navAdminData = [
@@ -63,13 +60,12 @@ const navAdminData = [
       { title: "Empresas", url: "/empresas" },
     ]
   },
-  { title: "Changelog", url: "/admin/changelog", icon: FileSliders },
+  { title: "Changelog", url: "/changelog", icon: FileSliders },
 ]
 
-const userInfoData = [
-  { name: "Tarefas", url: "#", icon: ClipboardCheck },
-  { name: "Dados", url: "#", icon: User },
-];
+const navAdminDataOutside = [
+  { title: "Changelog", url: "/changelog", icon: FileSliders },
+]
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user, signOut } = useAuth();
@@ -199,8 +195,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         )}
         {isAdmin ? (
           <NavAdmin items={navAdminData} />
-        ) : null}
-        <NavUserInfo users={userInfoData} />
+        ) : <NavAdmin items={navAdminDataOutside} />}
       </SidebarContent>
       <SidebarFooter>
         {user ? (

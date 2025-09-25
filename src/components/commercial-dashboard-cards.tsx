@@ -9,6 +9,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
+import useCountUp from "@/hooks/use-countup"
 
 type ComercialDashboardCardsProps = {
     stats?: any | null
@@ -22,13 +23,20 @@ export function ComercialDashboardCards({ stats = null, loading = false, }: Come
     const commission = stats?.commission ?? { current: 0, percent: 0 }
     const fmtBRL = (n: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
 
+    // Animate numbers from 0 when the page loads (or when values change)
+    const animDuration = 2000
+    const animatedCreated = useCountUp(loading ? 0 : Number(created.current || 0), animDuration)
+    const animatedApproved = useCountUp(loading ? 0 : Number(approved.current || 0), animDuration)
+    const animatedApprovedValue = useCountUp(loading ? 0 : Number(approvedValue.current || 0), animDuration)
+    const animatedCommission = useCountUp(loading ? 0 : Number(commission.current || 0), animDuration)
+
     return (
         <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
             <Card className="@container/card">
                 <CardHeader>
                     <CardDescription>Propostas Criadas</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : created.current}
+                        {loading ? '...' : animatedCreated}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">
@@ -49,7 +57,7 @@ export function ComercialDashboardCards({ stats = null, loading = false, }: Come
                 <CardHeader>
                     <CardDescription>Propostas Aprovadas</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : approved.current}
+                        {loading ? '...' : animatedApproved}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">
@@ -70,7 +78,7 @@ export function ComercialDashboardCards({ stats = null, loading = false, }: Come
                 <CardHeader>
                     <CardDescription>Valor Total Aprovado</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : fmtBRL(approvedValue.current)}
+                        {loading ? '...' : fmtBRL(animatedApprovedValue)}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">
@@ -91,7 +99,7 @@ export function ComercialDashboardCards({ stats = null, loading = false, }: Come
                 <CardHeader>
                     <CardDescription>Comissão</CardDescription>
                     <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? '...' : fmtBRL(commission.current)}
+                        {loading ? '...' : fmtBRL(animatedCommission)}
                     </CardTitle>
                     <CardAction>
                         <Badge variant="outline">

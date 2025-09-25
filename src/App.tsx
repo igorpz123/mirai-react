@@ -25,6 +25,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminUsersDetails from './pages/AdminUsersDetails';
 import AdminUnidades from './pages/AdminUnidades';
 import AdminSetores from './pages/AdminSetores';
+import AdminChangelog from './pages/AdminChangelog';
 import Empresas from './pages/Empresas';
 import EmpresaDetails from './pages/EmpresaDetails';
 import LivroRegistrosPage from './pages/LivroRegistros';
@@ -54,6 +55,10 @@ function AppContent() {
           <Route path="admin/usuario/:id" element={<AdminOrSelfRoute><AdminUsersDetails /></AdminOrSelfRoute>} />
           <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
           <Route path="admin/setores" element={<AdminRoute><AdminSetores /></AdminRoute>} />
+          {/* Changelog visível para todos os usuários autenticados */}
+          <Route path="changelog" element={<AdminChangelog />} />
+          {/* Rota antiga mantida como alias para compatibilidade */}
+          <Route path="admin/changelog" element={<AdminChangelog />} />
           <Route path="comercial/dashboard" element={<ComercialDashboard />} />
           <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
           <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />

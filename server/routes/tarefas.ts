@@ -23,7 +23,7 @@ import {
   uploadArquivoTarefa,
   deleteArquivoTarefa
 } from '../controllers/TaskController'
-import { getEventsByResponsavel } from '../controllers/AgendaController'
+import { getEventsByResponsavel, updateAgendaEvent } from '../controllers/AgendaController'
 
 const router: Router = Router()
 
@@ -48,6 +48,8 @@ router.get('/responsavel/:responsavel_id', getTaskByResponsavel)
 
 // Coletar eventos da agenda por responsável
 router.get('/agenda/responsavel/:responsavel_id', getEventsByResponsavel)
+// Atualizar horário/data de um evento da agenda
+router.put('/agenda/evento/:id', updateAgendaEvent)
 
 // Coletar tarefas por unidade
 router.get('/unidade/:unidade_id', getTaskByUnidade)
