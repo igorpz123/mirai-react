@@ -433,7 +433,7 @@ export default function CommercialProposalDetail() {
                                                                         toastSuccess('Programa removido')
                                                                     }
                                                                 )}
-                                                            ><IconTrash /> Remover</Button>
+                                                            ><IconTrash /></Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -486,7 +486,7 @@ export default function CommercialProposalDetail() {
                                                                         toastSuccess('Curso removido')
                                                                     }
                                                                 )}
-                                                            ><IconTrash /> Remover</Button>
+                                                            ><IconTrash /></Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -540,7 +540,7 @@ export default function CommercialProposalDetail() {
                                                                         toastSuccess('Químico removido')
                                                                     }
                                                                 )}
-                                                            ><IconTrash />Remover</Button>
+                                                            ><IconTrash /></Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -580,7 +580,7 @@ export default function CommercialProposalDetail() {
                                                         <TableCell className="text-right">{fmtBRL(p.valor_total)}</TableCell>
                                                         <TableCell className="text-right">
                                                             <Button
-                                                                variant="destructive"
+                                                                className='button-remove'
                                                                 size="sm"
                                                                 disabled={!canRemoveItems}
                                                                 title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível remover itens.' : 'Apenas o responsável ou um administrador pode remover itens.') : undefined}
@@ -594,7 +594,7 @@ export default function CommercialProposalDetail() {
                                                                         toastSuccess('Produto removido')
                                                                     }
                                                                 )}
-                                                            ><IconTrash /> Remover</Button>
+                                                            ><IconTrash /></Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -1003,9 +1003,9 @@ export default function CommercialProposalDetail() {
                         <DialogDescription>{confirmText || 'Deseja remover este item da proposta?'}</DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setConfirmOpen(false)} disabled={confirming}>Cancelar</Button>
+                        <Button variant="outline" className='cursor-pointer' onClick={() => setConfirmOpen(false)} disabled={confirming}>Cancelar</Button>
                         <Button
-                            variant="destructive"
+                            className="button-remove"
                             onClick={async () => {
                                 if (!confirmActionRef.current) { setConfirmOpen(false); return }
                                 try { setConfirming(true); await confirmActionRef.current(); } finally { setConfirming(false); setConfirmOpen(false) }
