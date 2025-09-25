@@ -4,7 +4,6 @@ import { useUnit } from '../../contexts/UnitContext';
 import {
   ClipboardCheck,
   FileSliders,
-  User,
   Wallet,
   HardHat,
   GalleryVerticalEnd,
@@ -15,7 +14,6 @@ import {
 import { NavTechnical } from "@/components/layout/nav-technical"
 import { NavComercial } from "./nav-comercial"
 import { NavAdmin } from "./nav-admin"
-import { NavUserInfo } from "@/components/layout/nav-user-info"
 import { NavUser } from "@/components/layout/nav-user"
 import { UnitSwitcher } from "@/components/layout/unit-switcher"
 import {
@@ -65,11 +63,6 @@ const navAdminData = [
   },
   { title: "Changelog", url: "/admin/changelog", icon: FileSliders },
 ]
-
-const userInfoData = [
-  { name: "Tarefas", url: "#", icon: ClipboardCheck },
-  { name: "Dados", url: "#", icon: User },
-];
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user, signOut } = useAuth();
@@ -200,7 +193,6 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         {isAdmin ? (
           <NavAdmin items={navAdminData} />
         ) : null}
-        <NavUserInfo users={userInfoData} />
       </SidebarContent>
       <SidebarFooter>
         {user ? (

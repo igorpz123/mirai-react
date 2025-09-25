@@ -12,6 +12,7 @@ import cargoRoutes from './cargos'
 import notificacaoRoutes from './notificacoes'
 import comercialItemsRoutes from './comercial_items'
 import livroRegistrosRoutes from './livro_registros'
+import changelogRoutes from './changelog'
 
 const router = Router()
 
@@ -28,5 +29,6 @@ router.use('/cargos', cargoRoutes)
 router.use('/notificacoes', notificacaoRoutes)
 router.use('/comercial', comercialItemsRoutes)
 router.use('/livro_registros', livroRegistrosRoutes)
+router.use('/changelog', changelogRoutes)
 
 export default router

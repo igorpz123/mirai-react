@@ -27,7 +27,15 @@ import { recalculateProposalTotal, deleteProposal, updateProposalStatus, PROPOSA
 import { useAuth } from '@/hooks/use-auth'
 import { DropdownMenuLabel } from '@radix-ui/react-dropdown-menu'
 
-export function CommercialProposalsTable({ proposals = [] }: { proposals?: Proposal[] }): ReactElement {
+export function CommercialProposalsTable({
+  proposals = [],
+  onProposalsPatched,
+  onProposalDeleted,
+}: {
+  proposals?: Proposal[]
+  onProposalsPatched?: (patches: Array<{ id: number | string; changes: Partial<Proposal> }>) => void
+  onProposalDeleted?: (id: number | string) => void
+}): ReactElement {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [search, setSearch] = useState('')
@@ -145,7 +153,10 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
       : (p.responsavel ?? '').toString().toLowerCase() === `${user?.nome ?? ''}`.toLowerCase()
   }, [user?.id, user?.nome])
 
-  const ProposalActionsMenu: React.FC<{ p: Proposal; onChange: (updater: (prev: Proposal[]) => Proposal[]) => void }>
+  const ProposalActionsMenu: React.FC<{
+    p: Proposal
+    onChange: (updater: (prev: Proposal[]) => Proposal[]) => void
+  }>
     = React.memo(({ p, onChange }) => {
     const [open, setOpen] = useState(false)
     const canManage = isAdmin || isUserResponsible(p)
@@ -170,6 +181,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                 try {
                   const res = await recalculateProposalTotal(p.id)
                   onChange(prev => prev.map(r => r.id === p.id ? { ...r, valor_total: res.valor_total } : r))
+                  onProposalsPatched?.([{ id: p.id as any, changes: { valor_total: res.valor_total } as Partial<Proposal> }])
                   toastSuccess('Valor total recalculado')
                 } catch (err) {
                   toastError('Falha ao recalcular valor total')
@@ -208,7 +220,10 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                           if (!ok) return
                         }
                         const res = await updateProposalStatus(p.id, s.key as ProposalStatus)
-                        onChange(prev => prev.map(r => r.id === p.id ? { ...r, status: res.status, dataAlteracao: res.dataAlteracao ?? (r as any).dataAlteracao } : r))
+                        onChange(prev => prev.map(r => r.id === p.id ? { ...r, status: res.status, dataAlteracao: (res as any).dataAlteracao ?? (r as any).dataAlteracao } : r))
+                        onProposalsPatched?.([
+                          { id: p.id as any, changes: { status: res.status, dataAlteracao: (res as any).dataAlteracao ?? (p as any).dataAlteracao } as Partial<Proposal> }
+                        ])
                         toastSuccess(`O status da proposta foi atualizado para: ${s.label}`)
                       } catch (e: any) {
                         toastError(e?.response?.data?.message || 'Falha ao atualizar status')
@@ -227,6 +242,7 @@ export function CommercialProposalsTable({ proposals = [] }: { proposals?: Propo
                       if (!confirmed) return
                       await deleteProposal(p.id)
                       onChange(prev => prev.filter(r => r.id !== p.id))
+                      onProposalDeleted?.(p.id)
                       toastSuccess('Proposta deletada')
                     } catch (err) {
                       toastError('Falha ao deletar proposta')

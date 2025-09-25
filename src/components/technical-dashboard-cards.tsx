@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import useCountUp from "@/hooks/use-countup"
 
 type TechnicalDashboardCardsProps = {
   stats?: any | null
@@ -29,6 +30,13 @@ export function TechnicalDashboardCards({
   const trendConcluida = getTrend('concluída')
   const overduePercent = stats?.overdue?.percent ?? 0
 
+  // Animate numbers from 0 when loading completes and on value changes
+  const animDuration = 1500
+  const animatedProgress = useCountUp(loading ? 0 : Number(getCount('progress') || 0), animDuration)
+  const animatedPendente = useCountUp(loading ? 0 : Number(getCount('pendente') || 0), animDuration)
+  const animatedOverdue = useCountUp(loading ? 0 : Number((stats?.overdue?.current ?? 0) || 0), animDuration)
+  const animatedConcluida = useCountUp(loading ? 0 : Number(getCount('concluída') || 0), animDuration)
+
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       {/* Tarefas em Andamento */}
@@ -36,7 +44,7 @@ export function TechnicalDashboardCards({
         <CardHeader>
           <CardDescription>Tarefas em Andamento</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {loading ? '...' : getCount('progress')}
+            {loading ? '...' : animatedProgress}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -65,7 +73,7 @@ export function TechnicalDashboardCards({
         <CardHeader>
           <CardDescription>Tarefas Pendentes</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {loading ? '...' : getCount('pendente')}
+            {loading ? '...' : animatedPendente}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -94,7 +102,7 @@ export function TechnicalDashboardCards({
         <CardHeader>
           <CardDescription>Tarefas Atrasadas</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {loading ? '...' : stats?.overdue?.current ?? 0}
+            {loading ? '...' : animatedOverdue}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">
@@ -121,7 +129,7 @@ export function TechnicalDashboardCards({
         <CardHeader>
           <CardDescription>Tarefas Concluídas</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            {loading ? '...' : getCount('concluída')}
+            {loading ? '...' : animatedConcluida}
           </CardTitle>
           <CardAction>
             <Badge variant="outline">

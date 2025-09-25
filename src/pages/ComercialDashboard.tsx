@@ -18,6 +18,8 @@ export default function ComercialDashboard(): ReactElement {
   const [proposals, setProposals] = useState<any[]>([])
   const [stats, setStats] = useState<any | null>(null)
   const [loading, setLoading] = useState(false)
+  const [refreshTick, setRefreshTick] = useState(0)
+  const refreshDebounceRef = useState<{ t?: number | null }>({ t: null })[0]
 
   async function fetchAll() {
     if (!userId && !unitId) return
@@ -87,6 +89,17 @@ export default function ComercialDashboard(): ReactElement {
 
   useEffect(() => { if (!userId && !unitId) return; fetchAll(); }, [userId, unitId])
 
+  // Debounced refetch when proposals change locally (e.g., status update in table)
+  useEffect(() => {
+    if (!userId && !unitId) return
+    if (refreshDebounceRef.t) window.clearTimeout(refreshDebounceRef.t as number)
+    refreshDebounceRef.t = window.setTimeout(() => {
+      fetchAll()
+      refreshDebounceRef.t = null
+    }, 700)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTick])
+
   return (
     <div className="container-main">
       <SiteHeader title='Comercial - Dashboard' />
@@ -151,7 +164,21 @@ export default function ComercialDashboard(): ReactElement {
                 </div>
               </div>
             </div>
-            <CommercialProposalsTable proposals={proposals} />
+            <CommercialProposalsTable
+              proposals={proposals}
+              onProposalsPatched={(patches) => {
+                // Apply patches locally to update chart/cards instantly
+                setProposals(prev => prev.map(p => {
+                  const patch = patches.find(pt => String(pt.id) === String(p.id))
+                  return patch ? { ...p, ...patch.changes } : p
+                }))
+                setRefreshTick(x => x + 1)
+              }}
+              onProposalDeleted={(id) => {
+                setProposals(prev => prev.filter(p => String(p.id) !== String(id)))
+                setRefreshTick(x => x + 1)
+              }}
+            />
           </div>
         </div>
       </div>
