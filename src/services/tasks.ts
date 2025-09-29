@@ -392,6 +392,23 @@ export async function addTaskObservation(taskId: number, usuarioId: number, obse
     return res.json();
 }
 
+export async function rateTaskHistory(historicoId: number, nota: number, observacao?: string): Promise<{ message: string }> {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/tarefas/historico/${historicoId}/avaliar`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ nota, observacao })
+    })
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Erro ao registrar avaliação' }))
+        throw new Error(err.message || 'Erro ao registrar avaliação')
+    }
+    return res.json()
+}
+
     // Files (Arquivos) services for tasks
     export interface Arquivo { id: number; nome_arquivo: string; caminho: string }
     export async function listTaskFiles(taskId: number): Promise<Arquivo[]> {

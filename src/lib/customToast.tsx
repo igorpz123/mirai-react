@@ -1,6 +1,6 @@
 import React from 'react'
 import { toast as sonnerToast } from 'sonner'
-import { IconCheck, IconX, IconAlertCircle } from '@tabler/icons-react'
+import { IconCheck, IconX, IconAlertCircle, IconBell } from '@tabler/icons-react'
 
 type ToastContent = React.ReactNode | string
 
@@ -46,4 +46,31 @@ export const toastError = (content: ToastContent, opts?: ToastOptions) => render
 export const toastWarning = (content: ToastContent, opts?: ToastOptions) => render('warning', 'Esta ação precisa de atenção', content, opts)
 export const toastSuccess = (content: ToastContent, opts?: ToastOptions) => render('success', 'Ação executada com sucesso', content, opts)
 
-export default { toastError, toastWarning, toastSuccess }
+// Neutral notification toast: bg-background with title "Nova Notificação"
+export const toastNotification = (content: ToastContent, opts?: ToastOptions) => {
+  const cls = `${baseContainer} bg-background text-foreground border border-border`
+  return sonnerToast.custom((t) => (
+    <div
+      role="status"
+      aria-live="polite"
+      onClick={() => { try { opts?.onClick && opts.onClick() } catch {} }}
+      className={`${cls} animate-in slide-in-from-top-6 duration-300 cursor-pointer`}>
+      <div className="flex items-center gap-3 px-4 py-3">
+        <div className="flex items-center justify-center shrink-0 w-6 h-6">
+          <IconBell className="w-5 h-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-sm leading-5">Nova Notificação</div>
+          <div className="mt-1 text-sm leading-5 opacity-90">{typeof content === 'string' ? content : content}</div>
+        </div>
+        <div className="ml-3">
+          <button aria-label="Fechar" onClick={(e) => { e.stopPropagation(); sonnerToast.dismiss(t) }} className="inline-flex items-center justify-center rounded-md p-1 hover:opacity-90 cursor-pointer">
+            <IconX className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  ), { id: opts?.id })
+}
+
+export default { toastError, toastWarning, toastSuccess, toastNotification }

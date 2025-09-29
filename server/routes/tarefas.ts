@@ -16,6 +16,7 @@ import {
   getRecentTasksByUsuario,
   getArquivosByTarefa,
   getTaskHistory,
+  rateTaskHistory,
   newTask,
   updateTaskResponsible,
   updateTask,
@@ -83,6 +84,9 @@ router.get('/historico/:tarefa_id', getTaskHistory)
 
 // Adicionar observação ao histórico da tarefa
 router.post('/:tarefa_id/observacoes', addTaskObservation)
+
+// Avaliar uma entrada de histórico (admin only)
+router.post('/historico/:historico_id/avaliar', rateTaskHistory)
 
 // Criar nova tarefa
 router.post('/', newTask)

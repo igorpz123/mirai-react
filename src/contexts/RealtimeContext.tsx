@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useAuth } from '@/hooks/use-auth'
+import { toastNotification } from '@/lib/customToast'
 
 // Presence state
 type PresenceState = Record<number, { online: boolean; updatedAt: number }>
@@ -41,6 +42,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [connected, setConnected] = useState(false)
   const [notifications, setNotifications] = useState<RTNotification[]>([])
   const socketRef = useRef<Socket | null>(null)
+  const shownToastsRef = useRef<Set<number>>(new Set())
 
   const unread = notifications.filter(n => !n.read_at).length
 
@@ -101,6 +103,19 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (prev.find(n => n.id === notif.id)) return prev
         return [notif, ...prev].slice(0, 100)
       })
+      // Show toast for new notifications (dedup by id)
+      try {
+        const nid = Number((notif as any)?.id)
+        if (!Number.isNaN(nid) && shownToastsRef.current.has(nid)) return
+        if (!Number.isNaN(nid)) shownToastsRef.current.add(nid)
+        const msg = (notif as any)?.message || (notif as any)?.metadata?.message || (notif as any)?.metadata?.title || 'Nova notificação'
+        const link = (notif as any)?.metadata?.link
+        const opts: any = {}
+        if (!Number.isNaN(nid)) opts.id = nid
+        if (link) opts.onClick = () => { try { window.location.assign(link) } catch {} }
+        // Always use the neutral Notification toast variant per request
+        toastNotification(msg, opts)
+      } catch {}
     })
 
     // Initial fetch

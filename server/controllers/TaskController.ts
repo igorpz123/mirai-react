@@ -452,6 +452,11 @@ export const getTaskHistory = async (
         h.acao AS alteracao,
         h.observacoes,
         h.data_alteracao,
+        -- rating fields (may not exist; if they do, use them)
+        h.avaliacao_nota,
+        h.avaliacao_by,
+        h.avaliacao_obs,
+        h.avaliacao_data,
         -- actor (quem fez a alteração)
         u.id AS actor_id,
         u.nome AS actor_nome,
@@ -469,15 +474,20 @@ export const getTaskHistory = async (
         JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.usuario')) AS novo_usuario_id,
 
         -- resolved names for anterior/novo usuario and setor (if available)
-        u_ant.nome AS anterior_usuario_nome,
-        u_ant.sobrenome AS anterior_usuario_sobrenome,
-        s_ant.nome AS anterior_setor_nome,
+  u_ant.nome AS anterior_usuario_nome,
+  u_ant.sobrenome AS anterior_usuario_sobrenome,
+  s_ant.nome AS anterior_setor_nome,
 
-        u_new.nome AS novo_usuario_nome,
-        u_new.sobrenome AS novo_usuario_sobrenome,
-        s_new.nome AS novo_setor_nome
+  u_new.nome AS novo_usuario_nome,
+  u_new.sobrenome AS novo_usuario_sobrenome,
+  s_new.nome AS novo_setor_nome,
+
+  u_av.nome AS u_av_nome,
+  u_av.sobrenome AS u_av_sobrenome,
+  u_av.foto_url AS u_av_foto
       FROM historico_alteracoes h
-      LEFT JOIN usuarios u ON h.usuario_id = u.id
+  LEFT JOIN usuarios u ON h.usuario_id = u.id
+  LEFT JOIN usuarios u_av ON h.avaliacao_by = u_av.id
       LEFT JOIN usuarios u_ant ON CAST(JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.usuario')) AS UNSIGNED) = u_ant.id
       LEFT JOIN usuarios u_new ON CAST(JSON_UNQUOTE(JSON_EXTRACT(h.novo_valor, '$.usuario')) AS UNSIGNED) = u_new.id
       LEFT JOIN setor s_ant ON CAST(JSON_UNQUOTE(JSON_EXTRACT(h.valor_anterior, '$.setor')) AS UNSIGNED) = s_ant.id
@@ -495,6 +505,17 @@ export const getTaskHistory = async (
         acao: r.alteracao,
         observacoes: r.observacoes,
         data_alteracao: r.data_alteracao,
+        avaliacao: (r.avaliacao_nota != null || r.avaliacao_data != null) ? {
+          nota: r.avaliacao_nota != null ? Number(r.avaliacao_nota) : null,
+          data: r.avaliacao_data || null,
+          obs: r.avaliacao_obs || null,
+          by: r.avaliacao_by ? {
+            id: r.avaliacao_by,
+            nome: r.u_av_nome || undefined,
+            sobrenome: r.u_av_sobrenome || undefined,
+            foto: r.u_av_foto || undefined,
+          } : null,
+        } : null,
         actor: r.actor_id ? {
           id: r.actor_id,
           nome: r.actor_nome,
@@ -526,6 +547,110 @@ export const getTaskHistory = async (
     res.status(500).json({ message: 'Erro ao buscar histórico' });
   }
 };
+
+// Avaliar uma entrada do histórico da tarefa (somente admin)
+export const rateTaskHistory = async (
+  req: Request<{ historico_id: string }, {}, { nota: number; observacao?: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { historico_id } = req.params
+    const { nota, observacao } = req.body || ({} as any)
+
+    if (!historico_id) {
+      res.status(400).json({ message: 'ID do histórico é obrigatório' })
+      return
+    }
+    const n = Number(nota)
+    if (!Number.isFinite(n) || n < 0 || n > 10) {
+      res.status(400).json({ message: 'Nota inválida. Deve estar entre 0 e 10.' })
+      return
+    }
+
+    // Auth and role check
+    let actorId: number | null = null
+    const authHeader = req.headers && (req.headers.authorization as string | undefined)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1]
+        const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+        actorId = payload?.userId ?? payload?.id ?? null
+      } catch {}
+    }
+    if (!actorId) {
+      res.status(401).json({ message: 'Não autorizado' })
+      return
+    }
+    // Only admin (cargo_id = 1) can rate
+    const [uRows] = await pool.query<RowDataPacket[]>(`SELECT cargo_id FROM usuarios WHERE id = ? LIMIT 1`, [actorId])
+    const cargoId = Number((uRows as any[])[0]?.cargo_id || 0)
+    if (cargoId !== 1) {
+      res.status(403).json({ message: 'Somente administradores podem avaliar alterações' })
+      return
+    }
+
+    // Ensure record exists
+    const [hRows] = await pool.query<RowDataPacket[]>(`SELECT id FROM historico_alteracoes WHERE id = ? LIMIT 1`, [historico_id])
+    if (!(hRows as any[]).length) {
+      res.status(404).json({ message: 'Histórico não encontrado' })
+      return
+    }
+
+    // Update rating fields (columns must exist in DB)
+    const sql = `UPDATE historico_alteracoes SET avaliacao_nota = ?, avaliacao_by = ?, avaliacao_obs = ?, avaliacao_data = NOW() WHERE id = ?`
+    await pool.query<OkPacket>(sql, [n, actorId, (observacao ?? null), historico_id])
+
+    // Notify the user who performed the original action (actor of that historico)
+    try {
+      const [hInfoRows] = await pool.query<RowDataPacket[]>(
+        `SELECT h.tarefa_id, h.usuario_id AS actor_original, t.responsavel_id
+         FROM historico_alteracoes h
+         LEFT JOIN tarefas t ON t.id = h.tarefa_id
+         WHERE h.id = ? LIMIT 1`,
+        [historico_id]
+      )
+      const hInfo: any = (hInfoRows as any[])[0] || null
+      const targetUserId = Number(hInfo?.actor_original || hInfo?.responsavel_id || 0)
+      if (targetUserId) {
+        const anchor = Number(historico_id)
+        const tarefaIdNum = Number(hInfo?.tarefa_id || 0)
+        const link = tarefaIdNum ? `/technical/tarefa/${tarefaIdNum}#hist-${anchor}` : undefined
+        const notif = await createNotification({
+          user_id: targetUserId,
+          actor_id: actorId,
+          type: 'task_rated',
+          title: 'Você recebeu uma avaliação',
+          body: `Sua atuação em uma alteração da tarefa ${hInfo?.tarefa_id ?? ''} foi avaliada com nota ${n}.`,
+          entity_type: 'task',
+          entity_id: tarefaIdNum,
+          metadata: { historico_id: anchor, tarefa_id: tarefaIdNum, nota: n, observacao: observacao ?? null, link },
+        })
+        // Realtime via socket
+        try {
+          const legacyPayload = {
+            id: notif.id,
+            user_id: notif.user_id,
+            type: notif.type,
+            entity: notif.entity_type,
+            entity_id: notif.entity_id,
+            message: notif.body,
+            metadata: notif.metadata,
+            created_at: notif.created_at,
+            read_at: notif.read_at,
+          }
+          getIO().to(`user:${targetUserId}`).emit('notification:new', legacyPayload)
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('Falha ao notificar avaliação:', e)
+    }
+
+    res.status(200).json({ message: 'Avaliação registrada' })
+  } catch (error) {
+    console.error('Erro ao avaliar histórico:', error)
+    res.status(500).json({ message: 'Erro ao avaliar histórico' })
+  }
+}
 
 interface NewTaskBody {
   empresa_id: number;

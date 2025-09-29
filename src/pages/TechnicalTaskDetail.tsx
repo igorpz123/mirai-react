@@ -1,6 +1,6 @@
 import React from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTaskById, getTaskHistory, addTaskObservation, listTaskFiles, uploadTaskFile, deleteTaskFile, updateTask, type Arquivo } from '@/services/tasks'
+import { getTaskById, getTaskHistory, addTaskObservation, listTaskFiles, uploadTaskFile, deleteTaskFile, updateTask, rateTaskHistory, type Arquivo } from '@/services/tasks'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import TaskStatusBadge from '@/components/task-status-badge'
@@ -12,6 +12,9 @@ import { getSetores } from '@/services/setores'
 import { getUsersByDepartmentAndUnit } from '@/services/users'
 import { useUnit } from '@/contexts/UnitContext'
 import { toastSuccess } from '@/lib/customToast'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function TechnicalTaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -39,6 +42,14 @@ export default function TechnicalTaskDetail() {
   const [usersForSetorLoading, setUsersForSetorLoading] = React.useState(false)
   const [selectedUserId, setSelectedUserId] = React.useState<number | null>(null)
   const [transferError, setTransferError] = React.useState<string | null>(null)
+
+  // Avaliação (admin)
+  const [rateOpen, setRateOpen] = React.useState(false)
+  const [ratingTarget, setRatingTarget] = React.useState<any | null>(null)
+  const [ratingNota, setRatingNota] = React.useState<string>('')
+  const [ratingObs, setRatingObs] = React.useState<string>('')
+  const [ratingSaving, setRatingSaving] = React.useState(false)
+  const [ratingError, setRatingError] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (!id) return
@@ -461,6 +472,20 @@ export default function TechnicalTaskDetail() {
                       })()}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">{h.observacoes ? `Observações: ${h.observacoes}` : 'Sem Observações'}</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      {h.avaliacao ? (
+                        <div className="text-xs text-muted-foreground">
+                          Avaliação: <span className="font-medium">{h.avaliacao.nota ?? '—'}</span>
+                          {h.avaliacao.by?.nome ? ` por ${h.avaliacao.by.nome}` : ''}
+                          {h.avaliacao.obs ? ` — ${h.avaliacao.obs}` : ''}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-muted-foreground">Sem avaliação</div>
+                      )}
+                      {(user && Number((user as any).cargoId) === 1) && (
+                        <Button variant="outline" size="sm" onClick={() => { setRatingTarget(h); setRatingNota(h.avaliacao?.nota != null ? String(h.avaliacao.nota) : ''); setRatingObs(h.avaliacao?.obs || ''); setRatingError(null); setRateOpen(true) }}>Avaliar</Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -469,6 +494,50 @@ export default function TechnicalTaskDetail() {
             <div>Nenhum histórico disponível.</div>
           )}
         </div>
+
+        {/* Modal de avaliação */}
+        <Dialog open={rateOpen} onOpenChange={(v) => { if (!ratingSaving) setRateOpen(v) }}>
+          <DialogContent className="sm:max-w-[420px]">
+            <DialogHeader>
+              <DialogTitle>Avaliar alteração</DialogTitle>
+              <DialogDescription>Registre uma nota de 0 a 10 para esta alteração.</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-3 py-2">
+              <div className="grid gap-1">
+                <Label htmlFor="nota">Nota (0 a 10)</Label>
+                <Input id="nota" type="number" min={0} max={10} step={1} value={ratingNota} onChange={(e) => setRatingNota(e.target.value)} />
+              </div>
+              <div className="grid gap-1">
+                <Label htmlFor="obs">Observação (opcional)</Label>
+                <Textarea id="obs" value={ratingObs} onChange={(e) => setRatingObs(e.target.value)} maxLength={300} />
+              </div>
+              {ratingError ? <div className="text-sm text-destructive">{ratingError}</div> : null}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" disabled={ratingSaving} onClick={() => setRateOpen(false)}>Cancelar</Button>
+              <Button className="button-primary" disabled={ratingSaving} onClick={async () => {
+                if (!ratingTarget) return
+                const n = Number(ratingNota)
+                if (!Number.isFinite(n) || n < 0 || n > 10) { setRatingError('Informe uma nota entre 0 e 10.'); return }
+                try {
+                  setRatingSaving(true)
+                  await rateTaskHistory(Number(ratingTarget.id), n, ratingObs?.trim() || undefined)
+                  try { toastSuccess('Avaliação registrada') } catch {}
+                  // refresh history
+                  setHistoryLoading(true)
+                  const data = await getTaskHistory(Number(id))
+                  setHistory(data)
+                  setRateOpen(false)
+                } catch (e: any) {
+                  setRatingError(e?.message || 'Erro ao registrar avaliação')
+                } finally {
+                  setRatingSaving(false)
+                  setHistoryLoading(false)
+                }
+              }}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )
