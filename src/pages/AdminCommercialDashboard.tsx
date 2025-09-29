@@ -10,7 +10,7 @@ import { QuickIdSearch } from '@/components/quick-id-search'
 import ProposalStatusPie from '@/components/proposal-status-pie'
 import useCountUp from '@/hooks/use-countup'
 
-export default function ComercialDashboard(): ReactElement {
+export default function AdminCommercialDashboard(): ReactElement {
   const { user } = useAuth()
   const { unitId } = useUnit()
   const userId = user?.id ?? null
@@ -47,12 +47,16 @@ export default function ComercialDashboard(): ReactElement {
       })
 
       // Keep only proposals where current user is responsável or indicação
-      const userVisible = merged.filter((p) => {
-        const respId = Number((p as any).responsavel_id ?? (p as any).responsavelId ?? 0)
-        const indicId = Number((p as any).indicacao_id ?? (p as any).indicacaoId ?? 0)
-        return respId === Number(userId) || indicId === Number(userId)
-      })
-      setProposals(userVisible)
+      // If a unit is selected, show all merged proposals for the unit.
+      // Otherwise keep the previous behavior (only proposals where the user is responsável or indicação).
+      const proposalsToShow = unitId
+        ? merged
+        : merged.filter((p) => {
+            const respId = Number((p as any).responsavel_id ?? (p as any).responsavelId ?? 0)
+            const indicId = Number((p as any).indicacao_id ?? (p as any).indicacaoId ?? 0)
+            return respId === Number(userId) || indicId === Number(userId)
+          })
+      setProposals(proposalsToShow)
 
       // Stats from backend: keep current behavior (prefer unit when selected)
       const s = unitId
@@ -69,7 +73,9 @@ export default function ComercialDashboard(): ReactElement {
       }
       const isApproved = (p: Proposal) => ((p.status ?? '').toString().toLowerCase()).includes('aprov')
       // Use dataAlteracao (approval date) when available for monthly windows; fallback to criadoEm only if missing
-  const approvedList = userVisible.filter(p => isApproved(p) && (inCurrentMonth((p as any).dataAlteracao) || (!((p as any).dataAlteracao) && inCurrentMonth(p.criadoEm))))
+      // When viewing a unit, base the stats on all merged proposals; otherwise use the user-scoped list.
+      const baseList = unitId ? merged : proposalsToShow
+      const approvedList = baseList.filter(p => isApproved(p) && (inCurrentMonth((p as any).dataAlteracao) || (!((p as any).dataAlteracao) && inCurrentMonth(p.criadoEm))))
       const approvedCount = approvedList.length
       const approvedValueSum = approvedList.reduce((acc, p) => acc + Number((p.valor_total ?? p.valor) || 0), 0)
       // Commission: only meaningful in context of a user (responsável/indicação). Apply 5% + 2% rules like backend.
@@ -80,7 +86,6 @@ export default function ComercialDashboard(): ReactElement {
         const rate = (isResp ? 0.05 : 0) + (isIndic ? 0.02 : 0)
         return acc + base * rate
       }, 0) : 0)
-
       const patchedStats = {
         ...(s ?? {}),
         approved: { ...(s?.approved ?? {}), current: approvedCount },
@@ -115,8 +120,8 @@ export default function ComercialDashboard(): ReactElement {
             <div className="px-4 lg:px-6 flex items-center justify-end">
               <QuickIdSearch kind="proposal" placeholder="Nº da proposta" />
             </div>
-            {/* Unique key to avoid sharing internal state with Admin dashboard */}
-            <ComercialDashboardCards key={`user-commercial-cards-${userId ?? 'no-user'}-${unitId ?? 'no-unit'}`} stats={stats} loading={loading} />
+            {/* Give cards a unique key on Admin page to avoid sharing state/cached values with user dashboard */}
+            <ComercialDashboardCards key={`admin-commercial-cards-${unitId ?? 'no-unit'}`} stats={stats} loading={loading} />
             <div className="px-4 lg:px-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-1">

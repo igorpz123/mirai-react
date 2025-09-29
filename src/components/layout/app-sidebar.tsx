@@ -9,6 +9,7 @@ import {
   GalleryVerticalEnd,
   Calendar,
   Map,
+  LayoutDashboard,
 } from "lucide-react"
 
 import { NavTechnical } from "@/components/layout/nav-technical"
@@ -29,7 +30,7 @@ import { useEffect, useState } from 'react'
 
 //Página comercial para usuários internos (equipe comercial)
 const navComercialData = [
-  { title: "Dashboard", url: "/comercial/dashboard", icon: ClipboardCheck },
+  { title: "Dashboard", url: "/comercial/dashboard", icon: LayoutDashboard },
   {
     title: "CRM", url: "", icon: Wallet, items: [
       { title: "Criar proposta", url: "/comercial/proposta/nova" },
@@ -50,7 +51,8 @@ const navComercialDataOutside = [
 ];
 
 const navAdminData = [
-  { title: "Dashboard", url: "/admin/dashboard", icon: ClipboardCheck },
+  { title: "Dashboard Técnico", url: "/admin/dashboard-technical", icon: LayoutDashboard },
+  { title: "Dashboard Comercial", url: "/admin/dashboard-commercial", icon: LayoutDashboard },
   {
     title: "Gerenciar", url: "#", icon: HardHat, items: [
       { title: "Usuários", url: "/admin/usuarios" },
@@ -130,7 +132,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     {
       title: "Dashboard",
       url: "/technical/dashboard",
-      icon: ClipboardCheck,
+      icon: LayoutDashboard,
     },
     {
       title: "Agenda",

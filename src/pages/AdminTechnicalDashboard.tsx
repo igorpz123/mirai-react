@@ -10,7 +10,7 @@ import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
 import { getTaskStatsByUnit } from '@/services/tasks'
 
-export default function AdminDashboard(): ReactElement {
+export default function AdminTechnicalDashboard(): ReactElement {
 
   const { unitId } = useUnit();
   const { tasks, loading: _loading, error: _error, refetchTasks } = useUnitTasks(unitId);

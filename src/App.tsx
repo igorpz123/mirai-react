@@ -20,7 +20,8 @@ import CommercialProposalNew from '@/pages/CommercialProposalNew';
 import CommercialItemsPage from '@/pages/CommercialItems';
 
 //Página de Administração
-import AdminDashboard from './pages/AdminDashboard';
+import AdminTechnicalDashboard from './pages/AdminTechnicalDashboard';
+import AdminCommercialDashboard from './pages/AdminCommercialDashboard';
 import AdminUsers from './pages/AdminUsers';
 import AdminUsersDetails from './pages/AdminUsersDetails';
 import AdminUnidades from './pages/AdminUnidades';
@@ -50,7 +51,8 @@ function AppContent() {
           }
         >
           <Route path="technical/dashboard" element={<TecnicoDashboard />} />
-          <Route path="admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="admin/dashboard-technical" element={<AdminRoute><AdminTechnicalDashboard /></AdminRoute>} />
+          <Route path="admin/dashboard-commercial" element={<AdminRoute><AdminCommercialDashboard /></AdminRoute>} />
           <Route path="admin/usuarios" element={<AdminRoute><AdminUsers /></AdminRoute>} />
           <Route path="admin/usuario/:id" element={<AdminOrSelfRoute><AdminUsersDetails /></AdminOrSelfRoute>} />
           <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
@@ -91,7 +93,7 @@ function HomeRedirect() {
   const cargoId = user.cargoId;
 
   if (cargoId === 1 || cargoId === 2 || cargoId === 3) {
-    return <Navigate to="/admin/dashboard" replace />;
+    return <Navigate to="/admin/dashboard-technical" replace />;
   }
 
   if (cargoId === 13) {
