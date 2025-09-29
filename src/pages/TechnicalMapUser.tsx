@@ -192,7 +192,7 @@ export default function TechnicalMapUser() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Pesquisar empresa ou cidade..."
-            className="border-input rounded-md px-3 py-2 w-full"
+            className="border border-input rounded-md px-3 py-2 w-full"
           />
           <button
             type="button"
@@ -394,7 +394,7 @@ export default function TechnicalMapUser() {
           </div>
 
           <SheetFooter>
-            <SheetClose className="btn cursor-pointer">Fechar</SheetClose>
+            <SheetClose className="button-primary p-2 rounded-md cursor-pointer">Fechar</SheetClose>
           </SheetFooter>
         </SheetContent>
       </Sheet>
