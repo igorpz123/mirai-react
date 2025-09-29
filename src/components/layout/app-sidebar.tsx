@@ -33,7 +33,6 @@ const navComercialData = [
   {
     title: "CRM", url: "", icon: Wallet, items: [
       { title: "Criar proposta", url: "/comercial/proposta/nova" },
-      { title: "Cursos", url: "/comercial/cursos" },
       { title: "Items", url: "/comercial/items" },
     ]
   },
