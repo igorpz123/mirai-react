@@ -289,7 +289,7 @@ export default function CommercialProposalDetail() {
                                 placeholder="Escreva uma observação sobre esta proposta..."
                                 value={note}
                                 onChange={(e) => setNote(e.target.value)}
-                                disabled={!canUpdateStatus || isApproved || savingNote}
+                                disabled={savingNote}
                             />
                             <div className="flex justify-end mt-2">
                                 <Button
@@ -309,7 +309,7 @@ export default function CommercialProposalDetail() {
                                             setSavingNote(false)
                                         }
                                     }}
-                                    disabled={!canUpdateStatus || isApproved || savingNote}
+                                    disabled={savingNote}
                                 >{savingNote ? 'Salvando...' : 'Salvar observação'}</Button>
                             </div>
                         </div>
@@ -323,7 +323,7 @@ export default function CommercialProposalDetail() {
                                 <input
                                     type="file"
                                     id="file-proposta"
-                                    disabled={!canRemoveItems || uploading}
+                                    disabled={uploading}
                                     onChange={async (e) => {
                                         const inputEl = e.currentTarget
                                         const file = inputEl.files?.[0]
@@ -347,9 +347,7 @@ export default function CommercialProposalDetail() {
                                     disabled
                                     title="Selecione um arquivo para enviar"
                                 >Enviar</Button>
-                                {!canRemoveItems && (
-                                    <div className="text-xs text-muted-foreground">{isApproved ? 'Proposta aprovada: uploads desabilitados.' : 'Apenas o responsável ou um administrador pode enviar/excluir arquivos.'}</div>
-                                )}
+                                {/* Uploads are open to any user; deletion still respects permissions. */}
                             </div>
                             <div>
                                 {!arquivos || arquivos.length === 0 ? (

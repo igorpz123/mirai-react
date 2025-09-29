@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useAuth } from './AuthContext'
 import { io } from 'socket.io-client'
+import { toastError, toastWarning, toastSuccess } from '../lib/customToast'
 
 export interface NotificationItem {
   id: number
@@ -27,6 +28,7 @@ const NotificationContext = createContext<NotificationContextValue | undefined>(
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { token } = useAuth()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
+  const shownToastsRef = React.useRef<Set<number>>(new Set())
   const unread = notifications.filter(n => !n.read_at).length
 
   const refresh = useCallback(async () => {
@@ -52,6 +54,27 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (exists) return prev
         return [data, ...prev].slice(0, 100)
       })
+      try {
+        // avoid showing duplicate toasts for the same notification id
+        const nid = Number(data?.id)
+        if (!Number.isNaN(nid) && shownToastsRef.current.has(nid)) return
+        if (!Number.isNaN(nid)) shownToastsRef.current.add(nid)
+        // Show a toast on new notifications. Choose variant based on type or metadata.severity
+        const msg = data?.message || data?.metadata?.message || data?.metadata?.title || 'Nova notificação'
+        const type = (data?.type || '').toLowerCase()
+        const severity = (data?.metadata?.severity || '').toLowerCase()
+        const opts = {} as any
+        const link = data?.metadata?.link
+        if (link) opts.onClick = () => { try { window.location.assign(link) } catch {} }
+        if (!Number.isNaN(nid)) opts.id = nid
+        if (type.includes('error') || severity === 'error') {
+          toastError(msg, opts)
+        } else if (type.includes('warn') || type.includes('alert') || severity === 'warning' || severity === 'warn') {
+          toastWarning(msg, opts)
+        } else {
+          toastSuccess(msg, opts)
+        }
+      } catch (e) { /* don't break notifications on toast errors */ }
     }
     s.on('notification:new', onNew)
     return () => { s.off('notification:new', onNew); s.disconnect() }

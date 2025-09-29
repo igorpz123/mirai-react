@@ -4,10 +4,16 @@ import { SiteHeader } from '@/components/layout/site-header'
 import { getAllUsers, inactivateUser, type User } from '@/services/users'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { toastError, toastSuccess } from '@/lib/customToast'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
+import { getUnidades, type Unidade } from '@/services/unidades'
+import { getSetores, type Setor } from '@/services/setores'
+import { getCargos, type Cargo } from '@/services/cargos'
+import { createUser, type CreateUserData } from '@/services/users'
 
 export default function AdminUsers() {
   const navigate = useNavigate()
@@ -18,6 +24,16 @@ export default function AdminUsers() {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  // create user modal state
+  const [createOpen, setCreateOpen] = useState(false)
+  const [unidades, setUnidades] = useState<Unidade[]>([])
+  const [setores, setSetores] = useState<Setor[]>([])
+  const [cargos, setCargos] = useState<Cargo[]>([])
+
+  const [form, setForm] = useState({ nome: '', sobrenome: '', email: '', senha: '', empresaId: 0, unidadeId: 0, setorId: 0, cargo: '' })
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [creating, setCreating] = useState(false)
 
   async function fetchUsers() {
     setLoading(true)
@@ -33,8 +49,22 @@ export default function AdminUsers() {
     }
   }
 
+  async function loadAuxData() {
+    try {
+      const uni = await getUnidades().catch(() => ({ unidades: [] }))
+      setUnidades(uni.unidades || [])
+      const st = await getSetores().catch(() => ({ setores: [] }))
+      setSetores(st.setores || [])
+      const cg = await getCargos().catch(() => ({ cargos: [] }))
+      setCargos(cg.cargos || [])
+    } catch (e) {
+      // ignore
+    }
+  }
+
   useEffect(() => {
     fetchUsers()
+    loadAuxData()
   }, [])
 
   const filtered = useMemo(() => {
@@ -77,6 +107,58 @@ export default function AdminUsers() {
     }
   }
 
+  function resetForm() {
+    setForm({ nome: '', sobrenome: '', email: '', senha: '', empresaId: 0, unidadeId: 0, setorId: 0, cargo: '' })
+    setSelectedFile(null)
+  }
+
+  async function handleCreateUser() {
+    // basic validation
+    if (!form.nome || !form.email || !form.senha) { toastError('Nome, email e senha são obrigatórios'); return }
+    setCreating(true)
+    try {
+      const payload: CreateUserData = {
+        nome: form.nome,
+        sobrenome: form.sobrenome || '',
+        email: form.email,
+        senha: form.senha,
+        empresaId: Number(form.empresaId) || 0,
+        unidadeId: Number(form.unidadeId) || 0,
+        setorId: Number(form.setorId) || 0,
+        cargo: undefined,
+        cargoId: form.cargo ? Number(form.cargo) : undefined,
+      }
+      const created = await createUser(payload)
+      // created may be { user } or user directly; try to extract id
+  const anyCreated: any = created
+  const newUserId = anyCreated?.user?.id || anyCreated?.id
+      // if a file was selected, upload it to /api/usuarios/:id/photo
+      if (newUserId && selectedFile) {
+        try {
+          const fd = new FormData()
+          fd.append('file', selectedFile)
+          const upRes = await fetch(`/api/usuarios/${newUserId}/photo`, { method: 'POST', body: fd })
+          if (!upRes.ok) {
+            const err = await upRes.json().catch(() => ({ message: 'Erro ao enviar foto' }))
+            throw new Error(err.message || 'Erro ao enviar foto')
+          }
+        } catch (e: any) {
+          // show error but don't block user creation
+          toastError(e?.message || 'Usuário criado, mas falha ao enviar foto')
+        }
+      }
+      toastSuccess('Usuário criado')
+      // refresh list
+      await fetchUsers()
+      setCreateOpen(false)
+      resetForm()
+    } catch (err: any) {
+      toastError(err?.message || 'Erro ao criar usuário')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   return (
     <div className="container-main">
       <SiteHeader title="Usuários | Administrativo" />
@@ -89,6 +171,54 @@ export default function AdminUsers() {
             placeholder="Buscar por nome, email, cargo, unidade ou setor..."
             className="max-w-xl"
           />
+          <div className="flex items-center gap-2">
+            <Dialog open={createOpen} onOpenChange={(o) => setCreateOpen(o)}>
+              <DialogTrigger asChild>
+                <Button size="sm" className="button-primary">Novo usuário</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Novo usuário</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="Nome" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
+                    <Input placeholder="Sobrenome" value={form.sobrenome} onChange={e => setForm(f => ({ ...f, sobrenome: e.target.value }))} />
+                  </div>
+                  <Input placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                  <Input placeholder="Senha" type="password" value={form.senha} onChange={e => setForm(f => ({ ...f, senha: e.target.value }))} />
+                  <Select onValueChange={v => setForm(f => ({ ...f, unidadeId: Number(v) }))}>
+                    <SelectTrigger size="sm"><SelectValue placeholder="Unidade" /></SelectTrigger>
+                    <SelectContent>
+                      {unidades.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select onValueChange={v => setForm(f => ({ ...f, setorId: Number(v) }))}>
+                    <SelectTrigger size="sm"><SelectValue placeholder="Setor" /></SelectTrigger>
+                    <SelectContent>
+                      {setores.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Select onValueChange={v => setForm(f => ({ ...f, cargo: v }))}>
+                    <SelectTrigger size="sm"><SelectValue placeholder="Cargo" /></SelectTrigger>
+                    <SelectContent>
+                      {cargos.map(cg => <SelectItem key={cg.id} value={String(cg.id)}>{cg.nome}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <div>
+                    <label className="text-sm">Foto do usuário</label>
+                    <input type="file" accept="image/*" onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => { setCreateOpen(false); resetForm() }} variant="ghost">Cancelar</Button>
+                    <Button size="sm" onClick={() => handleCreateUser()} disabled={creating}>{creating ? 'Criando...' : 'Criar usuário'}</Button>
+                  </div>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
           <div className="flex items-center gap-2">
             <label className="text-sm opacity-80" htmlFor="pageSize">Itens por página</label>
             <select

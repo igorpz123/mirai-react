@@ -21,12 +21,15 @@ export interface User {
 
 export interface CreateUserData {
     nome: string;
+    sobrenome?: string;
     email: string;
     senha: string;
     empresaId: number;
     unidadeId: number;
     setorId: number;
     cargo?: string;
+    // optional numeric cargo id (preferred)
+    cargoId?: number;
 }
 
 export interface UpdateUserData {

@@ -2,6 +2,9 @@
 import { Request, Response } from 'express'
 import pool from '../config/db'
 import * as UserService from '../services/userService'
+import path from 'path'
+import { PUBLIC_UPLOADS_PREFIX, PUBLIC_UPLOADS_DIR } from '../middleware/upload'
+import bcrypt from 'bcrypt'
 
 // Estrutura básica de um usuário retornado pelas queries
 interface UserRecord {
@@ -383,6 +386,80 @@ export const updateUser = async (
   } catch (error) {
     console.error('Erro ao atualizar usuário:', error)
     res.status(500).json({ message: 'Erro ao atualizar usuário' })
+  }
+}
+
+/**
+ * Upload de foto do usuário (multer middleware deve fornecer `req.file`)
+ * Salva o arquivo em uploads/user-{id}/<filename> e atualiza foto_url no banco com caminho público
+ */
+export const uploadUserPhoto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params
+    const file = (req as any).file
+    if (!file) {
+      res.status(400).json({ message: 'Arquivo não enviado' })
+      return
+    }
+    // Public path should be /uploads/user-{id}/{filename}
+    const folder = `user-${id}`
+    const publicPath = path.posix.join('/uploads', folder, file.filename)
+
+    // update db
+    await pool.query('UPDATE usuarios SET foto_url = ? WHERE id = ?', [publicPath, id])
+
+    res.status(200).json({ foto_url: publicPath })
+  } catch (error) {
+    console.error('Erro ao fazer upload de foto do usuário:', error)
+    res.status(500).json({ message: 'Erro ao fazer upload de foto do usuário' })
+  }
+}
+
+/**
+ * Criar um novo usuário
+ * Body esperado: { nome, sobrenome, email, senha, cargoId?, unidadeId?, setorId? }
+ */
+export const createUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { nome, sobrenome, email, senha, cargoId } = req.body as any
+    if (!nome || !email || !senha) {
+      res.status(400).json({ message: 'nome, email e senha são obrigatórios' })
+      return
+    }
+
+    // check if email exists
+    const [exists] = await pool.query('SELECT id FROM usuarios WHERE email = ? LIMIT 1', [email]) as [any[], any]
+    if (exists && exists.length > 0) {
+      res.status(409).json({ message: 'Email já cadastrado' })
+      return
+    }
+
+    const saltRounds = 10
+    const hash = await bcrypt.hash(String(senha), saltRounds)
+
+    const cargo_id = cargoId ? Number(cargoId) : null
+
+    const insertSql = `INSERT INTO usuarios (nome, sobrenome, email, senha, cargo_id, status) VALUES (?, ?, ?, ?, ?, 'ativo')`
+    const [result] = await pool.query(insertSql, [nome, sobrenome, email, hash, cargo_id]) as any
+    const newId = result.insertId
+
+    // optionally attach setor/unidade relations if provided
+    try {
+      const { setorId, unidadeId } = req.body as any
+      if (setorId) {
+        await pool.query('INSERT INTO usuario_setores (usuario_id, setor_id) VALUES (?, ?)', [newId, Number(setorId)])
+      }
+      if (unidadeId) {
+        await pool.query('INSERT INTO usuario_unidades (usuario_id, unidade_id) VALUES (?, ?)', [newId, Number(unidadeId)])
+      }
+    } catch (e) { /* ignore relation errors */ }
+
+    // return created user minimal
+    const [rows] = await pool.query('SELECT id, nome, sobrenome, email, cargo_id, foto_url FROM usuarios WHERE id = ? LIMIT 1', [newId]) as [any[], any]
+    res.status(201).json({ user: rows[0] })
+  } catch (error) {
+    console.error('Erro ao criar usuário:', error)
+    res.status(500).json({ message: 'Erro ao criar usuário' })
   }
 }
 

@@ -1,7 +1,6 @@
-import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+// ...existing code... (removed unused Dialog imports)
 import { useNotificationsRT } from '@/contexts/RealtimeContext'
 import type { RTNotification } from '@/contexts/RealtimeContext'
 import { summarizeNotification } from '@/lib/notificationHelpers'

@@ -15,7 +15,7 @@ function ensureDirSync(dir: string) {
 }
 
 // Build a diskStorage that saves files under uploads/task-<id>/ or uploads/proposal-<id>/
-export function makeDiskStorage(entityPrefix: 'task' | 'proposal', idParam: string): StorageEngine {
+export function makeDiskStorage(entityPrefix: 'task' | 'proposal' | 'user', idParam: string): StorageEngine {
   return multer.diskStorage({
   destination: (req: Request, _file: any, cb: (error: Error | null, destination: string) => void) => {
       const id = (req.params as any)?.[idParam]
@@ -36,6 +36,7 @@ export function makeDiskStorage(entityPrefix: 'task' | 'proposal', idParam: stri
 
 export const uploadTarefa = multer({ storage: makeDiskStorage('task', 'tarefa_id') })
 export const uploadProposta = multer({ storage: makeDiskStorage('proposal', 'id') })
+export const uploadUser = multer({ storage: makeDiskStorage('user', 'id') })
 
 // Public URL path prefix used by server.ts when exposing static files
 export const PUBLIC_UPLOADS_PREFIX = '/uploads'

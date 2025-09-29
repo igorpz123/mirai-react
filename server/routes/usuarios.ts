@@ -13,12 +13,18 @@ import {
   addUserSetores,
   addUserUnidades
 } from '../controllers/UserController'
+import { createUser } from '../controllers/UserController'
+import { uploadUserPhoto } from '../controllers/UserController'
+import { uploadUser } from '../middleware/upload'
 import { removeUserSetor, removeUserUnidade } from '../controllers/UserController'
 
 const router: Router = Router()
 
 // Listar todos os usuários
 router.get('/', getAllUsers)
+
+// Criar novo usuário
+router.post('/', createUser)
 
 // Buscar usuários pela unidade
 router.get('/unidade/:unidade_id', getUserByUnidade)
@@ -40,6 +46,9 @@ router.patch('/:id/inactivate', inactivateUser)
 
 // Atualizar dados do usuário
 router.put('/:id', updateUser)
+
+// Upload de foto do usuário
+router.post('/:id/photo', uploadUser.single('file'), uploadUserPhoto)
 
 // Adicionar setores ao usuário
 router.post('/:id/setores', addUserSetores)
