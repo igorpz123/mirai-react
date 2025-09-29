@@ -46,7 +46,13 @@ export default function ComercialDashboard(): ReactElement {
         return Number(b.id) - Number(a.id)
       })
 
-      setProposals(merged)
+      // Keep only proposals where current user is responsável or indicação
+      const userVisible = merged.filter((p) => {
+        const respId = Number((p as any).responsavel_id ?? (p as any).responsavelId ?? 0)
+        const indicId = Number((p as any).indicacao_id ?? (p as any).indicacaoId ?? 0)
+        return respId === Number(userId) || indicId === Number(userId)
+      })
+      setProposals(userVisible)
 
       // Stats from backend: keep current behavior (prefer unit when selected)
       const s = unitId
@@ -63,7 +69,7 @@ export default function ComercialDashboard(): ReactElement {
       }
       const isApproved = (p: Proposal) => ((p.status ?? '').toString().toLowerCase()).includes('aprov')
       // Use dataAlteracao (approval date) when available for monthly windows; fallback to criadoEm only if missing
-      const approvedList = merged.filter(p => isApproved(p) && (inCurrentMonth((p as any).dataAlteracao) || (!((p as any).dataAlteracao) && inCurrentMonth(p.criadoEm))))
+  const approvedList = userVisible.filter(p => isApproved(p) && (inCurrentMonth((p as any).dataAlteracao) || (!((p as any).dataAlteracao) && inCurrentMonth(p.criadoEm))))
       const approvedCount = approvedList.length
       const approvedValueSum = approvedList.reduce((acc, p) => acc + Number((p.valor_total ?? p.valor) || 0), 0)
       // Commission: only meaningful in context of a user (responsável/indicação). Apply 5% + 2% rules like backend.

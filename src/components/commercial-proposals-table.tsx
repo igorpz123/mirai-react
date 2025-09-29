@@ -344,13 +344,13 @@ export function CommercialProposalsTable({
               <TableHead>Última Atualização</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Valor Total</TableHead>
-              <TableHead>Ação</TableHead>
+              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pageItems.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 w-full text-center text-muted-foreground">
+                <TableCell colSpan={7} className="h-24 w-full text-center text-muted-foreground">
                   Nenhuma proposta encontrada
                 </TableCell>
               </TableRow>
