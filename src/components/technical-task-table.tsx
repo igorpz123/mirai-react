@@ -1,7 +1,8 @@
 import * as React from "react"
 import { useState } from "react"
 import type { Task } from "../services/tasks"
-import { updateUserResponsibleForTask, getUsersByDepartmentAndUnit } from '@/services/users';
+import { getUsersByDepartmentAndUnit, getUsersByUnitId, getAllUsers } from '@/services/users';
+import { updateTask as updateTaskService } from '@/services/tasks'
 import type { User } from '@/services/users';
 import { useUsers } from '@/contexts/UsersContext';
 import { useUnit } from '@/contexts/UnitContext';
@@ -90,7 +91,7 @@ import {
   TabsContent,
 } from "@/components/ui/tabs"
 import { TaskInfo } from "@/components/technical-task-info";
-import { toastSuccess } from '@/lib/customToast'
+import { toastSuccess, toastWarning, toastError } from '@/lib/customToast'
 
 interface TableTask {
   id: number
@@ -246,9 +247,27 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
 
           // if the context returned empty, attempt a direct API fallback
           let finalList = fetched || []
-          if ((finalList.length === 0 || !finalList) && (task.setorId || task.unidadeId)) {
+
+          // 1) If filtered by setor returned vazio, tentar só por unidade
+          if ((finalList.length === 0) && (preferredUnit != null)) {
+            const onlyUnit = usersCtx.getFilteredUsersForTask({ unidadeId: preferredUnit }).users || []
+            if (onlyUnit.length > 0) {
+              finalList = onlyUnit
+            }
+          }
+
+          // 2) Se ainda vazio, tenta todos (sem filtros)
+          if (finalList.length === 0) {
+            const all = usersCtx.getFilteredUsersForTask({}).users || []
+            if (all.length > 0) {
+              finalList = all
+            }
+          }
+
+          // 3) Como último recurso, tenta API específica (se tivermos setor E unidade id)
+          if ((finalList.length === 0 || !finalList) && (task.setorId != null) && (preferredUnit != null)) {
             try {
-              const res = await getUsersByDepartmentAndUnit(Number(task.setorId), Number(preferredUnit ?? 0))
+              const res = await getUsersByDepartmentAndUnit(Number(task.setorId), Number(preferredUnit))
               if (mounted && res && Array.isArray(res.users) && res.users.length > 0) {
                 finalList = res.users as User[]
                 setLastRawData(res)
@@ -259,6 +278,38 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
               const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
               if (mounted) setErrorUsers(msg)
               console.warn('[ResponsibleSelect] fallback API call failed', apiErr)
+            }
+          }
+
+          // 4) Se ainda vazio e temos unidade, tenta API por unidade
+          if ((finalList.length === 0 || !finalList) && (preferredUnit != null)) {
+            try {
+              const res = await getUsersByUnitId(Number(preferredUnit))
+              if (mounted && res && Array.isArray(res.users) && res.users.length > 0) {
+                finalList = res.users as User[]
+                setLastRawData(res)
+                setDebugEndpoint(`api:unit-only:${preferredUnit}`)
+              }
+            } catch (apiErr: any) {
+              const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
+              if (mounted) setErrorUsers(msg)
+              console.warn('[ResponsibleSelect] fallback unit API failed', apiErr)
+            }
+          }
+
+          // 5) Como último recurso absoluto, busca todos usuários no servidor
+          if ((finalList.length === 0 || !finalList)) {
+            try {
+              const res = await getAllUsers()
+              if (mounted && res && Array.isArray(res.users) && res.users.length > 0) {
+                finalList = res.users as User[]
+                setLastRawData(res)
+                setDebugEndpoint('api:all')
+              }
+            } catch (apiErr: any) {
+              const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
+              if (mounted) setErrorUsers(msg)
+              console.warn('[ResponsibleSelect] fallback all-users API failed', apiErr)
             }
           }
 
@@ -292,21 +343,23 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
 
       try {
         setAssigning(true)
-        await updateUserResponsibleForTask(task.id, userId)
+        const shouldSetPending = String(task.status) === 'Automático'
+        await updateTaskService(Number(task.id), { usuarioId: userId, ...(shouldSetPending ? { status: 'pendente' } : {}) })
 
-  try { toastSuccess('Responsável atribuído com sucesso') } catch (e) { /* ignore */ }
+        try { toastSuccess(shouldSetPending ? 'Responsável designado e tarefa marcada como pendente' : 'Responsável atribuído com sucesso') } catch (e) { /* ignore */ }
 
         // Atualiza UI local imediatamente
-        setData(prev => prev.map(d => d.id === task.id ? { ...d, responsavel: selectedUser ? selectedUser.nome : d.responsavel } : d))
+        setData(prev => prev.map(d => d.id === task.id ? { ...d, responsavel: selectedUser ? selectedUser.nome : d.responsavel, responsavelId: userId, status: shouldSetPending ? 'pendente' : d.status } : d))
 
         // chama callback externo se houver
         if (onRefresh) onRefresh()
         if (onTaskUpdate) {
-          // notifies parent if it wants to persist changes locally
-          onTaskUpdate(String(task.id), { responsavel: selectedUser ? selectedUser.nome : undefined } as Partial<Task>)
+          // notifies parent if it wants to persist changes locais
+          onTaskUpdate(String(task.id), { responsavel: selectedUser ? selectedUser.nome : undefined, status: shouldSetPending ? 'pendente' : undefined } as Partial<Task>)
         }
       } catch (err) {
         console.error('Erro ao atribuir responsável:', err)
+        try { toastError('Falha ao atribuir responsável à tarefa') } catch {}
       } finally {
         setAssigning(false)
       }
@@ -324,14 +377,14 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     const validUsers = (users || []).filter(u => u && (u.id !== undefined && u.id !== null) && !Number.isNaN(Number(u.id)))
 
     return (
-      <Select onValueChange={handleAssign}>
+      <Select onValueChange={handleAssign} defaultValue={typeof task.responsavelId === 'number' ? String(task.responsavelId) : undefined}>
         <SelectTrigger
           disabled={assigning}
           className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
           size="sm"
           id={`${task.id}-responsavel`}
         >
-          <SelectValue placeholder={assigning ? 'Atribuindo...' : 'Designar Responsável'} />
+          <SelectValue placeholder={assigning ? 'Atribuindo...' : (task.responsavel && task.responsavel !== 'Não atribuído' ? task.responsavel : 'Designar Responsável')} />
         </SelectTrigger>
         <SelectContent align="end">
           {validUsers && validUsers.length > 0 ? (
@@ -388,6 +441,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     pageIndex: 0,
     pageSize: 10,
   })
+  const [bulkWorking, setBulkWorking] = React.useState(false)
   const sortableId = React.useId()
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -524,6 +578,16 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       header: "Responsável",
       cell: ({ row }) => {
         const isAssigned = row.original.responsavel !== "Não atribuído"
+        const isAutomatic = String(row.original.status) === 'Automático'
+
+        if (isAutomatic) {
+          return (
+            <>
+              <Label htmlFor={`${row.original.id}-responsavel`} className="sr-only">Responsável</Label>
+              <ResponsibleSelect task={row.original} />
+            </>
+          )
+        }
 
         if (isAssigned) {
           return row.original.responsavel
@@ -688,6 +752,42 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     [dataIds, onTasksReorder]
   )
 
+  // Bulk: mark selected 'Automático' tasks as 'pendente' (only those that already have responsible)
+  const bulkDesignate = React.useCallback(async () => {
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    if (!selectedRows.length) return
+    const targets = selectedRows.map(r => r.original).filter(t => String(t.status) === 'Automático')
+    if (!targets.length) {
+      try { toastWarning('Seleção não contém tarefas com status Automático') } catch {}
+      return
+    }
+    const withResponsible = targets.filter(t => (t.responsavelId != null) || (t.responsavel && t.responsavel !== 'Não atribuído'))
+    const withoutResponsible = targets.filter(t => !withResponsible.includes(t))
+    if (withoutResponsible.length) {
+      try { toastWarning(`${withoutResponsible.length} tarefa(s) sem responsável — pulei essas`) } catch {}
+    }
+
+    if (!withResponsible.length) return
+
+    setBulkWorking(true)
+    try {
+      await Promise.all(
+        withResponsible.map(t => updateTaskService(Number(t.id), { status: 'pendente' }))
+      )
+      // update local state
+      setData(prev => prev.map(d => withResponsible.some(t => t.id === d.id) ? { ...d, status: 'pendente' } : d))
+      try { toastSuccess('Tarefas designadas e marcadas como pendentes') } catch {}
+      if (onRefresh) onRefresh()
+    } catch (err) {
+      console.error('Falha na designação em massa:', err)
+      try { toastError('Falha ao designar algumas tarefas') } catch {}
+    } finally {
+      setBulkWorking(false)
+      // clear selection after action
+      setRowSelection({})
+    }
+  }, [table, onRefresh])
+
   return (
     <Tabs
       defaultValue="outline"
@@ -784,6 +884,11 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <Button size="sm" className="button-primary" disabled={bulkWorking} onClick={bulkDesignate}>
+              {bulkWorking ? 'Designando…' : 'Designar em massa'}
+            </Button>
+          )}
         </div>
       </div>
       <TabsContent

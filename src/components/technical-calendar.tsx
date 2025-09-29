@@ -3,14 +3,17 @@ import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
+import ptBr from '@fullcalendar/core/locales/pt-br'
 import type { AgendaEvent } from '@/services/agenda'
 import { updateAgendaEvent } from '@/services/agenda'
+import './technical-calendar.css'
 
 export default function TechnicalCalendar(
   { events, currentMonth, onMonthChange }: { events: AgendaEvent[]; currentMonth?: Date; onMonthChange?: (d: Date) => void }
 ) {
   const [fcEvents, setFcEvents] = useState<any[]>([])
   const calendarRef = useRef<FullCalendar | null>(null)
+  const isSyncingRef = useRef(false)
 
   useEffect(() => {
     setFcEvents((events || []).map(e => {
@@ -46,7 +49,13 @@ export default function TechnicalCalendar(
     if (!currentMonth || !calendarRef.current) return
     try {
       const api = calendarRef.current.getApi()
-      api.gotoDate(currentMonth)
+      const viewDate = api.getDate()
+      const needsChange = viewDate.getFullYear() !== currentMonth.getFullYear() || viewDate.getMonth() !== currentMonth.getMonth()
+      if (needsChange) {
+        // mark that we're changing the view programmatically to avoid emitting onMonthChange
+        isSyncingRef.current = true
+        api.gotoDate(currentMonth)
+      }
     } catch {}
   }, [currentMonth])
 
@@ -56,20 +65,21 @@ export default function TechnicalCalendar(
         ref={calendarRef as any}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
-        weekends={false}
+        locales={[ptBr]}
+        locale="pt-br"
+        dayHeaderFormat={{ weekday: 'long' }}
+        weekends={true}
         headerToolbar={{ left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' }}
         events={fcEvents}
         height="auto"
         selectable
         editable
         datesSet={(info: any) => {
-          // Notify parent when user navigates via calendar toolbar
-          if (!onMonthChange) return
+          // User navigated in the calendar; notify parent unless this was our own programmatic change
           const d = new Date(info.start.getFullYear(), info.start.getMonth(), 1)
-          const sameMonth = currentMonth &&
-            d.getFullYear() === currentMonth.getFullYear() &&
-            d.getMonth() === currentMonth.getMonth()
-          if (!sameMonth) onMonthChange(d)
+          if (isSyncingRef.current) { isSyncingRef.current = false; return }
+          const sameMonth = currentMonth && d.getFullYear() === currentMonth.getFullYear() && d.getMonth() === currentMonth.getMonth()
+          if (!sameMonth && onMonthChange) onMonthChange(d)
         }}
         eventDrop={async (info: any) => {
           // Fired when an event is dragged and dropped to a new date/time

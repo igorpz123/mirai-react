@@ -1109,7 +1109,7 @@ export const updateTask = async (
     }
     const existing = (existingRows as any[])[0];
 
-    // build update parts — treat presence of the property as intent to update,
+  // build update parts — treat presence of the property as intent to update,
     // allowing null to explicitly clear fields. This prevents the server from
     // ignoring null values sent by the client.
     const updates: string[] = [];
@@ -1151,6 +1151,9 @@ export const updateTask = async (
 
     // insert historico following PHP semantics for conclude/designate/archive actions
     try {
+      const norm = (s: any) => (s == null ? '' : String(s)).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+      const existingStatusNorm = norm(existing.status)
+      const statusNorm = norm(status)
       let acao: string;
 
       // detect whether caller provided designated setor/usuario
@@ -1166,11 +1169,30 @@ export const updateTask = async (
       // or when the client sends a designation (setorId/usuarioId) with status 'pendente'
       // while the current task was 'progress' — this matches the PHP flow where
       // conclude+designate results in status 'pendente' but action 'concluir_*'.
-      const explicitConclude = typeof status === 'string' && status.toString().toLowerCase().includes('concl');
-      const implicitConcludeByDesignation = typeof status === 'string' && status.toString().toLowerCase() === 'pendente' && (hasSetorDesignado || hasUserDesignado) && existing.status && existing.status.toString().toLowerCase().includes('progress');
+      const explicitConclude = typeof status === 'string' && statusNorm.includes('concl');
+      const implicitConcludeByDesignation = typeof status === 'string' && statusNorm === 'pendente' && (hasSetorDesignado || hasUserDesignado) && existingStatusNorm.includes('progress');
       const isConclude = explicitConclude || implicitConcludeByDesignation;
 
-      if (isConclude) {
+      // Special case: 'designar' when a task is Automatic and gets assigned
+      // Covers two flows:
+      // 1) Single assignment: client sends usuarioId (hasUserDesignado)
+      // 2) Bulk designation: client sets status='pendente' and task already has responsavel_id
+      const isStatusToPending = typeof status === 'string' && statusNorm === 'pendente';
+      const hasExistingResponsible = existing.responsavel_id != null;
+      const isDesignateFromAutomatic = (existingStatusNorm === 'automatico') && (
+        (hasUserDesignado && usuarioId != null) ||
+        (isStatusToPending && hasExistingResponsible)
+      );
+      // Generic designation: whenever caller explicitly sets usuarioId and also sets status to pendente
+      const isDesignateGeneric = hasUserDesignado && isStatusToPending;
+
+      if (isDesignateFromAutomatic || isDesignateGeneric) {
+        acao = 'designar';
+        // For designation, record actor as valor_anterior.usuario and designated user as novo_valor.usuario
+        valorAnteriorObj = { usuario: actorId };
+        // If usuarioId not provided (bulk), keep the existing responsavel as the designated target
+        novoValorObj = { usuario: (hasUserDesignado && usuarioId != null) ? usuarioId : existing.responsavel_id };
+      } else if (isConclude) {
         if (setorDesignado === null) {
           acao = 'concluir_arquivar';
           // novo valor should reflect the designated target (null)

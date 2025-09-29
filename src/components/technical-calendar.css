@@ -1,0 +1,30 @@
+/* Make toolbar/header transparent and inherit text color */
+.fc .fc-toolbar.fc-header-toolbar {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Remove default title background paddings if any */
+.fc .fc-toolbar-title {
+  background: transparent !important;
+}
+
+/* Transparent day headers row (Mon, Tue, ...) */
+.fc .fc-col-header, .fc .fc-col-header-cell {
+  background: transparent !important;
+}
+
+/* Ensure button variants follow theme; keep borders minimal */
+.fc .fc-button {
+  background: transparent;
+  color: inherit;
+  border: 1px solid hsl(var(--border));
+}
+.fc .fc-button:hover {
+  background: hsl(var(--muted));
+}
+
+/* Transparent grid header background */
+.fc .fc-scrollgrid, .fc .fc-scrollgrid-section > * {
+  background: transparent !important;
+}

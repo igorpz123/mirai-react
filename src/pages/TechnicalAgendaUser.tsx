@@ -28,10 +28,22 @@ export default function TechnicalAgendaUser() {
   const [fromDate, setFromDate] = useState<string | undefined>(undefined)
   const [toDate, setToDate] = useState<string | undefined>(undefined)
 
+  // Parse 'YYYY-MM-DD' (or ISO starting with it) as a LOCAL date to avoid timezone shifting months
+  function parseLocalDate(value?: string | null): Date | null {
+    if (!value) return null
+    const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})/.exec(value)
+    if (m) {
+      const y = Number(m[1]); const mo = Number(m[2]) - 1; const d = Number(m[3])
+      return new Date(y, mo, d)
+    }
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? null : d
+  }
+
+  // Load user and tasks when uid changes
   useEffect(() => {
     let mounted = true
-    let timeout: any
-    async function fetchAll() {
+    async function fetchUserAndTasks() {
       setLoading(true)
       setError(null)
       try {
@@ -40,11 +52,9 @@ export default function TechnicalAgendaUser() {
             setError('ID de usuário inválido')
             setUser(null)
             setTasks([])
-            setEvents([])
           }
           return
         }
-
         // Resolve user (cache first)
         try {
           const { users: cached } = usersCtx.getFilteredUsersForTask({})
@@ -62,32 +72,38 @@ export default function TechnicalAgendaUser() {
           const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
           if (mounted) setUser(actualUser || null)
         }
-
         // Tasks
         const tResp = await getTasksByResponsavel(uid)
         if (mounted) setTasks(tResp.tasks || [])
-
-        // Events for month
-        const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
-        const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
-        const from = monthStart.toISOString().slice(0, 10)
-        const to = monthEnd.toISOString().slice(0, 10)
-        try {
-          const evResp = await getEventsByResponsavel(uid, { from, to })
-          if (mounted) setEvents(evResp.events || [])
-        } catch (err) {
-          if (mounted) setEvents([])
-          console.debug('Erro ao buscar eventos da agenda:', err)
-        }
       } catch (err) {
         if (mounted) setError(err instanceof Error ? err.message : String(err))
       } finally {
         if (mounted) setLoading(false)
       }
     }
-    // debounce leve para mudanças rápidas de mês
-    timeout = setTimeout(fetchAll, 80)
-    return () => { mounted = false; if (timeout) clearTimeout(timeout) }
+    fetchUserAndTasks()
+    return () => { mounted = false }
+  }, [uid])
+
+  // Load events when month or uid changes
+  useEffect(() => {
+    let mounted = true
+    async function fetchEvents() {
+      try {
+        if (!uid || Number.isNaN(uid)) return
+        const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
+        const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
+        const from = monthStart.toISOString().slice(0, 10)
+        const to = monthEnd.toISOString().slice(0, 10)
+        const evResp = await getEventsByResponsavel(uid, { from, to })
+        if (mounted) setEvents(evResp.events || [])
+      } catch (err) {
+        if (mounted) setEvents([])
+        console.debug('Erro ao buscar eventos da agenda:', err)
+      }
+    }
+    fetchEvents()
+    return () => { mounted = false }
   }, [uid, selectedMonth])
 
   // (removed monthsWithCounts - we now use input type=month and allow free navigation)
@@ -96,8 +112,8 @@ export default function TechnicalAgendaUser() {
   const tasksForMonth = useMemo(() => {
     return tasks.filter(t => {
       if (!t.prazo) return false
-      const d = new Date(t.prazo)
-      if (isNaN(d.getTime())) return false
+      const d = parseLocalDate(t.prazo as any)
+      if (!d) return false
       return d.getFullYear() === selectedMonth.getFullYear() && d.getMonth() === selectedMonth.getMonth()
     })
   }, [tasks, selectedMonth])
@@ -145,7 +161,8 @@ export default function TechnicalAgendaUser() {
                   value={`${selectedMonth.getFullYear().toString().padStart(4,'0')}-${(selectedMonth.getMonth()+1).toString().padStart(2,'0')}`}
                   onChange={(e) => {
                     const [y, m] = e.target.value.split('-').map(Number)
-                    setSelectedMonth(new Date(y, m - 1, 1))
+                    const next = new Date(y, m - 1, 1)
+                    setSelectedMonth(prev => (prev.getFullYear() === next.getFullYear() && prev.getMonth() === next.getMonth()) ? prev : next)
                   }}
                   className="border-input rounded-md px-2 py-1 text-sm"
                 />
@@ -166,15 +183,21 @@ export default function TechnicalAgendaUser() {
                   className="border-input rounded-md px-2 py-1 text-sm"
                   aria-label="Até"
                 />
-                <Button size="sm" onClick={async () => {
+                <Button size="sm" className='button-primary' onClick={async () => {
                   // build title and filter tasks according to date range
                   const title = `Agenda ${user?.nome || usuarioId}`
                   const filtered = tasks.filter(t => {
                     if (!t.prazo) return false
-                    const d = new Date(t.prazo)
-                    if (isNaN(d.getTime())) return false
-                    if (fromDate && new Date(d) < new Date(fromDate)) return false
-                    if (toDate && new Date(d) > new Date(toDate)) return false
+                    const d = parseLocalDate(t.prazo as any)
+                    if (!d) return false
+                    if (fromDate) {
+                      const f = parseLocalDate(fromDate)
+                      if (f && d < f) return false
+                    }
+                    if (toDate) {
+                      const tmax = parseLocalDate(toDate)
+                      if (tmax && d > tmax) return false
+                    }
                     return true
                   })
                   try {
@@ -215,7 +238,7 @@ export default function TechnicalAgendaUser() {
                   currentMonth={selectedMonth}
                   onMonthChange={async (d) => {
                     // Update selectedMonth when user navigates inside calendar
-                    setSelectedMonth(d)
+                    setSelectedMonth(prev => (prev.getFullYear() === d.getFullYear() && prev.getMonth() === d.getMonth()) ? prev : d)
                     try {
                       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1)
                       const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0)
