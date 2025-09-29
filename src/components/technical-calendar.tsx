@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
@@ -6,8 +6,11 @@ import interactionPlugin from '@fullcalendar/interaction'
 import type { AgendaEvent } from '@/services/agenda'
 import { updateAgendaEvent } from '@/services/agenda'
 
-export default function TechnicalCalendar({ events }: { events: AgendaEvent[] }) {
+export default function TechnicalCalendar(
+  { events, currentMonth, onMonthChange }: { events: AgendaEvent[]; currentMonth?: Date; onMonthChange?: (d: Date) => void }
+) {
   const [fcEvents, setFcEvents] = useState<any[]>([])
+  const calendarRef = useRef<FullCalendar | null>(null)
 
   useEffect(() => {
     setFcEvents((events || []).map(e => {
@@ -38,9 +41,19 @@ export default function TechnicalCalendar({ events }: { events: AgendaEvent[] })
     }))
   }, [events])
 
+  // Sync calendar view when parent-selected month changes
+  useEffect(() => {
+    if (!currentMonth || !calendarRef.current) return
+    try {
+      const api = calendarRef.current.getApi()
+      api.gotoDate(currentMonth)
+    } catch {}
+  }, [currentMonth])
+
   return (
     <div className="bg-background rounded-lg border p-2 text-sm">
       <FullCalendar
+        ref={calendarRef as any}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         weekends={false}
@@ -49,6 +62,15 @@ export default function TechnicalCalendar({ events }: { events: AgendaEvent[] })
         height="auto"
         selectable
         editable
+        datesSet={(info: any) => {
+          // Notify parent when user navigates via calendar toolbar
+          if (!onMonthChange) return
+          const d = new Date(info.start.getFullYear(), info.start.getMonth(), 1)
+          const sameMonth = currentMonth &&
+            d.getFullYear() === currentMonth.getFullYear() &&
+            d.getMonth() === currentMonth.getMonth()
+          if (!sameMonth) onMonthChange(d)
+        }}
         eventDrop={async (info: any) => {
           // Fired when an event is dragged and dropped to a new date/time
           try {

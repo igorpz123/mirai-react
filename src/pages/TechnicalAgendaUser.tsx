@@ -30,65 +30,64 @@ export default function TechnicalAgendaUser() {
 
   useEffect(() => {
     let mounted = true
-    async function fetch() {
+    let timeout: any
+    async function fetchAll() {
       setLoading(true)
       setError(null)
       try {
         if (!uid || Number.isNaN(uid)) {
-          setError('ID de usuário inválido')
-          setUser(null)
-          setTasks([])
+          if (mounted) {
+            setError('ID de usuário inválido')
+            setUser(null)
+            setTasks([])
+            setEvents([])
+          }
           return
         }
 
-  // try resolve user from UsersContext cache first
-  try {
-    const { users: cached } = usersCtx.getFilteredUsersForTask({})
-    const found = (cached || []).find(u => Number((u as any).id) === Number(uid))
-    if (found) {
-      setUser(found as any)
-    } else {
-      const uResp = await getUserById(uid)
-      if (!mounted) return
-      // backend returns the user object directly (not { user }), so handle both cases
-      const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
-      setUser(actualUser || null)
-    }
-  } catch (e) {
-    // fallback to network call
-    const uResp = await getUserById(uid)
-    if (!mounted) return
-    const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
-    setUser(actualUser || null)
-  }
-
-        const tResp = await getTasksByResponsavel(uid)
-        if (!mounted) return
-        setTasks(tResp.tasks || [])
-
+        // Resolve user (cache first)
         try {
-          // fetch events for the visible month range
-          const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
-          const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
-          const from = monthStart.toISOString().slice(0, 10)
-          const to = monthEnd.toISOString().slice(0, 10)
+          const { users: cached } = usersCtx.getFilteredUsersForTask({})
+          const found = (cached || []).find(u => Number((u as any).id) === Number(uid))
+          if (mounted) {
+            if (found) setUser(found as any)
+            else {
+              const uResp = await getUserById(uid)
+              const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
+              if (mounted) setUser(actualUser || null)
+            }
+          }
+        } catch {
+          const uResp = await getUserById(uid)
+          const actualUser = (uResp && (uResp as any).user) ? (uResp as any).user : uResp
+          if (mounted) setUser(actualUser || null)
+        }
+
+        // Tasks
+        const tResp = await getTasksByResponsavel(uid)
+        if (mounted) setTasks(tResp.tasks || [])
+
+        // Events for month
+        const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
+        const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
+        const from = monthStart.toISOString().slice(0, 10)
+        const to = monthEnd.toISOString().slice(0, 10)
+        try {
           const evResp = await getEventsByResponsavel(uid, { from, to })
-          if (!mounted) return
-          setEvents(evResp.events || [])
+          if (mounted) setEvents(evResp.events || [])
         } catch (err) {
+          if (mounted) setEvents([])
           console.debug('Erro ao buscar eventos da agenda:', err)
         }
       } catch (err) {
-        if (!mounted) return
-        setError(err instanceof Error ? err.message : String(err))
+        if (mounted) setError(err instanceof Error ? err.message : String(err))
       } finally {
-        if (!mounted) return
-        setLoading(false)
+        if (mounted) setLoading(false)
       }
     }
-
-    fetch()
-    return () => { mounted = false }
+    // debounce leve para mudanças rápidas de mês
+    timeout = setTimeout(fetchAll, 80)
+    return () => { mounted = false; if (timeout) clearTimeout(timeout) }
   }, [uid, selectedMonth])
 
   // (removed monthsWithCounts - we now use input type=month and allow free navigation)
@@ -211,7 +210,24 @@ export default function TechnicalAgendaUser() {
               </div>
 
               <div>
-                <TechnicalCalendar events={events} />
+                <TechnicalCalendar
+                  events={events}
+                  currentMonth={selectedMonth}
+                  onMonthChange={async (d) => {
+                    // Update selectedMonth when user navigates inside calendar
+                    setSelectedMonth(d)
+                    try {
+                      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1)
+                      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0)
+                      const from = monthStart.toISOString().slice(0, 10)
+                      const to = monthEnd.toISOString().slice(0, 10)
+                      const evResp = await getEventsByResponsavel(uid, { from, to })
+                      setEvents(evResp.events || [])
+                    } catch (err) {
+                      console.debug('Erro ao buscar eventos da agenda (nav interna):', err)
+                    }
+                  }}
+                />
               </div>
             </div>
           </>

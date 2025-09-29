@@ -44,8 +44,9 @@ export default function LoginForm(): JSX.Element {
   const onSubmit: SubmitHandler<LoginFormData> = async ({ email, password }) => {
     try {
       setLoginError('')
-      await signIn(email, password)
-      navigate('/dashboard')
+  await signIn(email, password)
+  // Redireciona para "/" para que o HomeRedirect escolha a dashboard correta por cargo
+  navigate('/')
     } catch (err: any) {
       setLoginError(err.message || 'Erro ao fazer login')
     }
@@ -129,7 +130,7 @@ export default function LoginForm(): JSX.Element {
             </div>
 
             {/* Botão de submit */}
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full cursor-pointer" disabled={isSubmitting}>
               {isSubmitting ? 'Entrando...' : 'Entrar'}
             </Button>
 
