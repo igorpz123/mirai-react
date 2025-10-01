@@ -18,19 +18,21 @@ import { getRecentTasksByUser, type Task } from '@/services/tasks'
 import { CommercialProposalsTable } from '@/components/commercial-proposals-table'
 import { getRecentProposalsByUser, type Proposal } from '@/services/proposals'
 import { useAuth } from '@/hooks/use-auth'
+import { getNotasResumoByUser } from '@/services/notas'
+import { IconStar, IconStarFilled } from '@tabler/icons-react'
 
 export default function AdminUsersDetails() {
 	const { id } = useParams()
 	const uid = id ? Number(id) : NaN
 	const navigate = useNavigate()
-		const { user: logged } = useAuth()
+	const { user: logged } = useAuth()
 	const isAdmin = logged ? (logged.cargoId === 1 || logged.cargoId === 2 || logged.cargoId === 3) : false
 	const canEditAdminFields = isAdmin // only admins can edit cargo/unidades/setores
 
 	const [user, setUser] = useState<User | null>(null)
 	const [loading, setLoading] = useState(false)
 	const [error, setError] = useState<string | null>(null)
-		const [edit, setEdit] = useState({ nome: '', sobrenome: '', email: '', cargo_id: '' as any, foto_url: '' })
+	const [edit, setEdit] = useState({ nome: '', sobrenome: '', email: '', cargo_id: '' as any, foto_url: '' })
 	const [saving, setSaving] = useState(false)
 	const [setores, setSetores] = useState<Setor[]>([])
 	const [unidades, setUnidades] = useState<Unidade[]>([])
@@ -44,6 +46,11 @@ export default function AdminUsersDetails() {
 	const [recentTasks, setRecentTasks] = useState<Task[] | null>(null)
 	const [recentProposals, setRecentProposals] = useState<Proposal[] | null>(null)
 	const [loadingRecent, setLoadingRecent] = useState(false)
+	const [avgNota, setAvgNota] = useState<number | null>(null)
+	const [notaCount, setNotaCount] = useState<number>(0)
+	const [loadingNotas, setLoadingNotas] = useState(false)
+	const [filtroInicio, setFiltroInicio] = useState<string>('')
+	const [filtroFim, setFiltroFim] = useState<string>('')
 
 	useEffect(() => {
 		let mounted = true
@@ -78,23 +85,44 @@ export default function AdminUsersDetails() {
 	// Load recent tasks and proposals for this user
 	useEffect(() => {
 		let mounted = true
-		;(async () => {
-			if (!uid || Number.isNaN(uid)) return
-			setLoadingRecent(true)
-			try {
-				const [tasksRes, propsRes] = await Promise.all([
-					getRecentTasksByUser(uid, 15).catch(() => ({ tasks: [], total: 0 })),
-					getRecentProposalsByUser(uid, 10).catch(() => ({ proposals: [] }))
-				])
-				if (!mounted) return
-				setRecentTasks(tasksRes.tasks || [])
-				setRecentProposals(propsRes.proposals || [])
-			} finally {
-				if (mounted) setLoadingRecent(false)
-			}
-		})()
+			; (async () => {
+				if (!uid || Number.isNaN(uid)) return
+				setLoadingRecent(true)
+				try {
+					const [tasksRes, propsRes] = await Promise.all([
+						getRecentTasksByUser(uid, 15).catch(() => ({ tasks: [], total: 0 })),
+						getRecentProposalsByUser(uid, 10).catch(() => ({ proposals: [] }))
+					])
+					if (!mounted) return
+					setRecentTasks(tasksRes.tasks || [])
+					setRecentProposals(propsRes.proposals || [])
+				} finally {
+					if (mounted) setLoadingRecent(false)
+				}
+			})()
 		return () => { mounted = false }
 	}, [uid])
+
+	// Carrega resumo de notas do usuário (count + average)
+	useEffect(() => {
+		let mounted = true
+			; (async () => {
+				if (!uid || Number.isNaN(uid)) return
+				setLoadingNotas(true)
+				try {
+					const res = await getNotasResumoByUser(uid, {
+						inicio: filtroInicio || undefined,
+						fim: filtroFim || undefined,
+					}).catch(() => ({ count: 0, average: null }))
+					if (!mounted) return
+					setAvgNota(res.average)
+					setNotaCount(res.count)
+				} finally {
+					if (mounted) setLoadingNotas(false)
+				}
+			})()
+		return () => { mounted = false }
+	}, [uid, filtroInicio, filtroFim])
 
 	useEffect(() => {
 		let mounted = true
@@ -156,35 +184,35 @@ export default function AdminUsersDetails() {
 		}
 	}, [availableSetores])
 
-		async function saveBasic() {
+	async function saveBasic() {
 		try {
 			setSaving(true)
-				// if not admin (self), do not send cargo change
-				const payload: any = {
+			// if not admin (self), do not send cargo change
+			const payload: any = {
 				nome: edit.nome,
 				email: edit.email,
 				...(edit.sobrenome ? { sobrenome: edit.sobrenome } : {}),
-				}
-				if (canEditAdminFields && edit.cargo_id) {
-					payload.cargoId = Number(edit.cargo_id)
-				}
-				await updateUserSvc(uid, payload) as any
+			}
+			if (canEditAdminFields && edit.cargo_id) {
+				payload.cargoId = Number(edit.cargo_id)
+			}
+			await updateUserSvc(uid, payload) as any
 			// Atualiza UI local
-				setUser(prev => prev ? ({
-					...prev,
-					nome: edit.nome,
-					sobrenome: edit.sobrenome,
-					email: edit.email,
-					...(canEditAdminFields ? { cargo_id: Number(edit.cargo_id) as any } : {})
-				} as any) : prev)
+			setUser(prev => prev ? ({
+				...prev,
+				nome: edit.nome,
+				sobrenome: edit.sobrenome,
+				email: edit.email,
+				...(canEditAdminFields ? { cargo_id: Number(edit.cargo_id) as any } : {})
+			} as any) : prev)
 			toastSuccess('Informações atualizadas')
 		} finally {
 			setSaving(false)
 		}
 	}
 
-		async function addSetor() {
-			if (!canEditAdminFields) return
+	async function addSetor() {
+		if (!canEditAdminFields) return
 		if (!newSetorId) return
 		try {
 			setAddingSetor(true)
@@ -201,8 +229,8 @@ export default function AdminUsersDetails() {
 		}
 	}
 
-		async function addUnidade() {
-			if (!canEditAdminFields) return
+	async function addUnidade() {
+		if (!canEditAdminFields) return
 		if (!newUnidadeId) return
 		try {
 			setAddingUnidade(true)
@@ -219,8 +247,8 @@ export default function AdminUsersDetails() {
 		}
 	}
 
-		async function removeSetor(setorNome: string) {
-			if (!canEditAdminFields) return
+	async function removeSetor(setorNome: string) {
+		if (!canEditAdminFields) return
 		const nome = String(setorNome).trim()
 		const found = setores.find(s => s.nome === nome)
 		if (!found) return
@@ -242,8 +270,8 @@ export default function AdminUsersDetails() {
 		}
 	}
 
-		async function removeUnidade(unidadeNome: string) {
-			if (!canEditAdminFields) return
+	async function removeUnidade(unidadeNome: string) {
+		if (!canEditAdminFields) return
 		const nome = String(unidadeNome).trim()
 		const found = unidades.find(s => s.nome === nome)
 		if (!found) return
@@ -279,28 +307,76 @@ export default function AdminUsersDetails() {
 				) : error ? (
 					<div className="text-destructive">{error}</div>
 				) : user ? (
-					<div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-w-0">
-						<div className="flex items-center gap-4">
-							<Avatar className="size-16">
-								<AvatarImage src={(user as any).foto_url || (user as any).fotoUrl || undefined} alt={`${user.nome} ${user.sobrenome || ''}`} />
-								<AvatarFallback className="text-lg">{(user.nome || 'U').charAt(0)}</AvatarFallback>
-							</Avatar>
-							<div>
-								<div className="text-xl font-semibold">{user.nome} {user.sobrenome} {(user as any).status ? (
-									<Badge className={(user as any).status === 'ativo' ? 'button-success' : 'button-remove'}>{(user as any).status}</Badge>
-								) : (
-									<Badge className="button-success">Ativo</Badge>
-								)}</div>
-								<div className="text-sm opacity-80">{user.email}</div>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start min-w-0">
+						{/* Coluna esquerda: informações do usuário */}
+						<div className="flex flex-col gap-4 self-center">
+							<div className="flex items-center gap-4">
+								<Avatar className="size-16">
+									<AvatarImage src={(user as any).foto_url || (user as any).fotoUrl || undefined} alt={`${user.nome} ${user.sobrenome || ''}`} />
+									<AvatarFallback className="text-lg">{(user.nome || 'U').charAt(0)}</AvatarFallback>
+								</Avatar>
+								<div>
+									<div className="text-xl font-semibold flex items-center gap-2">
+										<span>{user.nome} {user.sobrenome}</span>
+										{(user as any).status ? (
+											<Badge className={(user as any).status === 'ativo' ? 'button-success' : 'button-remove'}>{(user as any).status}</Badge>
+										) : (
+											<Badge className="button-success">Ativo</Badge>
+										)}
+									</div>
+									<div className="text-sm opacity-80">{user.email}</div>
+									{(loadingNotas) ? (
+										<div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+											<IconLoader2 className="size-3 animate-spin" />
+											<span>Carregando notas...</span>
+										</div>
+									) : (
+										<div className="text-xs mt-1 flex items-center gap-2">
+											<div className="flex items-center gap-1">
+												{Array.from({ length: 5 }).map((_, i) => {
+													const avg5 = (avgNota ?? 0) / 2 // 0-10 -> 0-5
+													const filled = i < Math.floor(avg5)
+													const half = !filled && i < avg5
+													if (half) {
+														return <IconStarFilled key={i} className="size-4 text-yellow-500" />
+													}
+													return filled ? (
+														<IconStarFilled key={i} className="size-4 text-yellow-500" />
+													) : (
+														<IconStar key={i} className="size-4 text-yellow-500 opacity-40" />
+													)
+												})}
+											</div>
+											<div>
+												<strong>{avgNota != null ? avgNota.toFixed(2) : '-'}</strong>
+												<span className="opacity-60"> ({notaCount} avaliações)</span>
+											</div>
+										</div>
+									)}
+								</div>
+							</div>
+							{/* Filtros de período para as notas (mantidos na coluna esquerda) */}
+							<div className="flex flex-wrap items-end gap-3">
+								<div>
+									<div className="text-xs opacity-70">Início</div>
+									<Input type="date" value={filtroInicio} onChange={(e) => setFiltroInicio(e.target.value)} className="h-8 max-w-[180px]" />
+								</div>
+								<div>
+									<div className="text-xs opacity-70">Fim</div>
+									<Input type="date" value={filtroFim} onChange={(e) => setFiltroFim(e.target.value)} className="h-8 max-w-[180px]" />
+								</div>
 							</div>
 						</div>
-						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							<div className='md:col-span-2'>
+
+						{/* Coluna direita: formulário de edição */}
+						<div className="grid grid-cols-2 gap-4">
+							<div>
 								<div className="text-sm opacity-70">Nome</div>
-								<div className="flex gap-2">
-									<Input value={edit.nome} onChange={(e) => setEdit(v => ({ ...v, nome: e.target.value }))} placeholder="Nome" className="max-w-xs" />
-									<Input value={edit.sobrenome} onChange={(e) => setEdit(v => ({ ...v, sobrenome: e.target.value }))} placeholder="Sobrenome" className="max-w-xs" />
-								</div>
+								<Input value={edit.nome} onChange={(e) => setEdit(v => ({ ...v, nome: e.target.value }))} placeholder="Nome" className="w-full" />
+							</div>
+							<div>
+								<div className="text-sm opacity-70">Sobrenome</div>
+								<Input value={edit.sobrenome} onChange={(e) => setEdit(v => ({ ...v, sobrenome: e.target.value }))} placeholder="Sobrenome" className="w-full" />
 							</div>
 							<div>
 								<div className="text-sm opacity-70">Email</div>
@@ -310,7 +386,7 @@ export default function AdminUsersDetails() {
 								<div className="text-sm opacity-70">Cargo</div>
 								<div className="flex items-center gap-2">
 									<Select value={edit.cargo_id} onValueChange={(v) => setEdit(s => ({ ...s, cargo_id: v }))} disabled={!canEditAdminFields}>
-										<SelectTrigger className="w-[260px]" disabled={!canEditAdminFields}><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
+										<SelectTrigger className="w-full" disabled={!canEditAdminFields}><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
 										<SelectContent>
 											{cargos.map(c => (
 												<SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>
@@ -320,7 +396,7 @@ export default function AdminUsersDetails() {
 								</div>
 							</div>
 							<div>
-								<Button disabled={saving} onClick={saveBasic} className="button-primary flex items-center gap-2">
+								<Button disabled={saving} onClick={saveBasic} className="button-primary flex items-center gap-2 w-fit">
 									{saving && <IconLoader2 className="size-4 animate-spin" />}
 									<span>Salvar alterações</span>
 								</Button>

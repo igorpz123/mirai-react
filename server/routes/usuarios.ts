@@ -17,6 +17,7 @@ import { createUser } from '../controllers/UserController'
 import { uploadUserPhoto } from '../controllers/UserController'
 import { uploadUser } from '../middleware/upload'
 import { removeUserSetor, removeUserUnidade } from '../controllers/UserController'
+import { getUserNotas, getUserNotasResumo } from '../controllers/UserController'
 
 const router: Router = Router()
 
@@ -59,6 +60,10 @@ router.post('/:id/unidades', addUserUnidades)
 // Remover setor e unidade
 router.delete('/:id/setores/:setorId', removeUserSetor)
 router.delete('/:id/unidades/:unidadeId', removeUserUnidade)
+
+// Notas do usuário (avaliações recebidas)
+router.get('/:id/notas/resumo', getUserNotasResumo)
+router.get('/:id/notas', getUserNotas)
 
 // Buscar usuário por ID (genérica por último)
 router.get('/:id', getUserById)

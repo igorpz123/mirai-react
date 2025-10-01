@@ -2,7 +2,6 @@ import * as React from "react"
 import { useUnit } from '../../contexts/UnitContext';
 
 import {
-  ClipboardCheck,
   FileSliders,
   Wallet,
   HardHat,

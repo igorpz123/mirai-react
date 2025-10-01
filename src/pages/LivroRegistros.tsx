@@ -323,6 +323,7 @@ export default function LivroRegistrosPage() {
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-end">
           <div className="flex gap-2">
+            <Input placeholder="Buscar..." value={search} onChange={e=> setSearch(e.target.value)} className="h-8 w-[220px]" />
             <Button variant="outline" size="sm" onClick={exportCSV} className="flex items-center gap-1"><IconDownload size={16}/> Exportar</Button>
             <Sheet open={open} onOpenChange={(o)=> { setOpen(o); if (!o) { setForm({ ...emptyForm }); setEditId(null) } }}>
             <SheetTrigger asChild>

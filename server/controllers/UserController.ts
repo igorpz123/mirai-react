@@ -553,3 +553,120 @@ export const removeUserUnidade = async (
     res.status(500).json({ message: 'Erro ao remover unidade' })
   }
 }
+
+/**
+ * Coletar notas (avaliações) recebidas por um usuário com base no histórico de tarefas
+ * Fonte: historico_alteracoes (colunas: avaliacao_nota, avaliacao_by, avaliacao_obs, avaliacao_data)
+ * Retorna lista, média e contagem
+ */
+export const getUserNotas = async (
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    if (!id) {
+      res.status(400).json({ message: 'ID do usuário é obrigatório' })
+      return
+    }
+
+    // Optional period filters (?inicio=YYYY-MM-DD&fim=YYYY-MM-DD)
+    const inicio = typeof (req.query as any).inicio === 'string' && (req.query as any).inicio.trim() ? String((req.query as any).inicio).trim() : null
+    const fim = typeof (req.query as any).fim === 'string' && (req.query as any).fim.trim() ? String((req.query as any).fim).trim() : null
+
+    const params: any[] = [id]
+    const where: string[] = [
+      'h.usuario_id = ?',
+      'h.avaliacao_nota IS NOT NULL'
+    ]
+    if (inicio) { where.push('h.avaliacao_data >= ?'); params.push(`${inicio} 00:00:00`) }
+    if (fim) { where.push('h.avaliacao_data <= ?'); params.push(`${fim} 23:59:59`) }
+
+    // Buscar avaliações feitas sobre ações deste usuário no histórico
+    const [rows] = await pool.query(
+      `
+      SELECT
+        h.id AS historico_id,
+        h.tarefa_id,
+        h.avaliacao_nota AS nota,
+        h.avaliacao_obs AS obs,
+        h.avaliacao_data AS data,
+        h.avaliacao_by AS avaliador_id,
+        u.nome AS avaliador_nome,
+        u.sobrenome AS avaliador_sobrenome,
+        u.foto_url AS avaliador_foto
+      FROM historico_alteracoes h
+      LEFT JOIN usuarios u ON u.id = h.avaliacao_by
+      WHERE ${where.join(' AND ')}
+      ORDER BY h.avaliacao_data DESC
+      `,
+      params
+    ) as [Array<any>, any]
+
+    const notas = (rows || []).map(r => ({
+      historico_id: Number(r.historico_id),
+      tarefa_id: Number(r.tarefa_id),
+      nota: r.nota != null ? Number(r.nota) : null,
+      data: r.data || null,
+      obs: r.obs || null,
+      by: r.avaliador_id ? {
+        id: Number(r.avaliador_id),
+        nome: r.avaliador_nome || undefined,
+        sobrenome: r.avaliador_sobrenome || undefined,
+        foto: r.avaliador_foto || undefined,
+      } : null,
+    }))
+
+    const values = notas.map(n => Number(n.nota)).filter(v => Number.isFinite(v)) as number[]
+    const count = values.length
+    const average = count ? (values.reduce((a, b) => a + b, 0) / count) : null
+
+    res.status(200).json({ notas, count, average })
+  } catch (error) {
+    console.error('Erro ao buscar notas do usuário:', error)
+    res.status(500).json({ message: 'Erro ao buscar notas do usuário' })
+  }
+}
+
+/**
+ * Resumo rápido das notas (count + average), com os mesmos filtros de período.
+ * GET /api/usuarios/:id/notas/resumo?inicio=YYYY-MM-DD&fim=YYYY-MM-DD
+ */
+export const getUserNotasResumo = async (
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+    if (!id) {
+      res.status(400).json({ message: 'ID do usuário é obrigatório' })
+      return
+    }
+
+    const inicio = typeof (req.query as any).inicio === 'string' && (req.query as any).inicio.trim() ? String((req.query as any).inicio).trim() : null
+    const fim = typeof (req.query as any).fim === 'string' && (req.query as any).fim.trim() ? String((req.query as any).fim).trim() : null
+
+    const params: any[] = [id]
+    const where: string[] = [
+      'h.usuario_id = ?',
+      'h.avaliacao_nota IS NOT NULL'
+    ]
+    if (inicio) { where.push('h.avaliacao_data >= ?'); params.push(`${inicio} 00:00:00`) }
+    if (fim) { where.push('h.avaliacao_data <= ?'); params.push(`${fim} 23:59:59`) }
+
+    const [rows] = await pool.query(
+      `SELECT COUNT(*) AS cnt, AVG(h.avaliacao_nota) AS avg_nota
+       FROM historico_alteracoes h
+       WHERE ${where.join(' AND ')}`,
+      params
+    ) as [Array<any>, any]
+
+    const cnt = Number((rows as any[])[0]?.cnt || 0)
+    const avgRaw = (rows as any[])[0]?.avg_nota
+    const average = cnt ? (avgRaw != null ? Number(avgRaw) : null) : null
+    res.status(200).json({ count: cnt, average })
+  } catch (error) {
+    console.error('Erro ao buscar resumo de notas do usuário:', error)
+    res.status(500).json({ message: 'Erro ao buscar resumo de notas do usuário' })
+  }
+}
