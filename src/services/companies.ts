@@ -141,6 +141,22 @@ export async function getAllCompanies(): Promise<CompaniesResponse> {
   return res.json()
 }
 
+export async function generateAutoTasksForUnit(unitId: number): Promise<{ processed: number; createdTotal: number; details: Array<{ empresaId: number; created: number }> }> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/empresas/unidade/${unitId}/auto-tarefas`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao gerar tarefas automáticas por unidade' }))
+    throw new Error(err.message || 'Erro ao gerar tarefas automáticas por unidade')
+  }
+  return res.json()
+}
+
 export async function getCompanyById(id: number): Promise<Company> {
   const token = localStorage.getItem('token')
   const res = await fetch(`${API_URL}/empresas/${id}`, {

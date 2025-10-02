@@ -342,3 +342,43 @@ export const updateCompany = async (
     res.status(500).json({ message: 'Erro ao atualizar empresa' })
   }
 }
+
+// Generate automatic tasks for all companies in a unit
+export const generateAutoTasksForUnit = async (req: Request<{ unidade_id: string }>, res: Response): Promise<void> => {
+  try {
+    const { unidade_id } = req.params
+    if (!unidade_id) {
+      res.status(400).json({ message: 'unidade_id é obrigatório' })
+      return
+    }
+
+    // Get all active companies for the unit
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT id FROM empresas WHERE unidade_responsavel = ? AND status = 'ativo' ORDER BY id ASC`,
+      [unidade_id]
+    )
+    const ids = (rows || []).map((r: any) => Number(r.id)).filter((n) => Number.isFinite(n))
+    if (!ids.length) {
+      res.status(200).json({ processed: 0, createdTotal: 0, details: [] })
+      return
+    }
+
+    const details: Array<{ empresaId: number; created: number }> = []
+    let createdTotal = 0
+    for (const id of ids) {
+      try {
+        const { created } = await generateAutomaticTasksForCompany(id)
+        createdTotal += Number(created || 0)
+        details.push({ empresaId: id, created: Number(created || 0) })
+      } catch (e) {
+        // Continue processing others; mark created as 0 for this one
+        details.push({ empresaId: id, created: 0 })
+      }
+    }
+
+    res.status(200).json({ processed: ids.length, createdTotal, details })
+  } catch (error) {
+    console.error('Erro ao gerar tarefas automáticas por unidade:', error)
+    res.status(500).json({ message: 'Erro ao gerar tarefas automáticas por unidade' })
+  }
+}

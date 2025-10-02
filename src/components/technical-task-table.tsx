@@ -2,7 +2,7 @@ import * as React from "react"
 import { useState } from "react"
 import type { Task } from "../services/tasks"
 import { getUsersByDepartmentAndUnit, getUsersByUnitId, getAllUsers } from '@/services/users';
-import { updateTask as updateTaskService } from '@/services/tasks'
+import { updateTask as updateTaskService, deleteTask as deleteTaskService } from '@/services/tasks'
 import type { User } from '@/services/users';
 import { useUsers } from '@/contexts/UsersContext';
 import { useUnit } from '@/contexts/UnitContext';
@@ -92,6 +92,7 @@ import {
 } from "@/components/ui/tabs"
 import { TaskInfo } from "@/components/technical-task-info";
 import { toastSuccess, toastWarning, toastError } from '@/lib/customToast'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface TableTask {
   id: number
@@ -202,6 +203,11 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   onTaskUpdate,
   onTasksReorder,
 }) => {
+  const { user } = useAuth()
+  const isAdmin = React.useMemo(() => {
+    const cid = Number((user as any)?.cargoId)
+    return [1, 2, 3].includes(cid)
+  }, [user])
   const { unitId } = useUnit();
   // local handler to update a single task in the table's data
   const handleTaskUpdate = async (taskId: string, updates: Partial<Task>) => {
@@ -627,6 +633,23 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
 
   const prazo = formatDate(row.original.prazo);
 
+        const doDelete = async () => {
+          const taskId = Number(id)
+          if (!isAdmin) return
+          const confirmed = window.confirm('Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.')
+          if (!confirmed) return
+          try {
+            await deleteTaskService(taskId)
+            // remove from local table
+            setData(prev => prev.filter(t => t.id !== taskId))
+            try { toastSuccess('Tarefa deletada com sucesso') } catch {}
+            if (onRefresh) onRefresh()
+          } catch (err) {
+            console.error('Erro ao deletar tarefa:', err)
+            try { toastError('Falha ao deletar tarefa') } catch {}
+          }
+        }
+
         return (
           <>
             <DropdownMenu>
@@ -658,7 +681,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
                 </DropdownMenuItem>
                 <DropdownMenuItem className="cursor-pointer">Favoritar</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive">Deletar</DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (isAdmin) doDelete() }} disabled={!isAdmin} className={!isAdmin ? 'opacity-60 pointer-events-none' : ''}>Deletar</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 

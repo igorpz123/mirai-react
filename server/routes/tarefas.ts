@@ -22,7 +22,8 @@ import {
   updateTask,
   addTaskObservation,
   uploadArquivoTarefa,
-  deleteArquivoTarefa
+  deleteArquivoTarefa,
+  deleteTask
 } from '../controllers/TaskController'
 import { getEventsByResponsavel, updateAgendaEvent } from '../controllers/AgendaController'
 
@@ -96,5 +97,8 @@ router.patch('/:tarefa_id/responsavel', updateTaskResponsible)
 
 // Atualizar campos da tarefa (status, setor, responsavel, etc.)
 router.put('/:tarefa_id', updateTask)
+
+// Deletar tarefa (admin only)
+router.delete('/:tarefa_id', deleteTask)
 
 export default router

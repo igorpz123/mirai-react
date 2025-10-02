@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toastError } from '@/lib/customToast'
-import { getAllCompanies, type Company } from '@/services/companies'
+import { getAllCompanies, type Company, generateAutoTasksForUnit } from '@/services/companies'
 import { getUnidades } from '@/services/unidades'
 import { getAllUsers, type User } from '@/services/users'
 
@@ -104,6 +104,26 @@ export default function Empresas() {
 
   const arrow = (key: 'nome' | 'razao_social' | 'cnpj' | 'tecnico') => (sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '')
 
+  async function onGenerateAutoTasksForUnit() {
+    if (selectedUnidade === '') {
+      toastError('Selecione uma unidade para gerar as tarefas automáticas.')
+      return
+    }
+    try {
+      setLoading(true)
+      const result = await generateAutoTasksForUnit(Number(selectedUnidade))
+      const msg = `Processadas ${result.processed} empresas. Tarefas criadas: ${result.createdTotal}.`
+      // Use success toast to indicate completion
+      import('@/lib/customToast').then(({ toastSuccess }) => toastSuccess(msg)).catch(() => alert(msg))
+      // Optionally, refresh list or keep as-is
+    } catch (e: any) {
+      const m = e?.message || 'Falha ao gerar tarefas automáticas por unidade'
+      toastError(m)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="container-main">
       <SiteHeader title="Empresas" />
@@ -111,6 +131,9 @@ export default function Empresas() {
         <div className="flex flex-col gap-3">
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
             <Input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder="Buscar por nome, razão social ou CNPJ..." className="max-w-xl" />
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={onGenerateAutoTasksForUnit} disabled={loading || selectedUnidade === ''}>Gerar tarefas automáticas (Unidade)</Button>
+            </div>
             <div className="flex items-center gap-2">
               <label className="text-sm opacity-80" htmlFor="pageSize">Itens por página</label>
               <select id="pageSize" className="border rounded-md px-2 py-1 text-sm bg-background" value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}>

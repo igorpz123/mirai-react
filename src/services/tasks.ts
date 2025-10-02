@@ -170,7 +170,7 @@ export async function updateTask(taskId: number, taskData: UpdateTaskData): Prom
     }
 }
 
-export async function deleteTask(taskId: number): Promise<{ message: string }> {
+export async function deleteTask(taskId: number): Promise<{ message?: string; deleted?: boolean; id?: number }> {
     const token = localStorage.getItem('token');
 
     const res = await fetch(`${API_URL}/tarefas/${taskId}`, {
@@ -182,7 +182,7 @@ export async function deleteTask(taskId: number): Promise<{ message: string }> {
     });
 
     if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ message: 'Erro ao deletar tarefa' }));
         throw new Error(err.message || 'Erro ao deletar tarefa');
     }
 

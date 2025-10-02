@@ -1460,3 +1460,86 @@ export const getRecentTasksByUsuario = async (
     res.status(500).json({ message: 'Erro ao buscar tarefas' })
   }
 }
+
+// Delete a task (admin only): remove agenda events, history, files (DB + disk), then the task
+export const deleteTask = async (
+  req: Request<{ tarefa_id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { tarefa_id } = req.params
+    const id = Number(tarefa_id)
+    if (!id || Number.isNaN(id)) {
+      res.status(400).json({ message: 'ID da tarefa inválido' })
+      return
+    }
+
+    // Auth and admin check via JWT
+    let actorId: number | null = null
+    let actorCargoId: number | null = null
+    const authHeader = req.headers && (req.headers.authorization as string | undefined)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1]
+        const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+        actorId = payload?.userId ?? payload?.id ?? null
+        actorCargoId = payload?.cargoId ?? null
+      } catch {}
+    }
+    if (!actorId) {
+      res.status(401).json({ message: 'Não autenticado' })
+      return
+    }
+    // If cargoId not present in token, fetch from DB
+    if (actorCargoId == null) {
+      try {
+        const [u] = await pool.query<RowDataPacket[]>(`SELECT cargo_id FROM usuarios WHERE id = ? LIMIT 1`, [actorId])
+        actorCargoId = (u as any[])[0]?.cargo_id ?? null
+      } catch {}
+    }
+    const isAdmin = (cid: any) => [1, 2, 3].includes(Number(cid))
+    if (!isAdmin(actorCargoId)) {
+      res.status(403).json({ message: 'Apenas administradores podem deletar tarefas' })
+      return
+    }
+
+    // Ensure task exists
+    const [exists] = await pool.query<RowDataPacket[]>(`SELECT id FROM tarefas WHERE id = ? LIMIT 1`, [id])
+    if (!(exists as any[]).length) {
+      res.status(404).json({ message: 'Tarefa não encontrada' })
+      return
+    }
+
+    // Try to unlink files on disk and then delete related rows
+    try {
+      const [fileRows] = await pool.query<RowDataPacket[]>(`SELECT id, caminho FROM arquivos WHERE tarefa_id = ?`, [id])
+      for (const r of (fileRows as any[])) {
+        const publicPath = String(r.caminho || '')
+        if (publicPath && publicPath.startsWith('/uploads/')) {
+          try {
+            const fileAbs = path.join(PUBLIC_UPLOADS_DIR, publicPath.replace('/uploads/', ''))
+            const resolved = path.resolve(fileAbs)
+            if (resolved.startsWith(PUBLIC_UPLOADS_DIR)) {
+              fs.unlink(resolved, () => { /* ignore */ })
+            }
+          } catch {}
+        }
+      }
+    } catch {}
+
+    // Cascade delete related data
+    await pool.query<OkPacket>(`DELETE FROM agenda_events WHERE tarefa_id = ?`, [id])
+    await pool.query<OkPacket>(`DELETE FROM historico_alteracoes WHERE tarefa_id = ?`, [id])
+    await pool.query<OkPacket>(`DELETE FROM arquivos WHERE tarefa_id = ?`, [id])
+    const [del] = await pool.query<OkPacket>(`DELETE FROM tarefas WHERE id = ?`, [id])
+    if (!del.affectedRows) {
+      res.status(500).json({ message: 'Falha ao deletar tarefa' })
+      return
+    }
+
+    res.status(200).json({ id, deleted: true })
+  } catch (error) {
+    console.error('Erro ao deletar tarefa:', error)
+    res.status(500).json({ message: 'Erro ao deletar tarefa' })
+  }
+}
