@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { AdminRoute } from '@/components/auth/AdminRoute'
 import { SiteHeader } from '@/components/layout/site-header'
-import { getApprovedProposals, getNotasRanking, exportApprovedProposalsToPdf, exportNotasRankingToPdf } from '@/services/reports'
+import { getApprovedProposals, getNotasRanking, exportApprovedProposalsToPdf, exportNotasRankingToPdf, exportApprovedProposalsToExcel, formatPaymentMethod } from '@/services/reports'
 import type { ApprovedProposalReportItem, NotasRankingItem } from '@/services/reports'
 import { getAllUsers, type User as SysUser } from '@/services/users'
 
@@ -26,6 +26,7 @@ export default function AdminReportsPage() {
     const [ranking, setRanking] = useState<NotasRankingItem[]>([])
     const [users, setUsers] = useState<SysUser[]>([])
     const [userId, setUserId] = useState<string>('')
+    const [paymentMethod, setPaymentMethod] = useState<string>('')
 
     const periodoLabel = useMemo(() => {
         if (!inicio && !fim) return ''
@@ -46,7 +47,7 @@ export default function AdminReportsPage() {
         setLoading(true)
         try {
             const [p, r] = await Promise.all([
-                getApprovedProposals({ inicio, fim, userId: userId || undefined }),
+                getApprovedProposals({ inicio, fim, userId: userId || undefined, paymentMethod: paymentMethod || undefined }),
                 getNotasRanking({ inicio, fim }),
             ])
             setPropostas(p.proposals)
@@ -90,6 +91,17 @@ export default function AdminReportsPage() {
         }
     }
 
+    function onExportExcel() {
+        if (tab !== 'propostas' || propostas.length === 0) return
+        const blob = exportApprovedProposalsToExcel(propostas, { title: 'Relatório - Propostas Aprovadas', periodo: periodoLabel })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'relatorio-propostas-aprovadas.xls'
+        a.click()
+        URL.revokeObjectURL(url)
+    }
+
     return (
         <AdminRoute>
             <div className='container-main'>
@@ -108,18 +120,34 @@ export default function AdminReportsPage() {
                         {tab === 'propostas' && (
                             <div>
                                 <label className="block text-sm font-medium">Usuário (responsável)</label>
-                                <select className="border rounded px-2 py-1 min-w-56" value={userId} onChange={e => setUserId(e.target.value)}>
+                                <select className="border rounded px-2 py-1 min-w-56 bg-background" value={userId} onChange={e => setUserId(e.target.value)}>
                                     <option value="">Todos</option>
                                     {users.map(u => (
-                                        <option key={u.id} value={String(u.id)}>
+                                        <option key={u.id} value={String(u.id)} className='bg-background'>
                                             {[u.nome, u.sobrenome].filter(Boolean).join(' ') || `#${u.id}`}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                         )}
+                        {tab === 'propostas' && (
+                            <div>
+                                <label className="block text-sm font-medium">Pagamento</label>
+                                <select className="border rounded px-2 py-1 min-w-56 bg-background" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}>
+                                    <option value="">Todos</option>
+                                    <option value="boleto_financeiro">Financeiro</option>
+                                    <option value="pix_mp">Mercado Pago (PIX)</option>
+                                    <option value="boleto_mp">Mercado Pago (Boleto)</option>
+                                </select>
+                            </div>
+                        )}
                         <Button onClick={loadData} disabled={loading}>Aplicar</Button>
                         <div className="flex-1" />
+                        {tab === 'propostas' && (
+                            <>
+                            <Button variant="outline" onClick={onExportExcel} disabled={loading || propostas.length === 0}>Exportar Excel</Button>
+                            </>
+                        )}
                         <Button variant="outline" onClick={onExportPDF} disabled={loading}>Exportar PDF</Button>
                     </div>
 
@@ -135,13 +163,14 @@ export default function AdminReportsPage() {
                             <table className="min-w-full text-sm">
                                 <thead>
                                     <tr className="text-left">
-                                        <th className="p-2">N. da Proposta</th>
+                                        <th className="p-2">Proposta</th>
                                         <th className="p-2">Título</th>
                                         <th className="p-2">Responsável</th>
+                                        <th className="p-2">Pagamento</th>
                                         <th className="p-2">Valor Total</th>
-                                        <th className="p-2">Comissão (3%/5%)</th>
+                                        <th className="p-2">Comissão Ven. (5%/7%)</th>
                                         <th className="p-2">Indicação</th>
-                                        <th className="p-2">Comissão Indicação (2%)</th>
+                                        <th className="p-2">Comissão Ind. (2%)</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -150,6 +179,7 @@ export default function AdminReportsPage() {
                                             <td className="p-2">{p.id}</td>
                                             <td className="p-2">{p.titulo || '-'}</td>
                                             <td className="p-2">{p.responsavel_nome || '-'}</td>
+                                            <td className="p-2">{formatPaymentMethod(p.payment_method)}</td>
                                             <td className="p-2">{fmtBRL(p.valor_total)}</td>
                                             <td className="p-2">{fmtBRL(p.comissao_vendedor)}</td>
                                             <td className="p-2">{p.indicacao_nome || '-'}</td>
@@ -157,13 +187,13 @@ export default function AdminReportsPage() {
                                         </tr>
                                     ))}
                                     {propostas.length === 0 && (
-                                        <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">Nenhum registro no período</td></tr>
+                                        <tr><td colSpan={8} className="p-4 text-center text-muted-foreground">Nenhum registro no período</td></tr>
                                     )}
                                 </tbody>
                                 {propostas.length > 0 && (
                                     <tfoot>
                                         <tr className="border-t bg-muted/30">
-                                            <td className="p-2 text-right font-medium" colSpan={3}>Totais</td>
+                                            <td className="p-2 text-right font-medium" colSpan={4}>Totais</td>
                                             <td className="p-2 font-medium">{fmtBRL(totals.sumValor)}</td>
                                             <td className="p-2 font-medium">{fmtBRL(totals.sumComVend)}</td>
                                             <td className="p-2"></td>

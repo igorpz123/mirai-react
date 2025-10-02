@@ -33,7 +33,7 @@ function requireAdmin(req: Request, res: Response): { ok: true; userId: number }
 
 // GET /api/relatorios/propostas-aprovadas?inicio=YYYY-MM-DD&fim=YYYY-MM-DD
 export async function getApprovedProposalsReport(
-  req: Request<{}, {}, {}, { inicio?: string; fim?: string; userId?: string }>,
+  req: Request<{}, {}, {}, { inicio?: string; fim?: string; userId?: string; paymentMethod?: string }>,
   res: Response
 ) {
   const auth = requireAdmin(req, res)
@@ -50,14 +50,18 @@ export async function getApprovedProposalsReport(
     if (inicio) { where.push('p.data_alteracao >= ?'); params.push(`${inicio} 00:00:00`) }
     if (fim) { where.push('p.data_alteracao <= ?'); params.push(`${fim} 23:59:59`) }
 
-    const userIdRaw = (req.query.userId || '').trim()
+  const userIdRaw = (req.query.userId || '').trim()
     const userId = userIdRaw && !Number.isNaN(Number(userIdRaw)) ? Number(userIdRaw) : null
     if (userId) { where.push('p.responsavel_id = ?'); params.push(userId) }
+
+  const paymentMethod = (req.query.paymentMethod || '').trim()
+  if (paymentMethod) { where.push('p.payment_method = ?'); params.push(paymentMethod) }
 
     const sql = `
       SELECT 
         p.id,
         p.titulo,
+        p.payment_method,
         p.responsavel_id,
         resp.nome AS responsavel_nome,
         resp.sobrenome AS responsavel_sobrenome,
@@ -85,9 +89,9 @@ export async function getApprovedProposalsReport(
       const valor_total_num = (Number.isFinite(valorTotalHeader) && (valorTotalHeader as number) > 0)
         ? (valorTotalHeader as number)
         : valorTotalCalc
-      // Comissão: 3% se houve indicação, 5% se não
-      const hasInd = r.indicacao_id != null
-  const comissao_vendedor = valor_total_num * (hasInd ? 0.03 : 0.05)
+    // Comissão do vendedor: 5% se houve indicação, 7% se não houve
+    const hasInd = r.indicacao_id != null
+  const comissao_vendedor = valor_total_num * (hasInd ? 0.05 : 0.07)
       // Comissão da indicação: 2% se houve indicação
   const comissao_indicacao = hasInd ? (valor_total_num * 0.02) : 0
       const indicacao_nome = [r.indicacao_nome, r.indicacao_sobrenome].filter(Boolean).join(' ').trim() || null
@@ -95,6 +99,7 @@ export async function getApprovedProposalsReport(
       return {
         id: Number(r.id),
         titulo: r.titulo || null,
+        payment_method: r.payment_method || null,
   valor_total: valor_total_num,
         comissao_vendedor,
         indicacao_nome,
