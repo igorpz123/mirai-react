@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { uploadProposta } from '../middleware/upload'
-import { getProposalsByUnidade, getProposalsByUser, getProposalStats, deleteProposal, getProposalById, getCursosByProposal, getQuimicosByProposal, getProdutosByProposal, getCoursesCatalog, getChemicalsCatalog, getProductsCatalog, getProductPriceRule, addCourseToProposal, addChemicalToProposal, addProductToProposal, updateProposalStatus, getProposalHistory, createProposal, getProgramsCatalog, getProgramPriceRule, getProgramasByProposal, addProgramToProposal, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, getArquivosByProposta, uploadArquivoProposta, deleteArquivoProposta, exportProposalDocx, getRecentProposalsByUser, getProposalsByEmpresa } from '../controllers/ProposalController'
+import { getProposalsByUnidade, getProposalsByUser, getProposalStats, deleteProposal, getProposalById, getCursosByProposal, getQuimicosByProposal, getProdutosByProposal, getCoursesCatalog, getChemicalsCatalog, getProductsCatalog, getProductPriceRule, addCourseToProposal, addChemicalToProposal, addProductToProposal, updateProposalStatus, getProposalHistory, createProposal, getProgramsCatalog, getProgramPriceRule, getProgramasByProposal, addProgramToProposal, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, getArquivosByProposta, uploadArquivoProposta, deleteArquivoProposta, exportProposalDocx, getRecentProposalsByUser, getProposalsByEmpresa, updateProposalPayment } from '../controllers/ProposalController'
 
 const router = Router()
 
@@ -39,6 +39,8 @@ router.delete('/:id/produtos/:itemId', deleteProductFromProposal)
 router.delete('/:id/programas/:itemId', deleteProgramFromProposal)
 // Update proposal status
 router.patch('/:id/status', updateProposalStatus)
+// Update payment info
+router.patch('/:id/pagamento', updateProposalPayment)
 // Add observation to proposal history
 router.post('/:id/observacoes', addProposalObservation)
 // Files for proposals

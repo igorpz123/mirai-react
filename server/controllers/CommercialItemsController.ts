@@ -107,4 +107,54 @@ export async function listCommercialItems(
   }
 }
 
+// Lista todas as regras de preço para um Programa de Prevenção específico
+export async function getProgramPriceRules(
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<void> {
+  try {
+    const id = Number(req.params.id)
+    if (!id || Number.isNaN(id)) {
+      res.status(400).json({ message: 'ID inválido' })
+      return
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT preco_linear, min_quantidade, max_quantidade, preco_unitario, preco_adicional
+       FROM regras_preco_programas
+       WHERE programa_id = ?
+       ORDER BY min_quantidade ASC, max_quantidade ASC`,
+      [id]
+    )
+    res.status(200).json(rows || [])
+  } catch (e) {
+    console.error('Erro ao listar regras de preço de programa:', e)
+    res.status(500).json({ message: 'Erro ao listar regras de preço' })
+  }
+}
+
+// Lista todas as regras de preço para um Produto específico
+export async function getProductPriceRules(
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<void> {
+  try {
+    const id = Number(req.params.id)
+    if (!id || Number.isNaN(id)) {
+      res.status(400).json({ message: 'ID inválido' })
+      return
+    }
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT preco_linear, min_quantidade, max_quantidade, preco_unitario, preco_adicional
+       FROM regras_preco_produtos
+       WHERE produto_id = ?
+       ORDER BY min_quantidade ASC, max_quantidade ASC`,
+      [id]
+    )
+    res.status(200).json(rows || [])
+  } catch (e) {
+    console.error('Erro ao listar regras de preço de produto:', e)
+    res.status(500).json({ message: 'Erro ao listar regras de preço' })
+  }
+}
+
 export default { listCommercialItems }

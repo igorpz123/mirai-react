@@ -73,7 +73,7 @@ export const getProposalsByUser = async (
             [userId]
         )
 
-        const proposals = (rows || []).map((r: any) => {
+    const proposals = (rows || []).map((r: any) => {
             const resp = [r.responsavel_nome, r.responsavel_sobrenome].filter(Boolean).join(' ').trim() || undefined
             const indic = [r.indicacao_nome, r.indicacao_sobrenome].filter(Boolean).join(' ').trim() || undefined
             const empresaNome = r.empresa_nome || r.empresa_razaoSocial || null
@@ -92,6 +92,8 @@ export const getProposalsByUser = async (
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,
                 status: r.status,
+                payment_method: r.payment_method ?? undefined,
+                payment_installments: r.payment_installments != null ? Number(r.payment_installments) : undefined,
                 comissao: r.comissao ?? undefined,
                 criadoEm: createdAt,
                 dataAlteracao: updatedAt,
@@ -167,7 +169,7 @@ export const getProposalsByUnidade = async (
             [unidade_id]
         )
 
-        const proposals = (rows || []).map((r: any) => {
+    const proposals = (rows || []).map((r: any) => {
             const resp = [r.responsavel_nome, r.responsavel_sobrenome].filter(Boolean).join(' ').trim() || undefined
             const indic = [r.indicacao_nome, r.indicacao_sobrenome].filter(Boolean).join(' ').trim() || undefined
             const empresaNome = r.empresa_nome || r.empresa_razaoSocial || null
@@ -185,6 +187,8 @@ export const getProposalsByUnidade = async (
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,
                 status: r.status,
+                payment_method: r.payment_method ?? undefined,
+                payment_installments: r.payment_installments != null ? Number(r.payment_installments) : undefined,
                 comissao: r.comissao ?? undefined,
                 criadoEm: createdAt,
                 dataAlteracao: updatedAt,
@@ -519,7 +523,7 @@ export const getProposalsByEmpresa = async (
             [empresa_id]
         )
 
-        const proposals = (rows || []).map((r: any) => {
+    const proposals = (rows || []).map((r: any) => {
             const resp = [r.responsavel_nome, r.responsavel_sobrenome].filter(Boolean).join(' ').trim() || undefined
             const empresaNome = r.empresa_nome || r.empresa_razaoSocial || null
             const createdAt = r.data ? (r.data instanceof Date ? r.data.toISOString() : String(r.data)) : undefined
@@ -536,6 +540,8 @@ export const getProposalsByEmpresa = async (
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,
                 status: r.status,
+                payment_method: r.payment_method ?? undefined,
+                payment_installments: r.payment_installments != null ? Number(r.payment_installments) : undefined,
                 comissao: r.comissao ?? undefined,
                 criadoEm: createdAt,
                 dataAlteracao: updatedAt,
@@ -1326,6 +1332,8 @@ export const getProposalById = async (
             valor: r.valor ?? undefined,
             valor_total: valorTotal,
             status: r.status,
+            payment_method: r.payment_method ?? undefined,
+            payment_installments: r.payment_installments != null ? Number(r.payment_installments) : undefined,
             comissao: r.comissao ?? undefined,
             criadoEm: createdAt,
             dataAlteracao: updatedAt,
@@ -2277,7 +2285,7 @@ export const getRecentProposalsByUser = async (
             [userId, limit]
         )
 
-        const proposals = (rows || []).map((r: any) => {
+    const proposals = (rows || []).map((r: any) => {
             const resp = [r.responsavel_nome, r.responsavel_sobrenome].filter(Boolean).join(' ').trim() || undefined
             const empresaNome = r.empresa_nome || r.empresa_razaoSocial || null
             const createdAt = r.data ? (r.data instanceof Date ? r.data.toISOString() : String(r.data)) : undefined
@@ -2294,6 +2302,8 @@ export const getRecentProposalsByUser = async (
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,
                 status: r.status,
+                payment_method: r.payment_method ?? undefined,
+                payment_installments: r.payment_installments != null ? Number(r.payment_installments) : undefined,
                 comissao: r.comissao ?? undefined,
                 criadoEm: createdAt,
                 dataAlteracao: updatedAt,
@@ -2311,3 +2321,105 @@ export const getRecentProposalsByUser = async (
         res.status(500).json({ proposals: [] })
     }
 }
+
+    // Atualiza informações de pagamento da proposta
+    export const updateProposalPayment = async (
+        req: Request<{ id: string }, {}, { payment_method?: string; payment_installments?: number }>,
+        res: Response
+    ): Promise<void> => {
+        try {
+            const id = Number(req.params.id)
+            if (!id || Number.isNaN(id)) {
+                res.status(400).json({ message: 'ID da proposta inválido' })
+                return
+            }
+
+            // Extract actor and permission (admin or responsável)
+            let actorId: number | null = null
+            let actorCargoId: number | null = null
+            const authHeader = req.headers && (req.headers.authorization as string | undefined)
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1]
+                try {
+                    const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+                    actorId = payload?.userId ?? payload?.id ?? null
+                    actorCargoId = payload?.cargoId ?? null
+                } catch {}
+            }
+            if (!actorId) {
+                res.status(401).json({ message: 'Não autenticado' })
+                return
+            }
+
+            const [curRows] = await pool.query<RowDataPacket[]>(`SELECT responsavel_id, payment_method, payment_installments FROM propostas WHERE id = ? LIMIT 1`, [id])
+            if (!curRows || curRows.length === 0) {
+                res.status(404).json({ message: 'Proposta não encontrada' })
+                return
+            }
+            const current: any = curRows[0]
+            const isAdmin = (cid: any) => [1, 2, 3].includes(Number(cid))
+            const isResponsible = Number(current.responsavel_id) === Number(actorId)
+            if (!(isAdmin(actorCargoId) || isResponsible)) {
+                res.status(403).json({ message: 'Sem permissão para alterar pagamento desta proposta' })
+                return
+            }
+
+            // Normalize inputs
+            const rawMethod = (req.body?.payment_method ?? '').toString().trim().toLowerCase()
+            let method: string | null = null
+            if (rawMethod) {
+                if (rawMethod.includes('pix')) method = 'pix_mp'
+                else if (rawMethod.includes('mercado') || rawMethod.includes('mp')) method = rawMethod.includes('boleto') ? 'boleto_mp' : 'pix_mp'
+                else if (rawMethod.includes('financeiro')) method = 'boleto_financeiro'
+                else if (rawMethod.includes('boleto')) method = 'boleto_mp'
+                else method = rawMethod
+            }
+            const installmentsNum = req.body?.payment_installments != null ? Number(req.body.payment_installments) : null
+            if (installmentsNum != null && (Number.isNaN(installmentsNum) || installmentsNum < 1)) {
+                res.status(400).json({ message: 'Número de parcelas inválido' })
+                return
+            }
+
+            const conn = await pool.getConnection()
+            try {
+                await conn.beginTransaction()
+                try {
+                    await conn.query<OkPacket>(
+                        `UPDATE propostas SET payment_method = ?, payment_installments = ?, data_alteracao = NOW() WHERE id = ?`,
+                        [method, installmentsNum, id]
+                    )
+                } catch (e: any) {
+                    // Column missing in DB
+                    if (e?.code === 'ER_BAD_FIELD_ERROR') {
+                        await conn.rollback()
+                        res.status(400).json({ message: 'Colunas de pagamento ausentes na tabela propostas. Adicione payment_method VARCHAR(50) NULL e payment_installments INT NULL.' })
+                        return
+                    }
+                    throw e
+                }
+
+                // History
+                try {
+                    const valor_anterior = JSON.stringify({ payment_method: current.payment_method ?? null, payment_installments: current.payment_installments ?? null })
+                    const novo_valor = JSON.stringify({ payment_method: method, payment_installments: installmentsNum })
+                    await conn.query<OkPacket>(
+                        `INSERT INTO historico_alteracoes (proposta_id, usuario_id, acao, valor_anterior, novo_valor, observacoes, data_alteracao)
+                         VALUES (?, ?, 'atualizar_pagamento', ?, ?, NULL, NOW())`,
+                        [id, actorId, valor_anterior, novo_valor]
+                    )
+                } catch {}
+
+                await conn.commit()
+            } catch (err) {
+                await conn.rollback()
+                throw err
+            } finally {
+                conn.release()
+            }
+
+            res.status(200).json({ id, payment_method: method, payment_installments: installmentsNum, dataAlteracao: new Date().toISOString() })
+        } catch (error) {
+            console.error('Erro ao atualizar pagamento da proposta:', error)
+            res.status(500).json({ message: 'Erro ao atualizar pagamento da proposta' })
+        }
+    }

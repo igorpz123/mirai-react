@@ -23,7 +23,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { IconDotsVertical, IconRotateClockwise, IconExternalLink, IconLink, IconTrash } from '@tabler/icons-react'
 import { toastError, toastSuccess } from '@/lib/customToast'
-import { recalculateProposalTotal, deleteProposal, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus } from '@/services/proposals'
+import { recalculateProposalTotal, deleteProposal, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, updateProposalPayment, PAYMENT_METHOD_OPTIONS } from '@/services/proposals'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/use-auth'
 import { DropdownMenuLabel } from '@radix-ui/react-dropdown-menu'
 
@@ -159,8 +161,13 @@ export function CommercialProposalsTable({
   }>
     = React.memo(({ p, onChange }) => {
     const [open, setOpen] = useState(false)
+    const [paymentOpen, setPaymentOpen] = useState(false)
+    const [savingPayment, setSavingPayment] = useState(false)
+    const [paymentMethod, setPaymentMethod] = useState<string>('pix_mp')
+    const [paymentInstallments, setPaymentInstallments] = useState<string>('1')
     const canManage = isAdmin || isUserResponsible(p)
     return (
+      <>
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="data-[state=open]:bg-muted text-muted-foreground">
@@ -215,7 +222,16 @@ export function CommercialProposalsTable({
                     className="cursor-pointer"
                     onClick={async () => {
                       try {
-                        if (s.key === 'aprovada' || s.key === 'rejeitada') {
+                        if (s.key === 'aprovada') {
+                          // Directly open dialog (no prior confirmation, no immediate status change)
+                          setPaymentMethod((p as any).payment_method || 'pix_mp')
+                          setPaymentInstallments(String((p as any).payment_installments || 1))
+                          setOpen(false)
+                          setPaymentOpen(true)
+                          return
+                        }
+                        // Other statuses: keep normal flow (confirm only for rejeitada)
+                        if (s.key === 'rejeitada') {
                           const ok = window.confirm(`Tem certeza que deseja marcar como ${s.label}?`)
                           if (!ok) return
                         }
@@ -255,7 +271,58 @@ export function CommercialProposalsTable({
             )}
           </DropdownMenuContent>
         )}
-      </DropdownMenu>
+  </DropdownMenu>
+      {/* Payment Dialog */}
+      <Dialog open={paymentOpen} onOpenChange={(v)=>{ if(!savingPayment) setPaymentOpen(v) }}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>Forma de pagamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor={`pay-method-${p.id}`}>Método</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger id={`pay-method-${p.id}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PAYMENT_METHOD_OPTIONS.map(opt => (
+                    <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`pay-inst-${p.id}`}>Parcelas</Label>
+              <Input id={`pay-inst-${p.id}`} type="number" min={1} value={paymentInstallments} onChange={(e)=> setPaymentInstallments(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={()=> setPaymentOpen(false)} disabled={savingPayment}>Cancelar</Button>
+            <Button onClick={async ()=>{
+              try {
+                setSavingPayment(true)
+                const installments = Math.max(1, Number(paymentInstallments || '1'))
+                // Save payment first
+                const resp = await updateProposalPayment(p.id, { payment_method: paymentMethod as any, payment_installments: installments })
+                onChange(prev => prev.map(r => r.id === p.id ? { ...r, payment_method: resp.payment_method, payment_installments: resp.payment_installments, dataAlteracao: (resp as any).dataAlteracao ?? (r as any).dataAlteracao } : r))
+                onProposalsPatched?.([{ id: p.id as any, changes: { payment_method: resp.payment_method, payment_installments: resp.payment_installments } }])
+                // Then set status to aprovada
+                const statusRes = await updateProposalStatus(p.id, 'aprovada')
+                onChange(prev => prev.map(r => r.id === p.id ? { ...r, status: statusRes.status, dataAlteracao: (statusRes as any).dataAlteracao ?? (r as any).dataAlteracao } : r))
+                onProposalsPatched?.([{ id: p.id as any, changes: { status: statusRes.status, dataAlteracao: (statusRes as any).dataAlteracao } }])
+                toastSuccess('Pagamento salvo e proposta aprovada')
+                setPaymentOpen(false)
+              } catch (e: any) {
+                toastError(e?.response?.data?.message || 'Falha ao salvar pagamento')
+              } finally {
+                setSavingPayment(false)
+              }
+            }} disabled={savingPayment}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      </>
     )
   })
 

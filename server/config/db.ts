@@ -10,6 +10,8 @@ const poolOptions: PoolOptions = {
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  // Return DECIMAL/NUMERIC as numbers instead of strings
+  decimalNumbers: true,
 };
 
 // Cria o pool e exporta com tipagem Pool

@@ -6,6 +6,8 @@ export type Proposal = {
   valor?: number
   valor_total?: number
   status: 'pendente' | 'progress' | 'andamento' | 'analise' | 'análise' | 'rejeitada' | 'aprovada' | string
+  payment_method?: string
+  payment_installments?: number
   comissao?: number
   criadoEm?: string
   dataAlteracao?: string
@@ -211,6 +213,17 @@ export const PROPOSAL_STATUSES: Array<{ key: ProposalStatus; label: string }> = 
 export async function updateProposalStatus(id: number, status: ProposalStatus) {
   const res = await api.patch(`/propostas/${id}/status`, { status })
   return res.data as { id: number; status: ProposalStatus; dataAlteracao?: string }
+}
+
+export type PaymentMethodKey = 'pix_mp' | 'boleto_mp' | 'boleto_financeiro'
+export const PAYMENT_METHOD_OPTIONS: Array<{ key: PaymentMethodKey; label: string }> = [
+  { key: 'pix_mp', label: 'PIX (Mercado Pago)' },
+  { key: 'boleto_mp', label: 'Boleto (Mercado Pago)' },
+  { key: 'boleto_financeiro', label: 'Boleto (Financeiro)' },
+]
+export async function updateProposalPayment(id: number, payload: { payment_method: PaymentMethodKey; payment_installments: number }) {
+  const res = await api.patch(`/propostas/${id}/pagamento`, payload)
+  return res.data as { id: number; payment_method: PaymentMethodKey; payment_installments: number; dataAlteracao?: string }
 }
 
 export type ProposalHistoryEntry = {

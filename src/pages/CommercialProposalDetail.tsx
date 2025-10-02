@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, listProposalFiles, uploadProposalFile, deleteProposalFile, type Arquivo as PropostaArquivo, exportProposalDocx } from '@/services/proposals'
+import { getProposalById, type Proposal, getCursosByProposal, getProdutosByProposal, getQuimicosByProposal, type ProposalCurso, type ProposalProduto, type ProposalQuimico, getCoursesCatalog, getProductsCatalog, addCourseToProposal, addChemicalToProposal, addProductToProposal, getProductPrice, type Curso, type Produto, getChemicalsCatalog, type Quimico, updateProposalStatus, PROPOSAL_STATUSES, type ProposalStatus, getProposalHistory, type ProposalHistoryEntry, getProgramsCatalog, type Programa, addProgramToProposal, getProgramasByProposal, type ProposalPrograma, getProgramPrice, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, listProposalFiles, uploadProposalFile, deleteProposalFile, type Arquivo as PropostaArquivo, exportProposalDocx, updateProposalPayment, PAYMENT_METHOD_OPTIONS } from '@/services/proposals'
 import ProposalStatusBadge from '@/components/proposal-status-badge'
 import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -11,9 +11,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toastError, toastSuccess } from '@/lib/customToast'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { IconTrash } from '@tabler/icons-react'
 import { AuthContext } from '@/contexts/AuthContext'
+import { Separator } from '@radix-ui/react-separator'
 
 export default function CommercialProposalDetail() {
     const { id } = useParams<{ id: string }>()
@@ -37,6 +39,12 @@ export default function CommercialProposalDetail() {
     const [programs, setPrograms] = React.useState<Programa[]>([])
     const [note, setNote] = React.useState<string>('')
     const [savingNote, setSavingNote] = React.useState<boolean>(false)
+
+    // Payment dialog state
+    const [payOpen, setPayOpen] = React.useState(false)
+    const [savingPay, setSavingPay] = React.useState(false)
+    const [payMethod, setPayMethod] = React.useState<string>('pix_mp')
+    const [payInstallments, setPayInstallments] = React.useState<string>('1')
 
     // Confirm dialog state
     const [confirmOpen, setConfirmOpen] = React.useState(false)
@@ -75,13 +83,13 @@ export default function CommercialProposalDetail() {
         if (openCourse) setFormCourse({ curso_id: 0, quantidade: 1, valor_unitario: 0, desconto: 0 })
     }, [openCourse])
     React.useEffect(() => {
-    if (openChemical) setFormChemical({ selectedKey: '', quimico_id: 0, grupo: '', pontos: 0, valor_unitario: 0, desconto: 0 })
+        if (openChemical) setFormChemical({ selectedKey: '', quimico_id: 0, grupo: '', pontos: 0, valor_unitario: 0, desconto: 0 })
     }, [openChemical])
     React.useEffect(() => {
         if (openProduct) setFormProduct({ produto_id: 0, quantidade: 1, desconto: 0, precoPrev: 0 })
     }, [openProduct])
     React.useEffect(() => {
-    if (openProgram) setFormProgram({ programa_id: 0, quantidade: 1, desconto: 0, acrescimo_mensal: 0, precoPrev: 0 })
+        if (openProgram) setFormProgram({ programa_id: 0, quantidade: 1, desconto: 0, acrescimo_mensal: 0, precoPrev: 0 })
     }, [openProgram])
 
     React.useEffect(() => {
@@ -180,27 +188,27 @@ export default function CommercialProposalDetail() {
                             Proposta #{proposal.id}
                             <ProposalStatusBadge status={proposal.status} />
                         </h1>
-                                                <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                             <Button variant="outline" onClick={() => navigate(-1)}>Voltar</Button>
-                                                        <Button
-                                                            variant="secondary"
-                                                            onClick={async () => {
-                                                                try {
-                                                                    if (!id) return
-                                                                    const blob = await exportProposalDocx(Number(id))
-                                                                    const url = window.URL.createObjectURL(blob)
-                                                                    const a = document.createElement('a')
-                                                                    a.href = url
-                                                                    a.download = `Proposta-${id}.docx`
-                                                                    document.body.appendChild(a)
-                                                                    a.click()
-                                                                    a.remove()
-                                                                    window.URL.revokeObjectURL(url)
-                                                                } catch (err: any) {
-                                                                    toastError(err?.response?.data?.message || err?.message || 'Falha ao exportar DOCX')
-                                                                }
-                                                            }}
-                                                        >Exportar Word</Button>
+                            <Button
+                                variant="secondary"
+                                onClick={async () => {
+                                    try {
+                                        if (!id) return
+                                        const blob = await exportProposalDocx(Number(id))
+                                        const url = window.URL.createObjectURL(blob)
+                                        const a = document.createElement('a')
+                                        a.href = url
+                                        a.download = `Proposta-${id}.docx`
+                                        document.body.appendChild(a)
+                                        a.click()
+                                        a.remove()
+                                        window.URL.revokeObjectURL(url)
+                                    } catch (err: any) {
+                                        toastError(err?.response?.data?.message || err?.message || 'Falha ao exportar DOCX')
+                                    }
+                                }}
+                            >Exportar Word</Button>
                             <Button onClick={() => setOpenCourse(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Curso</Button>
                             <Button onClick={() => setOpenChemical(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Químico</Button>
                             <Button onClick={() => setOpenProduct(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Produto</Button>
@@ -208,45 +216,8 @@ export default function CommercialProposalDetail() {
                         </div>
                     </div>
 
-                    {/* Status updater */}
-                    <div className="flex flex-col gap-2 rounded-md border p-3 bg-card/50">
-                        <div className="text-sm font-medium">Status da proposta</div>
-                        <div className="flex items-center gap-2">
-                            <Select
-                                disabled={!canUpdateStatus}
-                                value={(proposal.status || '').toString().toLowerCase().replace('progress', 'andamento').replace('análise', 'analise')}
-                                onValueChange={async (v) => {
-                                    try {
-                                        const key = v as ProposalStatus
-                                        // confirmations
-                                        if (key === 'aprovada' || key === 'rejeitada') {
-                                            const ok = window.confirm(`Tem certeza que deseja marcar como ${PROPOSAL_STATUSES.find(s=>s.key===key)?.label}?`)
-                                            if (!ok) return
-                                        }
-                                        const res = await updateProposalStatus(proposal.id, key)
-                                        setProposal((prev) => prev ? { ...prev, status: res.status, dataAlteracao: res.dataAlteracao ?? prev.dataAlteracao } : prev)
-                                        // refresh history
-                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
-                                        toastSuccess('Status atualizado')
-                                    } catch (e: any) {
-                                        toastError(e?.response?.data?.message || 'Falha ao atualizar status')
-                                    }
-                                }}
-                            >
-                                <SelectTrigger className="w-56">
-                                    <SelectValue placeholder="Selecione o status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {PROPOSAL_STATUSES.map(s => (
-                                        <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
                     <section className="space-y-2 w-full">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <div className="text-sm text-muted-foreground">Título</div>
                                 <div className="text-base">{proposal.titulo || '—'}</div>
@@ -265,7 +236,7 @@ export default function CommercialProposalDetail() {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                             <div>
                                 <div className="text-sm text-muted-foreground">Criada em</div>
                                 <div className="text-base">{fmtDate(proposal.criadoEm)}</div>
@@ -278,117 +249,52 @@ export default function CommercialProposalDetail() {
                                 <div className="text-sm text-muted-foreground">Valor total</div>
                                 <div className="text-base">{fmtBRL(proposal.valor_total ?? proposal.valor)}</div>
                             </div>
-                        </div>
-                    </section>
-
-                    {/* Observações sobre a proposta */}
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold">Observações</h2>
-                        <div className="rounded-md border p-3 bg-card/50">
-                            <Textarea
-                                placeholder="Escreva uma observação sobre esta proposta..."
-                                value={note}
-                                onChange={(e) => setNote(e.target.value)}
-                                disabled={savingNote}
-                            />
-                            <div className="flex justify-end mt-2">
-                                <Button
-                                    onClick={async () => {
-                                        try {
-                                            if (!id || !user?.id) return
-                                            const content = (note || '').trim()
-                                            if (!content) { toastError('Digite uma observação'); return }
-                                            setSavingNote(true)
-                                            await addProposalObservation(Number(id), Number(user.id), content)
-                                            setNote('')
-                                            try { const h = await getProposalHistory(Number(id)); setHistory(h) } catch {}
-                                            toastSuccess('Observação adicionada')
-                                        } catch (err: any) {
-                                            toastError(err?.response?.data?.message || err?.message || 'Erro ao adicionar observação')
-                                        } finally {
-                                            setSavingNote(false)
-                                        }
-                                    }}
-                                    disabled={savingNote}
-                                >{savingNote ? 'Salvando...' : 'Salvar observação'}</Button>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Arquivos vinculados */}
-                    <section className="space-y-2">
-                        <h2 className="text-lg font-semibold">Arquivos</h2>
-                        <div className="rounded-md border p-3 bg-card/50 space-y-3">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <input
-                                    type="file"
-                                    id="file-proposta"
-                                    disabled={uploading}
-                                    onChange={async (e) => {
-                                        const inputEl = e.currentTarget
-                                        const file = inputEl.files?.[0]
-                                        if (!file || !id) return
-                                        try {
-                                            setUploading(true)
-                                            await uploadProposalFile(Number(id), file)
-                                            const list = await listProposalFiles(Number(id))
-                                            setArquivos(list)
-                                            toastSuccess('Arquivo enviado')
-                                        } catch (err: any) {
-                                            toastError(err?.response?.data?.message || err?.message || 'Erro ao enviar arquivo')
-                                        } finally {
-                                            try { inputEl.value = '' } catch {}
-                                            setUploading(false)
-                                        }
-                                    }}
-                                />
-                                <Button
-                                    variant="outline"
-                                    disabled
-                                    title="Selecione um arquivo para enviar"
-                                >Enviar</Button>
-                                {/* Uploads are open to any user; deletion still respects permissions. */}
-                            </div>
                             <div>
-                                {!arquivos || arquivos.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground">Nenhum arquivo enviado.</div>
-                                ) : (
-                                    <ul className="space-y-2">
-                                        {arquivos.map((a) => (
-                                            <li key={a.id} className="flex items-center justify-between gap-2">
-                                                <a href={a.caminho} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate max-w-[70%]">{a.nome_arquivo}</a>
-                                                <div className="flex items-center gap-2">
-                                                    <a href={a.caminho} target="_blank" rel="noreferrer">
-                                                        <Button size="sm" variant="secondary">Abrir</Button>
-                                                    </a>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        disabled={!canRemoveItems}
-                                                        onClick={async () => {
-                                                            if (!id) return
-                                                            const ok = window.confirm('Excluir este arquivo?')
-                                                            if (!ok) return
-                                                            try {
-                                                                await deleteProposalFile(Number(id), a.id)
-                                                                setArquivos(prev => prev ? prev.filter(x => x.id !== a.id) : prev)
-                                                                toastSuccess('Arquivo excluído')
-                                                            } catch (err: any) {
-                                                                toastError(err?.response?.data?.message || err?.message || 'Erro ao excluir arquivo')
-                                                            }
-                                                        }}
-                                                    >Excluir</Button>
-                                                </div>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
+                                <div className="text-sm font-medium">Status da proposta</div>
+                                <div className="flex items-center gap-2">
+                                    <Select
+                                        disabled={!canUpdateStatus}
+                                        value={(proposal.status || '').toString().toLowerCase().replace('progress', 'andamento').replace('análise', 'analise')}
+                                        onValueChange={async (v) => {
+                                            try {
+                                                const key = v as ProposalStatus
+                                                if (key === 'aprovada') {
+                                                    // Open dialog directly; status will be updated after saving payment
+                                                    setPayMethod((proposal as any).payment_method || 'pix_mp')
+                                                    setPayInstallments(String((proposal as any).payment_installments || 1))
+                                                    setPayOpen(true)
+                                                    return
+                                                }
+                                                // For other statuses, keep normal flow (confirm only for rejeitada)
+                                                if (key === 'rejeitada') {
+                                                    const ok = window.confirm(`Tem certeza que deseja marcar como ${PROPOSAL_STATUSES.find(s => s.key === key)?.label}?`)
+                                                    if (!ok) return
+                                                }
+                                                const res = await updateProposalStatus(proposal.id, key)
+                                                setProposal((prev) => prev ? { ...prev, status: res.status, dataAlteracao: res.dataAlteracao ?? prev.dataAlteracao } : prev)
+                                                try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch { }
+                                                toastSuccess('Status atualizado')
+                                            } catch (e: any) {
+                                                toastError(e?.response?.data?.message || 'Falha ao atualizar status')
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-56">
+                                            <SelectValue placeholder="Selecione o status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {PROPOSAL_STATUSES.map(s => (
+                                                <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </div>
                     </section>
 
                     <section className="space-y-2">
-                        <h2 className="text-lg font-semibold">Produtos vinculados</h2>
+                        <h2 className="text-lg font-semibold text-center">Produtos vinculados</h2>
                         {loadingItens ? (
                             <div className="text-sm text-muted-foreground">Carregando itens...</div>
                         ) : (
@@ -427,7 +333,7 @@ export default function CommercialProposalDetail() {
                                                                         await deleteProgramFromProposal(proposal.id, p.id)
                                                                         setProgramas(prev => prev ? prev.filter(x => x.id !== p.id) : prev)
                                                                         setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number(p.valor_total || 0) } : prev)
-                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch { }
                                                                         toastSuccess('Programa removido')
                                                                     }
                                                                 )}
@@ -446,6 +352,7 @@ export default function CommercialProposalDetail() {
                                         </Table>
                                     )}
                                 </div>
+                                <Separator className="my-4 bg-muted-foreground/30" />
                                 <div>
                                     <h3 className="font-medium">Cursos</h3>
                                     {(!cursos || cursos.length === 0) ? (
@@ -480,7 +387,7 @@ export default function CommercialProposalDetail() {
                                                                         await deleteCourseFromProposal(proposal.id, c.id)
                                                                         setCursos(prev => prev ? prev.filter(x => x.id !== c.id) : prev)
                                                                         setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number(c.valor_total || 0) } : prev)
-                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch { }
                                                                         toastSuccess('Curso removido')
                                                                     }
                                                                 )}
@@ -499,7 +406,7 @@ export default function CommercialProposalDetail() {
                                         </Table>
                                     )}
                                 </div>
-
+                                <Separator className="my-4 bg-muted-foreground/30" />
                                 <div>
                                     <h3 className="font-medium">Químicos</h3>
                                     {(!quimicos || quimicos.length === 0) ? (
@@ -534,7 +441,7 @@ export default function CommercialProposalDetail() {
                                                                         await deleteChemicalFromProposal(proposal.id, q.id)
                                                                         setQuimicos(prev => prev ? prev.filter(x => x.id !== q.id) : prev)
                                                                         setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number((q as any).valor_total || 0) } : prev)
-                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch { }
                                                                         toastSuccess('Químico removido')
                                                                     }
                                                                 )}
@@ -553,7 +460,7 @@ export default function CommercialProposalDetail() {
                                         </Table>
                                     )}
                                 </div>
-
+                                <Separator className="my-4 bg-muted-foreground/30" />
                                 <div>
                                     <h3 className="font-medium">Produtos</h3>
                                     {(!produtos || produtos.length === 0) ? (
@@ -588,7 +495,7 @@ export default function CommercialProposalDetail() {
                                                                         await deleteProductFromProposal(proposal.id, p.id)
                                                                         setProdutos(prev => prev ? prev.filter(x => x.id !== p.id) : prev)
                                                                         setProposal(prev => prev ? { ...prev, valor_total: Number(prev.valor_total || 0) - Number(p.valor_total || 0) } : prev)
-                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch {}
+                                                                        try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch { }
                                                                         toastSuccess('Produto removido')
                                                                     }
                                                                 )}
@@ -610,6 +517,114 @@ export default function CommercialProposalDetail() {
                             </div>
                         )}
                     </section>
+
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                        {/* Observações sobre a proposta */}
+                        <section className="space-y-2">
+                            <h2 className="text-lg font-semibold">Observações</h2>
+                            <div>
+                                <Textarea
+                                    placeholder="Escreva uma observação sobre esta proposta..."
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    disabled={savingNote}
+                                />
+                                <div className="flex justify-end mt-2">
+                                    <Button
+                                        onClick={async () => {
+                                            try {
+                                                if (!id || !user?.id) return
+                                                const content = (note || '').trim()
+                                                if (!content) { toastError('Digite uma observação'); return }
+                                                setSavingNote(true)
+                                                await addProposalObservation(Number(id), Number(user.id), content)
+                                                setNote('')
+                                                try { const h = await getProposalHistory(Number(id)); setHistory(h) } catch { }
+                                                toastSuccess('Observação adicionada')
+                                            } catch (err: any) {
+                                                toastError(err?.response?.data?.message || err?.message || 'Erro ao adicionar observação')
+                                            } finally {
+                                                setSavingNote(false)
+                                            }
+                                        }}
+                                        disabled={savingNote}
+                                    >{savingNote ? 'Salvando...' : 'Salvar observação'}</Button>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* Arquivos vinculados */}
+                        <section className="space-y-2">
+                            <h2 className="text-lg font-semibold">Arquivos</h2>
+                            <div className="rounded-md border p-3 bg-card/50 space-y-3">
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <input
+                                        type="file"
+                                        id="file-proposta"
+                                        disabled={uploading}
+                                        onChange={async (e) => {
+                                            const inputEl = e.currentTarget
+                                            const file = inputEl.files?.[0]
+                                            if (!file || !id) return
+                                            try {
+                                                setUploading(true)
+                                                await uploadProposalFile(Number(id), file)
+                                                const list = await listProposalFiles(Number(id))
+                                                setArquivos(list)
+                                                toastSuccess('Arquivo enviado')
+                                            } catch (err: any) {
+                                                toastError(err?.response?.data?.message || err?.message || 'Erro ao enviar arquivo')
+                                            } finally {
+                                                try { inputEl.value = '' } catch { }
+                                                setUploading(false)
+                                            }
+                                        }}
+                                    />
+                                    <Button
+                                        variant="outline"
+                                        disabled
+                                        title="Selecione um arquivo para enviar"
+                                    >Enviar</Button>
+                                    {/* Uploads are open to any user; deletion still respects permissions. */}
+                                </div>
+                                <div>
+                                    {!arquivos || arquivos.length === 0 ? (
+                                        <div className="text-sm text-muted-foreground">Nenhum arquivo enviado.</div>
+                                    ) : (
+                                        <ul className="space-y-2">
+                                            {arquivos.map((a) => (
+                                                <li key={a.id} className="flex items-center justify-between gap-2">
+                                                    <a href={a.caminho} target="_blank" rel="noreferrer" className="text-primary hover:underline truncate max-w-[70%]">{a.nome_arquivo}</a>
+                                                    <div className="flex items-center gap-2">
+                                                        <a href={a.caminho} target="_blank" rel="noreferrer">
+                                                            <Button size="sm" variant="secondary">Abrir</Button>
+                                                        </a>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            disabled={!canRemoveItems}
+                                                            onClick={async () => {
+                                                                if (!id) return
+                                                                const ok = window.confirm('Excluir este arquivo?')
+                                                                if (!ok) return
+                                                                try {
+                                                                    await deleteProposalFile(Number(id), a.id)
+                                                                    setArquivos(prev => prev ? prev.filter(x => x.id !== a.id) : prev)
+                                                                    toastSuccess('Arquivo excluído')
+                                                                } catch (err: any) {
+                                                                    toastError(err?.response?.data?.message || err?.message || 'Erro ao excluir arquivo')
+                                                                }
+                                                            }}
+                                                        >Excluir</Button>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
 
                     {/* History section */}
                     <section className="space-y-2">
@@ -659,13 +674,16 @@ export default function CommercialProposalDetail() {
                                                             return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou um item`
                                                         }
                                                         case 'aprovar':
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} marcou a proposta como aprovada`
                                                         case 'rejeitar':
                                                         case 'atualizar_status':
                                                             return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} atualizou o status de ${h.anterior?.status || '—'} para ${h.novo?.status || '—'}`
                                                         case 'adicionar_observacao':
                                                             return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} adicionou uma observação`
+                                                        case 'atualizar_pagamento':
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} realizou atualizar pagamento`
                                                         default:
-                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} realizou ${h.acao?.replace('_',' ')}`
+                                                            return `${h.actor ? `${h.actor.nome} ${h.actor.sobrenome || ''}`.trim() : 'Usuário'} realizou ${h.acao?.replace('_', ' ')}`
                                                     }
                                                 })()}
                                             </p>
@@ -1010,6 +1028,56 @@ export default function CommercialProposalDetail() {
                             }}
                             disabled={confirming}
                         >{confirming ? 'Removendo...' : 'Remover'}</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Payment Dialog */}
+            <Dialog open={payOpen} onOpenChange={(o) => { if (!savingPay) setPayOpen(o) }}>
+                <DialogContent className="sm:max-w-[420px]" onInteractOutside={(e) => e.preventDefault()}>
+                    <DialogHeader>
+                        <DialogTitle>Forma de pagamento</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                        <div className="space-y-1">
+                            <Label htmlFor={`pay-method-${proposal.id}`}>Método</Label>
+                            <Select value={payMethod} onValueChange={setPayMethod}>
+                                <SelectTrigger id={`pay-method-${proposal.id}`}>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {PAYMENT_METHOD_OPTIONS.map(opt => (
+                                        <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor={`pay-inst-${proposal.id}`}>Parcelas</Label>
+                            <Input id={`pay-inst-${proposal.id}`} type="number" min={1} value={payInstallments} onChange={(e) => setPayInstallments(e.target.value)} />
+                        </div>
+                    </div>
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setPayOpen(false)} disabled={savingPay}>Cancelar</Button>
+                        <Button onClick={async () => {
+                            try {
+                                setSavingPay(true)
+                                const installments = Math.max(1, Number(payInstallments || '1'))
+                                // Save payment first
+                                const resp = await updateProposalPayment(proposal.id, { payment_method: payMethod as any, payment_installments: installments })
+                                setProposal(prev => prev ? { ...prev, payment_method: resp.payment_method as any, payment_installments: resp.payment_installments as any, dataAlteracao: (resp as any).dataAlteracao ?? prev.dataAlteracao } : prev)
+                                // Then set status to aprovada
+                                const resStatus = await updateProposalStatus(proposal.id, 'aprovada')
+                                setProposal(prev => prev ? { ...prev, status: resStatus.status, dataAlteracao: resStatus.dataAlteracao ?? prev.dataAlteracao } : prev)
+                                toastSuccess('Pagamento salvo e proposta aprovada')
+                                setPayOpen(false)
+                                try { const h = await getProposalHistory(proposal.id); setHistory(h) } catch { }
+                            } catch (e: any) {
+                                toastError(e?.response?.data?.message || 'Falha ao salvar pagamento')
+                            } finally {
+                                setSavingPay(false)
+                            }
+                        }} disabled={savingPay}>Salvar</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
