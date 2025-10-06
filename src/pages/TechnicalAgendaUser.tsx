@@ -9,8 +9,6 @@ import { getEventsByResponsavel } from '@/services/agenda'
 import TechnicalCalendar from '@/components/technical-calendar'
 import { TechnicalTaskTable } from '@/components/technical-task-table'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 
 export default function TechnicalAgendaUser() {
   const { usuarioId } = useParams()
@@ -125,10 +123,7 @@ export default function TechnicalAgendaUser() {
 
   // allow navigation beyond current month; still compute currentMonth for informational purposes
   // no longer tracking currentMonth locally
-
-  const goPrev = () => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-  const goNext = () => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-
+  
   return (
     <div className="container-main">
       <SiteHeader title={user?.nome ? `Agenda | ${user.nome}` : `Agenda | Usuário ${usuarioId}`} />
