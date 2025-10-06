@@ -10,6 +10,9 @@
     "build:full": "npm run build && npm run build:server",
     "install:all": "npm install && npm --prefix server install",
     "start:prod": "node server/dist/server.js",
+    "build:types": "tsc -p tsconfig.json --noEmit",
+    "build:frontend": "vite build",
+    "build:split": "npm run build:types && npm run build:frontend && npm run build:server",
     "lint": "eslint .",
     "preview": "vite preview"
   },

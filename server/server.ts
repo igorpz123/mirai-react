@@ -45,28 +45,43 @@ app.use(PUBLIC_UPLOADS_PREFIX, express.static(PUBLIC_UPLOADS_DIR))
 app.use('/api', routes)
 app.use('/api/auth', authRoutes)
 
-// --- Optional static serving of frontend build (for shared hosting like HostGator) ---
-// Enable by setting SERVE_FRONT=true (and placing the React build in ../dist or setting FRONT_DIST_PATH)
+// --- Optional static serving of frontend build (Render / shared hosting) ---
+// Accept truthy values: true, 1, yes (case-insensitive)
 try {
-  if (process.env.SERVE_FRONT === 'true') {
+  const rawServe = (process.env.SERVE_FRONT || '').toLowerCase().trim()
+  const shouldServe = ['true', '1', 'yes'].includes(rawServe)
+  if (shouldServe) {
     const candidate = process.env.FRONT_DIST_PATH || path.resolve(__dirname, '..', '..', 'dist')
-    if (fs.existsSync(candidate)) {
-      console.log('[serve_front] Servindo frontend estático de', candidate)
+    const indexFile = path.join(candidate, 'index.html')
+    const exists = fs.existsSync(candidate)
+    console.log('[serve_front] ENABLED. Pasta build esperada:', candidate, '| existe?', exists)
+    if (exists) {
+      if (!fs.existsSync(indexFile)) console.warn('[serve_front] index.html não encontrado em', candidate)
       app.use(express.static(candidate))
-      app.get('*', (req, res, next) => {
-        // Deixa rotas da API seguirem normalmente
-        if (req.path.startsWith('/api')) return next()
-        const indexFile = path.join(candidate, 'index.html')
+      app.get('/', (req, res) => {
         if (fs.existsSync(indexFile)) return res.sendFile(indexFile)
-        return res.status(404).send('index.html não encontrado')
+        return res.status(500).send('Build frontend não encontrado (index.html ausente)')
+      })
+      // Catch-all (SPA) após rotas API
+      app.get('*', (req, res, next) => {
+        if (req.path.startsWith('/api')) return next()
+        if (fs.existsSync(indexFile)) return res.sendFile(indexFile)
+        return res.status(404).send('Recurso não encontrado e index.html ausente')
       })
     } else {
-      console.warn('[serve_front] Pasta não encontrada:', candidate)
+      console.warn('[serve_front] Pasta do build não existe. Verifique build command no Render.')
     }
+  } else {
+    console.log('[serve_front] DESABILITADO. Defina SERVE_FRONT=true para servir o build pelo backend.')
   }
 } catch (e) {
-  console.warn('[serve_front] Falhou ao configurar front estático:', e)
+  console.warn('[serve_front] Erro ao configurar front estático:', e)
 }
+
+// Health check simples
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, uptime: process.uptime(), ts: Date.now() })
+})
 
 // Endpoint para registrar last_seen manualmente (fallback / polling)
 app.post('/api/presenca/ping', async (req: Request, res: Response) => {

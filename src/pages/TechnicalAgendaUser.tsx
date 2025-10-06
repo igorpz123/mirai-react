@@ -110,23 +110,24 @@ export default function TechnicalAgendaUser() {
 
   // filter tasks by selectedMonth
   const tasksForMonth = useMemo(() => {
-    return tasks.filter(t => {
+    const filtered = tasks.filter(t => {
       if (!t.prazo) return false
       const d = parseLocalDate(t.prazo as any)
       if (!d) return false
       return d.getFullYear() === selectedMonth.getFullYear() && d.getMonth() === selectedMonth.getMonth()
     })
+    if (filtered.length === 0) {
+      const sample = tasks.slice(0,3).map(t => t.prazo)
+      console.debug('[AgendaUser] Nenhuma tarefa no mês filtrado', { selectedMonth: selectedMonth.toISOString(), samplePrazos: sample })
+    }
+    return filtered
   }, [tasks, selectedMonth])
 
   // allow navigation beyond current month; still compute currentMonth for informational purposes
   // no longer tracking currentMonth locally
 
-  const goPrev = () => {
-    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-  }
-  const goNext = () => {
-    setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-  }
+  const goPrev = () => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+  const goNext = () => setSelectedMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
 
   return (
     <div className="container-main">
@@ -140,7 +141,7 @@ export default function TechnicalAgendaUser() {
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm">
+              {/* <div className="flex items-center gap-2 text-sm">
                 <Button variant="ghost" size="icon" onClick={goPrev} aria-label="Mês anterior">
                   <IconChevronLeft />
                 </Button>
@@ -151,9 +152,9 @@ export default function TechnicalAgendaUser() {
                 <Button variant="ghost" size="icon" onClick={goNext} aria-label="Próximo mês">
                   <IconChevronRight />
                 </Button>
-              </div>
+              </div> */}
 
-              <div>
+              {/* <div>
                 <label htmlFor="month-select" className="sr-only">Selecionar mês</label>
                 <input
                   id="month-select"
@@ -166,7 +167,7 @@ export default function TechnicalAgendaUser() {
                   }}
                   className="border-input rounded-md px-2 py-1 text-sm"
                 />
-              </div>
+              </div> */}
 
               <div className="flex items-center gap-2">
                 <input
@@ -237,7 +238,6 @@ export default function TechnicalAgendaUser() {
                   events={events}
                   currentMonth={selectedMonth}
                   onMonthChange={async (d) => {
-                    // Update selectedMonth when user navigates inside calendar
                     setSelectedMonth(prev => (prev.getFullYear() === d.getFullYear() && prev.getMonth() === d.getMonth()) ? prev : d)
                     try {
                       const monthStart = new Date(d.getFullYear(), d.getMonth(), 1)

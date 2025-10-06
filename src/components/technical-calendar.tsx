@@ -17,7 +17,7 @@ export default function TechnicalCalendar(
 ) {
   const [fcEvents, setFcEvents] = useState<any[]>([])
   const calendarRef = useRef<FullCalendar | null>(null)
-  const isSyncingRef = useRef(false)
+  // Removido sync complexo; apenas refletimos eventos e deixamos FullCalendar navegar livremente.
 
   // Edit modal state
   const [editOpen, setEditOpen] = useState(false)
@@ -63,20 +63,7 @@ export default function TechnicalCalendar(
     }))
   }, [events])
 
-  // Sync calendar view when parent-selected month changes
-  useEffect(() => {
-    if (!currentMonth || !calendarRef.current) return
-    try {
-      const api = calendarRef.current.getApi()
-      const viewDate = api.getDate()
-      const needsChange = viewDate.getFullYear() !== currentMonth.getFullYear() || viewDate.getMonth() !== currentMonth.getMonth()
-      if (needsChange) {
-        // mark that we're changing the view programmatically to avoid emitting onMonthChange
-        isSyncingRef.current = true
-        api.gotoDate(currentMonth)
-      }
-    } catch {}
-  }, [currentMonth])
+  // Não sincronizamos mais programaticamente; evitamos loops.
 
   return (
     <div className="bg-background rounded-lg border p-2 text-sm">
@@ -84,6 +71,8 @@ export default function TechnicalCalendar(
         ref={calendarRef as any}
         plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
+  // Deixar FullCalendar decidir a data inicial (ou usamos currentMonth se veio)
+  initialDate={currentMonth}
         locales={[ptBr]}
         locale="pt-br"
         dayHeaderFormat={{ weekday: 'long' }}
@@ -94,11 +83,11 @@ export default function TechnicalCalendar(
         selectable
         editable
         datesSet={(info: any) => {
-          // User navigated in the calendar; notify parent unless this was our own programmatic change
-          const d = new Date(info.start.getFullYear(), info.start.getMonth(), 1)
-          if (isSyncingRef.current) { isSyncingRef.current = false; return }
-          const sameMonth = currentMonth && d.getFullYear() === currentMonth.getFullYear() && d.getMonth() === currentMonth.getMonth()
-          if (!sameMonth && onMonthChange) onMonthChange(d)
+          // Para month view, info.start pode ser o primeiro dia exibido (que pode pertencer ao mês anterior).
+          // Usamos view.currentStart (primeiro dia do mês real) quando disponível.
+          const base: Date = (info.view && info.view.currentStart) ? new Date(info.view.currentStart) : new Date(info.start)
+          const d = new Date(base.getFullYear(), base.getMonth(), 1)
+          if (onMonthChange) onMonthChange(d)
         }}
         eventDrop={async (info: any) => {
           // Fired when an event is dragged and dropped to a new date/time
