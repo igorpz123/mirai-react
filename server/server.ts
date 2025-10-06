@@ -13,6 +13,8 @@ import { setIO } from './realtime'
 import jwt from 'jsonwebtoken'
 import authConfig from './config/auth'
 import pool from './config/db'
+import path from 'path'
+
 
 const app = express()
 const httpServer = http.createServer(app)
@@ -42,6 +44,29 @@ app.use(PUBLIC_UPLOADS_PREFIX, express.static(PUBLIC_UPLOADS_DIR))
 // Rotas principais
 app.use('/api', routes)
 app.use('/api/auth', authRoutes)
+
+// --- Optional static serving of frontend build (for shared hosting like HostGator) ---
+// Enable by setting SERVE_FRONT=true (and placing the React build in ../dist or setting FRONT_DIST_PATH)
+try {
+  if (process.env.SERVE_FRONT === 'true') {
+    const candidate = process.env.FRONT_DIST_PATH || path.resolve(__dirname, '..', '..', 'dist')
+    if (fs.existsSync(candidate)) {
+      console.log('[serve_front] Servindo frontend estático de', candidate)
+      app.use(express.static(candidate))
+      app.get('*', (req, res, next) => {
+        // Deixa rotas da API seguirem normalmente
+        if (req.path.startsWith('/api')) return next()
+        const indexFile = path.join(candidate, 'index.html')
+        if (fs.existsSync(indexFile)) return res.sendFile(indexFile)
+        return res.status(404).send('index.html não encontrado')
+      })
+    } else {
+      console.warn('[serve_front] Pasta não encontrada:', candidate)
+    }
+  }
+} catch (e) {
+  console.warn('[serve_front] Falhou ao configurar front estático:', e)
+}
 
 // Endpoint para registrar last_seen manualmente (fallback / polling)
 app.post('/api/presenca/ping', async (req: Request, res: Response) => {

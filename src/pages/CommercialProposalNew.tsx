@@ -232,11 +232,17 @@ export default function CommercialProposalNew() {
                 // if company not found, create
                 if (!company) {
                   try {
+                    // Ensure we have a unit id before creating (DB constraint unidade_responsavel NOT NULL)
+                    if (!unitId) {
+                      toastError('Unidade não definida. Tente novamente em instantes.')
+                      return
+                    }
                     const created = await createCompany({
                       cnpj: onlyDigits(empresaForm.cnpj || cnpj),
                       razao_social: empresaForm.razao_social,
                       nome_fantasia: empresaForm.nome_fantasia,
                       cidade: empresaForm.cidade,
+                      unidade_responsavel: unitId,
                     })
                     setCompany({ ...created, nome: created.nome })
                     toastSuccess('Empresa cadastrada')
