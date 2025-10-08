@@ -1,12 +1,10 @@
 import * as React from "react"
 import { useState } from "react"
 import type { Task } from "../services/tasks"
-import { getUsersByDepartmentAndUnit, getUsersByUnitId, getAllUsers } from '@/services/users';
 import { updateTask as updateTaskService, deleteTask as deleteTaskService } from '@/services/tasks'
-import type { User } from '@/services/users';
-import { useUsers } from '@/contexts/UsersContext';
 import { useUnit } from '@/contexts/UnitContext';
 import { useTheme } from '@/components/layout/theme-provider';
+import { getUsersByUnitId, getAllUsers, type User } from '@/services/users';
 import {
   closestCenter,
   DndContext,
@@ -222,122 +220,39 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     }
   }
 
-  function ResponsibleSelect({ task }: { task: TableTask }) {
-  const [users, setUsers] = React.useState<User[] | null>(null)
-  const [loadingUsers, setLoadingUsers] = React.useState(false)
-  const [errorUsers, setErrorUsers] = React.useState<string | null>(null)
-  const [debugEndpoint, setDebugEndpoint] = React.useState<string | null>(null)
-  const [lastRawData, setLastRawData] = React.useState<any | null>(null)
-  const usersCtx = useUsers()
+  // --- Fetch centralizado de usuários da unidade (uma vez) ---
+  const [unitUsers, setUnitUsers] = React.useState<User[]>([])
+  const [unitUsersLoading, setUnitUsersLoading] = React.useState<boolean>(false)
+  const [unitUsersError, setUnitUsersError] = React.useState<string | null>(null)
+  const lastFetchedUnitRef = React.useRef<number | null | undefined>(undefined)
+
+  React.useEffect(() => {
+    const preferredUnit = unitId ?? null
+    if (lastFetchedUnitRef.current === preferredUnit && unitUsers.length > 0) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        setUnitUsersLoading(true)
+        setUnitUsersError(null)
+        lastFetchedUnitRef.current = preferredUnit
+        const resp = preferredUnit ? await getUsersByUnitId(Number(preferredUnit)) : await getAllUsers()
+        if (cancelled) return
+        setUnitUsers((resp.users || []).filter(u => u && u.id != null))
+      } catch (e: any) {
+        if (cancelled) return
+        setUnitUsers([])
+        setUnitUsersError(e?.message || 'Falha ao carregar usuários')
+      } finally {
+        if (!cancelled) setUnitUsersLoading(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [unitId])
+
+  function ResponsibleSelect({ task, users, loading, error }: { task: TableTask; users: User[]; loading: boolean; error: string | null }) {
     const [assigning, setAssigning] = React.useState(false)
-    // track last ensured unit to avoid calling ensureUsersForUnit repeatedly
-    const lastEnsuredUnitRef = React.useRef<number | null | undefined>(undefined)
-
-    React.useEffect(() => {
-      let mounted = true
-      ;(async () => {
-        setLoadingUsers(true)
-        try {
-          // ensure ctx has users for the unit, but only call ensureUsersForUnit
-          // again if the unit changed. This prevents repeated network/cache ops
-          // when the context identity changes.
-          const preferredUnit = task.unidadeId ?? unitId ?? null
-          if (lastEnsuredUnitRef.current !== preferredUnit) {
-            await usersCtx.ensureUsersForUnit(preferredUnit ?? null)
-            lastEnsuredUnitRef.current = preferredUnit
-          }
-
-          if (!mounted) return
-          const { users: fetched, error } = usersCtx.getFilteredUsersForTask({ setorId: task.setorId ?? undefined, setorName: task.setor ?? undefined, unidadeId: task.unidadeId ?? undefined })
-          if (!mounted) return
-
-          // if the context returned empty, attempt a direct API fallback
-          let finalList = fetched || []
-
-          // 1) If filtered by setor returned vazio, tentar só por unidade
-          if ((finalList.length === 0) && (preferredUnit != null)) {
-            const onlyUnit = usersCtx.getFilteredUsersForTask({ unidadeId: preferredUnit }).users || []
-            if (onlyUnit.length > 0) {
-              finalList = onlyUnit
-            }
-          }
-
-          // 2) Se ainda vazio, tenta todos (sem filtros)
-          if (finalList.length === 0) {
-            const all = usersCtx.getFilteredUsersForTask({}).users || []
-            if (all.length > 0) {
-              finalList = all
-            }
-          }
-
-          // 3) Como último recurso, tenta API específica (se tivermos setor E unidade id)
-          if ((finalList.length === 0 || !finalList) && (task.setorId != null) && (preferredUnit != null)) {
-            try {
-              const res = await getUsersByDepartmentAndUnit(Number(task.setorId), Number(preferredUnit))
-              if (mounted && res && Array.isArray(res.users) && res.users.length > 0) {
-                finalList = res.users as User[]
-                setLastRawData(res)
-                setDebugEndpoint(`api:unit:${preferredUnit}`)
-              }
-            } catch (apiErr: any) {
-              // surface API error so UI shows reason for empty list (e.g., 401)
-              const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
-              if (mounted) setErrorUsers(msg)
-              console.warn('[ResponsibleSelect] fallback API call failed', apiErr)
-            }
-          }
-
-          // 4) Se ainda vazio e temos unidade, tenta API por unidade
-          if ((finalList.length === 0 || !finalList) && (preferredUnit != null)) {
-            try {
-              const res = await getUsersByUnitId(Number(preferredUnit))
-              if (mounted && res && Array.isArray(res.users) && res.users.length > 0) {
-                finalList = res.users as User[]
-                setLastRawData(res)
-                setDebugEndpoint(`api:unit-only:${preferredUnit}`)
-              }
-            } catch (apiErr: any) {
-              const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
-              if (mounted) setErrorUsers(msg)
-              console.warn('[ResponsibleSelect] fallback unit API failed', apiErr)
-            }
-          }
-
-          // 5) Como último recurso absoluto, busca todos usuários no servidor
-          if ((finalList.length === 0 || !finalList)) {
-            try {
-              const res = await getAllUsers()
-              if (mounted && res && Array.isArray(res.users) && res.users.length > 0) {
-                finalList = res.users as User[]
-                setLastRawData(res)
-                setDebugEndpoint('api:all')
-              }
-            } catch (apiErr: any) {
-              const msg = apiErr instanceof Error ? apiErr.message : String(apiErr)
-              if (mounted) setErrorUsers(msg)
-              console.warn('[ResponsibleSelect] fallback all-users API failed', apiErr)
-            }
-          }
-
-          // avoid setting state if nothing changed to prevent re-renders that
-          // might re-trigger effects in other components
-          const normalizedFetched = finalList || []
-          const same = Array.isArray(normalizedFetched) && Array.isArray(users) && normalizedFetched.length === users.length && normalizedFetched.every((u, i) => u.id === (users as User[])[i]?.id)
-          if (!same) setUsers(normalizedFetched)
-          setErrorUsers(error ?? null)
-          setDebugEndpoint(preferredUnit ? `unit:${preferredUnit}` : 'all')
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Erro ao carregar usuários'
-          if (!mounted) return
-          setErrorUsers(msg)
-          setUsers([])
-        } finally {
-          if (mounted) setLoadingUsers(false)
-        }
-      })()
-      return () => { mounted = false }
-    // only re-run when the logical inputs change (setorId/unitId/task.unit)
-    }, [task.setorId, task.unidadeId, unitId, task.setor])
+    if (loading) return <span>Carregando...</span>
+    if (error) return <span className="text-destructive">{error}</span>
 
     const handleAssign = async (userIdValue: string) => {
       const userId = Number(userIdValue)
@@ -371,17 +286,6 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       }
     }
 
-    if (loadingUsers) {
-      return <span>Carregando...</span>
-    }
-
-    if (errorUsers) {
-      return <span className="text-destructive">{errorUsers}</span>
-    }
-
-    // filter users to only those with valid numeric ids to avoid duplicate/undefined keys
-    const validUsers = (users || []).filter(u => u && (u.id !== undefined && u.id !== null) && !Number.isNaN(Number(u.id)))
-
     return (
       <Select onValueChange={handleAssign} defaultValue={typeof task.responsavelId === 'number' ? String(task.responsavelId) : undefined}>
         <SelectTrigger
@@ -393,8 +297,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
           <SelectValue placeholder={assigning ? 'Atribuindo...' : (task.responsavel && task.responsavel !== 'Não atribuído' ? task.responsavel : 'Designar Responsável')} />
         </SelectTrigger>
         <SelectContent align="end">
-          {validUsers && validUsers.length > 0 ? (
-            validUsers.map((u) => (
+          {users && users.length > 0 ? (
+            users.map((u) => (
               <SelectItem key={String(u.id)} value={`${u.id}`}>
                 {u.nome}
               </SelectItem>
@@ -402,12 +306,6 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
           ) : (
             <>
               <SelectItem value="__none" disabled>Nenhum usuário</SelectItem>
-              {debugEndpoint ? (
-                <div className="px-2 py-1 text-xs text-muted-foreground">Origem: {debugEndpoint}</div>
-              ) : null}
-              {lastRawData ? (
-                <pre className="text-xs max-h-40 overflow-auto bg-muted p-2 rounded mt-1">{JSON.stringify(lastRawData, null, 2)}</pre>
-              ) : null}
             </>
           )}
         </SelectContent>
@@ -583,30 +481,19 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       accessorKey: "responsavel",
       header: "Responsável",
       cell: ({ row }) => {
-        const isAssigned = row.original.responsavel !== "Não atribuído"
+        const isAssigned = row.original.responsavel && row.original.responsavel !== 'Não atribuído'
         const isAutomatic = String(row.original.status) === 'Automático'
-
-        if (isAutomatic) {
+        // Nova regra: mostrar o select se NÃO atribuído OU se status for Automático
+        if (!isAssigned || isAutomatic) {
           return (
             <>
               <Label htmlFor={`${row.original.id}-responsavel`} className="sr-only">Responsável</Label>
-              <ResponsibleSelect task={row.original} />
+              <ResponsibleSelect task={row.original} users={unitUsers} loading={unitUsersLoading} error={unitUsersError} />
             </>
           )
         }
-
-        if (isAssigned) {
-          return row.original.responsavel
-        }
-
-        return (
-          <>
-            <Label htmlFor={`${row.original.id}-responsavel`} className="sr-only">
-              Responsável
-            </Label>
-            <ResponsibleSelect task={row.original} />
-          </>
-        )
+        // Caso contrário apenas exibe o nome
+        return row.original.responsavel || '—'
       },
     },
     {

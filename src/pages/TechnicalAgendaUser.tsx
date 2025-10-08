@@ -1,6 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useEffect, useMemo, useState } from 'react'
+import { useUnit } from '@/contexts/UnitContext'
 import { getUserById } from '@/services/users'
 import { useUsers } from '@/contexts/UsersContext'
 import { getTasksByResponsavel, type Task } from '@/services/tasks'
@@ -20,6 +21,7 @@ export default function TechnicalAgendaUser() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const usersCtx = useUsers()
+  const { unitId, isLoading: unitLoading } = useUnit()
 
   // selected month (Date) - defaults to current month
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date())
@@ -83,18 +85,26 @@ export default function TechnicalAgendaUser() {
     return () => { mounted = false }
   }, [uid])
 
-  // Load events when month or uid changes
+  // Cache simples por mês (YYYY-MM) para evitar refetch ao navegar rapidamente
+  const eventsCacheRef = useMemo(() => ({ map: new Map<string, any[]>() }), [])
   useEffect(() => {
     let mounted = true
     async function fetchEvents() {
       try {
         if (!uid || Number.isNaN(uid)) return
+        const key = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth()+1).padStart(2,'0')}`
+        if (eventsCacheRef.map.has(key)) {
+          if (mounted) setEvents(eventsCacheRef.map.get(key) || [])
+          return
+        }
         const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
         const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
         const from = monthStart.toISOString().slice(0, 10)
         const to = monthEnd.toISOString().slice(0, 10)
         const evResp = await getEventsByResponsavel(uid, { from, to })
-        if (mounted) setEvents(evResp.events || [])
+        const list = evResp.events || []
+        eventsCacheRef.map.set(key, list)
+        if (mounted) setEvents(list)
       } catch (err) {
         if (mounted) setEvents([])
         console.debug('Erro ao buscar eventos da agenda:', err)
@@ -102,7 +112,7 @@ export default function TechnicalAgendaUser() {
     }
     fetchEvents()
     return () => { mounted = false }
-  }, [uid, selectedMonth])
+  }, [uid, selectedMonth, eventsCacheRef])
 
   // (removed monthsWithCounts - we now use input type=month and allow free navigation)
 
@@ -120,6 +130,32 @@ export default function TechnicalAgendaUser() {
     }
     return filtered
   }, [tasks, selectedMonth])
+
+  // Prefetch baseado apenas na unidade global (UnitContext)
+  useEffect(() => {
+    if (unitLoading) return
+    ;(async () => {
+      try {
+        await usersCtx.ensureUsersForUnit(unitId ?? null)
+      } catch (e) {
+        console.debug('[AgendaUser] Falha ao garantir usuários para unit context', unitId, e)
+      }
+    })()
+  }, [unitId, unitLoading, usersCtx])
+
+  // Fallback: se após carregar a unidade ainda não há unitId válido, garante cache 'all'
+  useEffect(() => {
+    if (unitLoading) return
+    if (unitId == null) {
+      (async () => {
+        try {
+          await usersCtx.ensureUsersForUnit(null)
+        } catch (e) {
+          console.debug('[AgendaUser] Falha ao garantir usuários (fallback all)', e)
+        }
+      })()
+    }
+  }, [unitId, unitLoading, usersCtx])
 
   // allow navigation beyond current month; still compute currentMonth for informational purposes
   // no longer tracking currentMonth locally
@@ -232,18 +268,9 @@ export default function TechnicalAgendaUser() {
                 <TechnicalCalendar
                   events={events}
                   currentMonth={selectedMonth}
-                  onMonthChange={async (d) => {
+                  onMonthChange={(d) => {
+                    // Apenas altera o mês; efeito acima fará fetch com cache
                     setSelectedMonth(prev => (prev.getFullYear() === d.getFullYear() && prev.getMonth() === d.getMonth()) ? prev : d)
-                    try {
-                      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1)
-                      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0)
-                      const from = monthStart.toISOString().slice(0, 10)
-                      const to = monthEnd.toISOString().slice(0, 10)
-                      const evResp = await getEventsByResponsavel(uid, { from, to })
-                      setEvents(evResp.events || [])
-                    } catch (err) {
-                      console.debug('Erro ao buscar eventos da agenda (nav interna):', err)
-                    }
                   }}
                 />
               </div>

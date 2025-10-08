@@ -25,37 +25,58 @@ function keyForUnit(unitId?: number | null) {
 export const UsersProvider: React.FC<React.PropsWithChildren<{}>> = ({ children }) => {
   const { unitId } = useUnit()
   const [cache, setCache] = React.useState<Record<string, CacheEntry>>({})
+  const inFlightRef = React.useRef<Record<string, { promise: Promise<void>; started: number }>>({})
+  const TTL_MS = 60_000
+  const cacheRef = React.useRef(cache)
+  React.useEffect(() => { cacheRef.current = cache }, [cache])
 
   const ensureUsersForUnit = React.useCallback(async (uId?: number | null) => {
     const preferred = uId ?? unitId ?? null
     const key = keyForUnit(preferred)
 
-    // set loading flag only if not already loading / present using functional update
+    const existing = cacheRef.current[key]
+    // Evita refetch dentro do TTL se já temos dados
+    if (existing && existing.users && !existing.loading) {
+      const inflight = inFlightRef.current[key]
+      if (!inflight) return
+    }
+    // Se já há request em andamento reutiliza
+    if (inFlightRef.current[key]) return inFlightRef.current[key].promise
+
     let shouldFetch = false
     setCache(prev => {
-      const existing = prev[key]
-      if (existing && (existing.loading || existing.users)) {
-        // nothing to do
+      const ex = prev[key]
+      if (ex && (ex.loading || ex.users)) {
         return prev
       }
       shouldFetch = true
       return { ...prev, [key]: { users: null, loading: true } }
     })
+  if (!shouldFetch) return
 
-    if (!shouldFetch) return
-
-    try {
-      let res
-      if (preferred && Number(preferred) > 0) {
-        res = await getUsersByUnitId(Number(preferred))
-      } else {
-        res = await getAllUsers()
+    const p = (async () => {
+      try {
+        let res
+        if (preferred && Number(preferred) > 0) {
+          res = await getUsersByUnitId(Number(preferred))
+        } else {
+          res = await getAllUsers()
+        }
+        setCache(prev => ({ ...prev, [key]: { users: res.users || [], loading: false, error: null } }))
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setCache(prev => ({ ...prev, [key]: { users: [], loading: false, error: msg } }))
+      } finally {
+        setTimeout(() => {
+          const inflight = inFlightRef.current[key]
+          if (inflight && Date.now() - inflight.started >= TTL_MS) {
+            delete inFlightRef.current[key]
+          }
+        }, TTL_MS + 50)
       }
-      setCache(prev => ({ ...prev, [key]: { users: res.users || [], loading: false, error: null } }))
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      setCache(prev => ({ ...prev, [key]: { users: [], loading: false, error: msg } }))
-    }
+    })()
+    inFlightRef.current[key] = { promise: p, started: Date.now() }
+    return p
   }, [unitId])
 
   // auto ensure for current unit on mount / unit change
