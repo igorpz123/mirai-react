@@ -156,9 +156,6 @@ export default function TechnicalAgendaUser() {
       })()
     }
   }, [unitId, unitLoading, usersCtx])
-
-  // allow navigation beyond current month; still compute currentMonth for informational purposes
-  // no longer tracking currentMonth locally
   
   return (
     <div className="container-main">
