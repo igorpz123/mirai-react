@@ -266,7 +266,7 @@ export default function LivroRegistrosPage() {
       curso_id: r.curso_id,
       instrutor: r.instrutor || '',
       carga_horaria: r.carga_horaria,
-      data_conclusao: r.data_conclusao,
+      data_conclusao: r.data_conclusao || '',
       modalidade: r.modalidade,
       sesmo: r.sesmo,
       observacoes: r.observacoes || ''
@@ -375,8 +375,8 @@ export default function LivroRegistrosPage() {
                     <input className="border rounded px-2 py-1" name="carga_horaria" value={form.carga_horaria} onChange={handleChange} required />
                   </div>
                   <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Data Conclusão *</label>
-                    <input className="border rounded px-2 py-1" type="date" name="data_conclusao" value={form.data_conclusao} onChange={handleChange} required />
+                    <label className="text-xs font-medium">Data Conclusão</label>
+                    <input className="border rounded px-2 py-1" type="date" name="data_conclusao" value={form.data_conclusao} onChange={handleChange} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-xs font-medium">Modalidade *</label>

@@ -101,8 +101,17 @@ export default function CommercialItemsPage() {
     const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')
     a.download = `itens-${tipo}-${ts}.csv`
     document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    try { a.click() } catch {}
+    // Remoção defensiva: só remove se ainda for filho para evitar NotFoundError
+    try {
+      if (a.parentNode === document.body) {
+        document.body.removeChild(a)
+      } else if (a.remove) {
+        a.remove()
+      }
+    } catch (e) {
+      // swallow - navegadores podem já ter removido
+    }
     URL.revokeObjectURL(url)
   }
 

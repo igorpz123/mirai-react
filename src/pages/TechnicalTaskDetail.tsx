@@ -15,6 +15,7 @@ import { toastSuccess } from '@/lib/customToast'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useIsMounted } from '@/hooks/use-is-mounted'
 
 export default function TechnicalTaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -30,6 +31,7 @@ export default function TechnicalTaskDetail() {
   const [uploading, setUploading] = React.useState(false)
   const { user } = useAuth()
   const { unitId } = useUnit()
+  const isMounted = useIsMounted()
 
   // Estados e lógica para iniciar / transferir tarefa
   const [actionLoading, setActionLoading] = React.useState(false)
@@ -265,32 +267,40 @@ export default function TechnicalTaskDetail() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-xs font-medium">Setor (opcional)</label>
-                  <Select value={selectedSetorId ? String(selectedSetorId) : ''} onValueChange={(v) => setSelectedSetorId(v === '' || v === '__none' ? null : Number(v))}>
-                    <SelectTrigger className="w-full" disabled={setoresLoading}>
-                      <SelectValue placeholder={setoresLoading ? 'Carregando...' : 'Selecionar setor'} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">-- Nenhum --</SelectItem>
-                      {!setoresLoading && setores.map(s => (
-                        <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {!isMounted ? (
+                    <div className="text-xs text-muted-foreground">Preparando...</div>
+                  ) : (
+                    <Select value={selectedSetorId ? String(selectedSetorId) : ''} onValueChange={(v) => setSelectedSetorId(v === '' || v === '__none' ? null : Number(v))}>
+                      <SelectTrigger className="w-full" disabled={setoresLoading}>
+                        <SelectValue placeholder={setoresLoading ? 'Carregando...' : 'Selecionar setor'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">-- Nenhum --</SelectItem>
+                        {!setoresLoading && setores.map(s => (
+                          <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   {setoresError && <div className="text-destructive text-xs">{setoresError}</div>}
                 </div>
                 <div className="space-y-2">
                   <label className="text-xs font-medium">Usuário (opcional)</label>
-                  <Select value={selectedUserId ? String(selectedUserId) : ''} onValueChange={(v) => setSelectedUserId(v === '' || v === '__none' ? null : Number(v))}>
-                    <SelectTrigger className="w-full" disabled={usersForSetorLoading}>
-                      <SelectValue placeholder={usersForSetorLoading ? 'Carregando...' : (usersForSetor ? 'Selecionar usuário' : 'Selecionar usuário')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none">-- Nenhum --</SelectItem>
-                      {usersForSetor && usersForSetor.map((u: any) => (
-                        <SelectItem key={u.id} value={String(u.id)}>{u.nome || u.nome_completo || u.email}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {!isMounted ? (
+                    <div className="text-xs text-muted-foreground">Preparando...</div>
+                  ) : (
+                    <Select value={selectedUserId ? String(selectedUserId) : ''} onValueChange={(v) => setSelectedUserId(v === '' || v === '__none' ? null : Number(v))}>
+                      <SelectTrigger className="w-full" disabled={usersForSetorLoading}>
+                        <SelectValue placeholder={usersForSetorLoading ? 'Carregando...' : (usersForSetor ? 'Selecionar usuário' : 'Selecionar usuário')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none">-- Nenhum --</SelectItem>
+                        {usersForSetor && usersForSetor.map((u: any) => (
+                          <SelectItem key={u.id} value={String(u.id)}>{u.nome || u.nome_completo || u.email}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end">
