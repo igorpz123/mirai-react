@@ -23,6 +23,7 @@ export default function EmpresaDetails() {
   const [tecnicos, setTecnicos] = useState<User[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [proposals, setProposals] = useState<any[]>([])
+  const [reactivating, setReactivating] = useState(false)
 
   const [form, setForm] = useState({
     nome_fantasia: '',
@@ -143,6 +144,20 @@ export default function EmpresaDetails() {
     }
   }
 
+  async function handleReactivate() {
+    if (!id) return
+    try {
+      setReactivating(true)
+      const updated = await updateCompany(Number(id), { status: 'ativo' } as any)
+      setEmpresa(updated)
+      try { toastSuccess('Empresa reativada') } catch {}
+    } catch (e: any) {
+      toastError(e?.message || 'Falha ao reativar a empresa')
+    } finally {
+      setReactivating(false)
+    }
+  }
+
   return (
     <div className="container-main">
       <SiteHeader title={`Empresa #${id}`} />
@@ -150,6 +165,15 @@ export default function EmpresaDetails() {
         {loading && <div>Carregando...</div>}
         {!loading && (
           <>
+            {/* Ações rápidas */}
+            {empresa && (empresa as any).status === 'inativo' && (
+              <div className="flex items-center justify-end">
+                <Button className="success" onClick={handleReactivate} disabled={reactivating}>
+                  {reactivating ? 'Reativando...' : 'Reativar empresa'}
+                </Button>
+              </div>
+            )}
+
             {/* Edit form */}
             <div className="rounded-md border p-4 space-y-4">
               <h3 className="text-lg font-semibold">Dados da Empresa</h3>

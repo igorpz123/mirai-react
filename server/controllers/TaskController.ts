@@ -867,14 +867,14 @@ export const getTaskStatsByUnidade = async (
 
     // overdue count (prazo < now and not concluded)
     const [rowsOverdue] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) as cnt FROM tarefas WHERE unidade_id IN (?) AND prazo < ? AND status <> 'concluída'`,
+      `SELECT COUNT(*) as cnt FROM tarefas WHERE unidade_id IN (?) AND prazo < ? AND status <> 'concluída' AND status <> 'Automático'`,
       [unidade_id, nowStr]
     );
     const overdueCurrent = Number((rowsOverdue as any[])[0]?.cnt || 0);
 
     // previous overdue: count of tasks created in previous period that were overdue by prevEnd
     const [rowsPrevOverdue] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) as cnt FROM tarefas WHERE unidade_id IN (?) AND created_at >= ? AND created_at < ? AND prazo < ? AND status <> 'concluída'`,
+      `SELECT COUNT(*) as cnt FROM tarefas WHERE unidade_id IN (?) AND created_at >= ? AND created_at < ? AND prazo < ? AND status <> 'concluída' AND status <> 'Automático'`,
       [unidade_id, prevStartStr, prevEndStr, prevEndStr]
     );
     const overduePrev = Number((rowsPrevOverdue as any[])[0]?.cnt || 0);

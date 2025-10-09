@@ -18,8 +18,8 @@ type CompanyRow = RowDataPacket & {
 // List all companies (admin)
 export const getAllCompanies = async (req: Request, res: Response): Promise<void> => {
   try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT e.id,
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT e.id,
               e.nome_fantasia,
               e.razao_social,
               e.cnpj,
@@ -27,12 +27,12 @@ export const getAllCompanies = async (req: Request, res: Response): Promise<void
               e.telefone,
               e.tecnico_responsavel,
               e.unidade_responsavel,
+        e.status,
               u.nome AS tecnico_nome,
               u.sobrenome AS tecnico_sobrenome
-         FROM empresas e
-    LEFT JOIN usuarios u ON u.id = e.tecnico_responsavel
-        WHERE e.status = 'ativo'
-        ORDER BY e.nome_fantasia ASC`
+     FROM empresas e
+  LEFT JOIN usuarios u ON u.id = e.tecnico_responsavel
+    ORDER BY e.nome_fantasia ASC`
     )
 
     const companies = (rows || []).map((r: any) => ({
@@ -45,6 +45,7 @@ export const getAllCompanies = async (req: Request, res: Response): Promise<void
       tecnico_responsavel: r.tecnico_responsavel,
       tecnico_nome: [r.tecnico_nome, r.tecnico_sobrenome].filter(Boolean).join(' ').trim() || null,
       unidade_id: r.unidade_responsavel,
+      status: r.status,
     }))
 
     res.status(200).json({ companies, total: companies.length })
@@ -73,7 +74,8 @@ export const getCompanyById = async (req: Request<{ id: string }>, res: Response
               e.tecnico_responsavel,
               e.unidade_responsavel AS unidade_id,
               e.periodicidade,
-              e.data_renovacao,
+        e.data_renovacao,
+        e.status,
               uu.nome AS unidade_nome,
               u.nome AS tecnico_nome,
               u.sobrenome AS tecnico_sobrenome
@@ -104,6 +106,7 @@ export const getCompanyById = async (req: Request<{ id: string }>, res: Response
       unidade_nome: r.unidade_nome,
       periodicidade: r.periodicidade ?? null,
       data_renovacao: r.data_renovacao ?? null,
+      status: (r as any).status ?? undefined,
     }
 
     res.status(200).json(empresa)
@@ -122,7 +125,7 @@ export const getCompaniesByResponsavel = async (req: Request<{ responsavel_id: s
     }
 
     const [rows] = await pool.query<CompanyRow[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel FROM empresas WHERE tecnico_responsavel = ? AND status = 'ativo'`,
+      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE tecnico_responsavel = ?`,
       [responsavel_id]
     )
 
@@ -137,6 +140,7 @@ export const getCompaniesByResponsavel = async (req: Request<{ responsavel_id: s
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
       unidade_id: r.unidade_responsavel,
+      status: (r as any).status,
     }))
 
     res.status(200).json({ companies, total: companies.length })
@@ -155,7 +159,7 @@ export const getCompaniesByResponsavelAndUnidade = async (req: Request<{ unidade
     }
 
     const [rows] = await pool.query<CompanyRow[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel FROM empresas WHERE tecnico_responsavel = ? AND unidade_responsavel = ? AND status = 'ativo'`,
+      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE tecnico_responsavel = ? AND unidade_responsavel = ?`,
       [responsavel_id, unidade_id]
     )
 
@@ -169,6 +173,7 @@ export const getCompaniesByResponsavelAndUnidade = async (req: Request<{ unidade
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
       unidade_id: r.unidade_responsavel,
+      status: (r as any).status,
     }))
 
     res.status(200).json({ companies, total: companies.length })
@@ -187,7 +192,7 @@ export const getCompaniesByUnidade = async (req: Request<{ unidade_id: string }>
     }
 
     const [rows] = await pool.query<CompanyRow[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel FROM empresas WHERE unidade_responsavel = ? AND status = 'ativo'`,
+      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE unidade_responsavel = ?`,
       [unidade_id]
     )
 
@@ -201,6 +206,7 @@ export const getCompaniesByUnidade = async (req: Request<{ unidade_id: string }>
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
       unidade_id: r.unidade_responsavel,
+      status: (r as any).status,
     }))
 
     res.status(200).json({ companies, total: companies.length })
@@ -273,7 +279,7 @@ export const createCompany = async (
 
 // Update company details (admin)
 export const updateCompany = async (
-  req: Request<{ id: string }, {}, Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null; periodicidade: number | null; data_renovacao: string | null }>>,
+  req: Request<{ id: string }, {}, Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null; periodicidade: number | null; data_renovacao: string | null; status: 'ativo' | 'inativo' }>>,
   res: Response
 ): Promise<void> => {
   try {
@@ -297,6 +303,16 @@ export const updateCompany = async (
       unidade_responsavel: 'unidade_responsavel',
       periodicidade: 'periodicidade',
       data_renovacao: 'data_renovacao',
+      status: 'status',
+    }
+
+    // Validate status values if present
+    if (Object.prototype.hasOwnProperty.call(payload, 'status')) {
+      const s = (payload as any).status
+      if (s !== 'ativo' && s !== 'inativo') {
+        res.status(400).json({ message: "status inválido. Use 'ativo' ou 'inativo'" })
+        return
+      }
     }
 
     for (const key of Object.keys(fieldsMap)) {

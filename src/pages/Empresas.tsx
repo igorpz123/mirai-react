@@ -2,12 +2,23 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { SiteHeader } from '@/components/layout/site-header'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { IconDotsVertical, IconTrash } from '@tabler/icons-react'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toastError } from '@/lib/customToast'
-import { getAllCompanies, type Company, generateAutoTasksForUnit } from '@/services/companies'
+import { getAllCompanies, type Company, generateAutoTasksForUnit, updateCompany } from '@/services/companies'
+import { toastSuccess } from '@/lib/customToast'
 import { getUnidades } from '@/services/unidades'
 import { getAllUsers, type User } from '@/services/users'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 export default function Empresas() {
   const navigate = useNavigate()
@@ -23,6 +34,7 @@ export default function Empresas() {
   const [selectedTecnico, setSelectedTecnico] = useState<number | ''>('')
   const [sortKey, setSortKey] = useState<'nome' | 'razao_social' | 'cnpj' | 'tecnico'>('nome')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [confirmInativar, setConfirmInativar] = useState<{ open: boolean; id?: number; nome?: string }>({ open: false })
 
   async function fetchAll() {
     setLoading(true)
@@ -104,6 +116,33 @@ export default function Empresas() {
 
   const arrow = (key: 'nome' | 'razao_social' | 'cnpj' | 'tecnico') => (sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '')
 
+  async function inativarEmpresa(id: number) {
+    try {
+      setLoading(true)
+      await updateCompany(id, { status: 'inativo' } as any)
+      // atualiza status localmente sem novo fetch para sensação de instantâneo
+      setItems(prev => prev.map(e => Number(e.id) === Number(id) ? { ...e, status: 'inativo' } : e))
+      try { toastSuccess('Empresa inativada') } catch {}
+    } catch (e: any) {
+      toastError(e?.message || 'Falha ao inativar empresa')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function reativarEmpresa(id: number) {
+    try {
+      setLoading(true)
+      await updateCompany(id, { status: 'ativo' } as any)
+      setItems(prev => prev.map(e => Number(e.id) === Number(id) ? { ...e, status: 'ativo' } : e))
+      try { toastSuccess('Empresa reativada') } catch {}
+    } catch (e: any) {
+      toastError(e?.message || 'Falha ao reativar empresa')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function onGenerateAutoTasksForUnit() {
     if (selectedUnidade === '') {
       toastError('Selecione uma unidade para gerar as tarefas automáticas.')
@@ -128,6 +167,30 @@ export default function Empresas() {
     <div className="container-main">
       <SiteHeader title="Empresas" />
       <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6 mx-6">
+        {/* Dialog de confirmação para inativar */}
+        <Dialog open={confirmInativar.open} onOpenChange={(open) => setConfirmInativar(s => ({ ...s, open }))}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Inativar empresa</DialogTitle>
+              <DialogDescription>
+                Tem certeza que deseja inativar {confirmInativar.nome ? `"${confirmInativar.nome}"` : 'esta empresa'}? Essa ação pode ser revertida depois.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmInativar({ open: false })}>Cancelar</Button>
+              <Button
+                className='button-remove'
+                onClick={async () => {
+                  const id = confirmInativar.id
+                  setConfirmInativar({ open: false })
+                  if (id) await inativarEmpresa(Number(id))
+                }}
+              >
+                <IconTrash /> Inativar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
             <Input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder="Buscar por nome, razão social ou CNPJ..." className="max-w-xl" />
@@ -187,6 +250,7 @@ export default function Empresas() {
                 <TableHead onClick={() => toggleSort('razao_social')} className="cursor-pointer select-none">Razão Social{arrow('razao_social')}</TableHead>
                 <TableHead onClick={() => toggleSort('cnpj')} className="cursor-pointer select-none">CNPJ{arrow('cnpj')}</TableHead>
                 <TableHead onClick={() => toggleSort('tecnico')} className="cursor-pointer select-none">Técnico Responsável{arrow('tecnico')}</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right"></TableHead>
               </TableRow>
             </TableHeader>
@@ -197,8 +261,40 @@ export default function Empresas() {
                   <TableCell>{e.razao_social || '-'}</TableCell>
                   <TableCell>{e.cnpj || '-'}</TableCell>
                   <TableCell>{e.tecnico_nome || e.tecnico_responsavel_nome || e.tecnico_responsavel || '-'}</TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button size="sm" className="button-primary" onClick={() => navigate(`/empresa/${e.id}`)}>Detalhes</Button>
+                  <TableCell>
+                    <Badge className={(String((e as any).status || 'ativo').toLowerCase() === 'inativo') ? 'button-remove' : 'button-success'}>
+                      {String((e as any).status || 'ativo').toLowerCase() === 'inativo' ? 'Inativo' : 'Ativo'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8">
+                          <IconDotsVertical />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/empresa/${e.id}`)}>
+                          Detalhes
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        {String((e as any).status || 'ativo').toLowerCase() === 'inativo' ? (
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            onClick={() => reativarEmpresa(Number(e.id))}
+                          >
+                            Reativar
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                            onClick={() => setConfirmInativar({ open: true, id: Number(e.id), nome: e.nome || e.nome_fantasia })}
+                          >
+                              <IconTrash className='mr-2 text-destructive' /> Inativar
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
