@@ -1,5 +1,5 @@
 param(
-  [Parameter(Mandatory=$true)] [string]$Host,
+  [Parameter(Mandatory=$true)] [string]$ServerHost,
   [Parameter(Mandatory=$true)] [string]$KeyPath,
   [string]$User = "ubuntu",
   [string]$RemoteDir = "~/mirai-react"
@@ -9,7 +9,7 @@ function ExecOrFail {
   param([string]$Cmd)
   Write-Host "→ $Cmd" -ForegroundColor Cyan
   $LASTEXITCODE = 0
-  & powershell -NoProfile -Command $Cmd
+  & cmd.exe /c $Cmd
   if ($LASTEXITCODE -ne 0) { throw "Falhou: $Cmd" }
 }
 
@@ -20,11 +20,12 @@ try {
   ExecOrFail "npm run build"
 
   Write-Host "[2/3] Enviando dist/" -ForegroundColor Green
-  ExecOrFail "scp -i `"$KeyPath`" -r dist $User@$Host:$RemoteDir/"
+  $remoteSpec = "${User}@${ServerHost}:${RemoteDir}/"
+  ExecOrFail "scp -i `"$KeyPath`" -r dist $remoteSpec"
 
   Write-Host "[3/3] (Opcional) Reiniciar app para limpar cache" -ForegroundColor Green
-  $remoteRestart = "pm2 restart mirai || true"
-  ExecOrFail "ssh -i `"$KeyPath`" $User@$Host `"$remoteRestart`""
+  $remoteRestart = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use --lts >/dev/null 2>&1 || nvm use default; pm2 restart mirai || true"
+  ExecOrFail "ssh -i `"$KeyPath`" ${User}@${ServerHost} `"$remoteRestart`""
 
   Write-Host "Deploy frontend concluído." -ForegroundColor Green
 } catch {

@@ -1,5 +1,5 @@
 param(
-  [Parameter(Mandatory=$true)] [string]$Host,          # IP ou domínio do servidor
+  [Parameter(Mandatory=$true)] [string]$ServerHost,    # IP ou domínio do servidor
   [Parameter(Mandatory=$true)] [string]$KeyPath,       # Caminho da chave SSH .pem
   [string]$User = "ubuntu",
   [string]$RemoteDir = "~/mirai-react"
@@ -9,7 +9,7 @@ function ExecOrFail {
   param([string]$Cmd)
   Write-Host "→ $Cmd" -ForegroundColor Cyan
   $LASTEXITCODE = 0
-  & powershell -NoProfile -Command $Cmd
+  & cmd.exe /c $Cmd
   if ($LASTEXITCODE -ne 0) { throw "Falhou: $Cmd" }
 }
 
@@ -28,11 +28,12 @@ try {
   ExecOrFail "tar.exe -czf deploy.tar.gz dist server/dist server/templates package.json server/package.json"
 
   Write-Host "[4/6] Enviando pacote para o servidor" -ForegroundColor Green
-  ExecOrFail "scp -i `"$KeyPath`" deploy.tar.gz $User@$Host:$RemoteDir/"
+  $remoteSpec = "${User}@${ServerHost}:${RemoteDir}/"
+  ExecOrFail "scp -i `"$KeyPath`" deploy.tar.gz $remoteSpec"
 
   Write-Host "[5/6] Aplicando no servidor" -ForegroundColor Green
-  $remote = "cd $RemoteDir && tar xzf deploy.tar.gz && npm --prefix server install --omit=dev && (pm2 restart mirai || pm2 start server/dist/server.js --name mirai) && rm deploy.tar.gz"
-  ExecOrFail "ssh -i `"$KeyPath`" $User@$Host `"$remote`""
+  $remote = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use --lts >/dev/null 2>&1 || nvm use default; cd $RemoteDir && tar xzf deploy.tar.gz && npm --prefix server install --omit=dev && (pm2 restart mirai || pm2 start server/dist/server.js --name mirai) && rm deploy.tar.gz"
+  ExecOrFail "ssh -i `"$KeyPath`" ${User}@${ServerHost} `"$remote`""
 
   Write-Host "[6/6] Concluído com sucesso." -ForegroundColor Green
 } catch {
