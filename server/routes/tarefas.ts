@@ -75,6 +75,8 @@ router.get('/unidade/:unidade_id/setor/:setor_id', getTaskByUnidadeSetor)
 
 // Coletar arquivos de uma tarefa
 router.get('/arquivos/:tarefa_id', getArquivosByTarefa)
+// Rota simétrica (mais intuitiva e compatível com o front): /tarefas/:tarefa_id/arquivos
+router.get('/:tarefa_id/arquivos', getArquivosByTarefa)
 // Upload de arquivo para tarefa
 router.post('/:tarefa_id/arquivos', uploadTarefa.single('file'), uploadArquivoTarefa)
 // Remover arquivo de tarefa

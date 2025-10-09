@@ -138,11 +138,18 @@ export default function TechnicalTaskDetail() {
     if (!path) return '#'
     if (/^https?:\/\//i.test(path)) return path
     const rawBase = (import.meta as any).env?.VITE_API_PUBLIC_BASE || (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api'
-    const base = rawBase.startsWith('http') ? rawBase : 'http://localhost:5000/api'
-    if (base.endsWith('/api') && path.startsWith('/api')) {
-      return base.replace(/\/api$/, '') + path
+    const baseHttp = rawBase.startsWith('http') ? rawBase : 'http://localhost:5000/api'
+    const origin = baseHttp.replace(/\/api\/?$/, '')
+    // Para arquivos públicos, garantir que usamos a ORIGEM sem /api
+    if (path.startsWith('/uploads')) {
+      return origin + path
     }
-    return base.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path)
+    // Se já vier com /api, também usar a origem + caminho
+    if (path.startsWith('/api')) {
+      return origin + path
+    }
+    // Caso geral: anexar ao baseHttp
+    return baseHttp.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path)
   }
 
   if (loading) return <div>Carregando...</div>

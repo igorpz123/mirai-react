@@ -366,11 +366,8 @@ export const getArquivosByTarefa = async (
       [tarefa_id]
     );
 
-    if (rows.length) {
-      res.status(200).json(rows);
-    } else {
-      res.status(404).json({ message: 'Nenhum arquivo encontrado' });
-    }
+    // Sempre retornar 200; se não houver arquivos, retornar [] para evitar 404 no front
+    res.status(200).json(rows || []);
   } catch (error) {
     console.error('Erro ao buscar arquivos:', error);
     res.status(500).json({ message: 'Erro ao buscar arquivos' });

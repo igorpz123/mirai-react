@@ -27,7 +27,7 @@ try {
   ExecOrFail "ssh -i `"$KeyPath`" $User@$Host `"$remoteInstall`""
 
   Write-Host "[4/4] Reiniciando app (PM2)" -ForegroundColor Green
-  $remoteRestart = "pm2 restart mirai || pm2 start $RemoteDir/server/dist/server.js --name mirai"
+  $remoteRestart = "cd $RemoteDir && pm2 restart mirai || pm2 start server/dist/server.js --name mirai"
   ExecOrFail "ssh -i `"$KeyPath`" $User@$Host `"$remoteRestart`""
 
   Write-Host "Deploy backend concluído." -ForegroundColor Green
