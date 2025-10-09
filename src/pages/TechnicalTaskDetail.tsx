@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useIsMounted } from '@/hooks/use-is-mounted'
+import { ADMIN_ROLES, CAN_EVALUATE_ROLES } from '@/constants/roles'
 
 export default function TechnicalTaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -179,7 +180,7 @@ export default function TechnicalTaskDetail() {
       if (respStr.includes(userFullName) || respStr.includes(String(user.id))) isResponsible = true
     }
   }
-  const canTransferAny = user && [1, 2, 3].includes(Number((user as any).cargoId))
+  const canTransferAny = user && ADMIN_ROLES.has(Number((user as any).cargoId))
   const showStart = isPending && isResponsible
   const showTransferSection = isProgress && (isResponsible || canTransferAny)
 
@@ -492,7 +493,7 @@ export default function TechnicalTaskDetail() {
                       ) : (
                         <div className="text-xs text-muted-foreground">Sem avaliação</div>
                       )}
-                      {(user && Number((user as any).cargoId) === 1) && (
+                      {(user && CAN_EVALUATE_ROLES.has(Number((user as any).cargoId))) && (
                         <Button variant="outline" size="sm" onClick={() => { setRatingTarget(h); setRatingNota(h.avaliacao?.nota != null ? String(h.avaliacao.nota) : ''); setRatingObs(h.avaliacao?.obs || ''); setRatingError(null); setRateOpen(true) }}>Avaliar</Button>
                       )}
                     </div>
