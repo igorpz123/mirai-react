@@ -91,6 +91,7 @@ import {
 } from "@/components/ui/tabs"
 import { TaskInfo } from "@/components/technical-task-info";
 import { toastSuccess, toastWarning, toastError } from '@/lib/customToast'
+import { formatDateBRSafe } from '@/lib/date'
 import { useAuth } from '@/contexts/AuthContext'
 
 interface TableTask {
@@ -134,10 +135,16 @@ export const schema = z.object({
 })
 
 const formatDate = (dateString: string): string =>
-  new Date(dateString).toLocaleDateString('pt-BR')
+  formatDateBRSafe(dateString)
 
-const formatDateTime = (dateString: string): string =>
-  new Date(dateString).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+const formatDateTime = (dateString: string): string => {
+  // Keep using Date for datetime strings; for date-only, formatDate will be used elsewhere
+  try {
+    const d = new Date(dateString)
+    if (!isNaN(d.getTime())) return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+  } catch { /* ignore */ }
+  return dateString
+}
 
 const getStatusText = (status: string): string => {
   switch (status) {

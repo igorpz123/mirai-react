@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button"
 import { useAuth } from '@/hooks/use-auth'
 import { Badge } from '@/components/ui/badge'
 import { IconCircleCheckFilled, IconProgress, IconLoader, IconDotsVertical } from '@tabler/icons-react'
+import { formatDateBRSafe } from '@/lib/date'
 
 export default function TechnicalMapUser() {
   const { usuarioId } = useParams()
@@ -307,19 +308,7 @@ export default function TechnicalMapUser() {
                     {companyTasks.map((t: any) => (
                       <tr key={t.id} className="hover:bg-muted/50">
                         <td className="p-2">{t.finalidade || '—'}</td>
-                        <td className="p-2">
-                          {t.prazo ? (
-                            (() => {
-                              try {
-                                const d = new Date(t.prazo)
-                                if (isNaN(d.getTime())) return '—'
-                                return new Intl.DateTimeFormat('pt-BR').format(d)
-                              } catch {
-                                return '—'
-                              }
-                            })()
-                          ) : '—'}
-                        </td>
+                        <td className="p-2">{t.prazo ? formatDateBRSafe(t.prazo) : '—'}</td>
                         <td className="p-2">{t.responsavel || '—'}</td>
                         <td className="p-2">
                           {t.status ? (() => {

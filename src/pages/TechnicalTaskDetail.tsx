@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useIsMounted } from '@/hooks/use-is-mounted'
 import { ADMIN_ROLES, CAN_EVALUATE_ROLES } from '@/constants/roles'
+import { formatDateBRSafe } from '@/lib/date'
 
 export default function TechnicalTaskDetail() {
   const { id } = useParams<{ id: string }>()
@@ -159,14 +160,8 @@ export default function TechnicalTaskDetail() {
   // helpers
 
   const formatDateBR = (value?: string) => {
-    if (!value) return '—'
-    try {
-      const d = new Date(value)
-      if (isNaN(d.getTime())) return '—'
-      return new Intl.DateTimeFormat('pt-BR').format(d)
-    } catch {
-      return '—'
-    }
+    const out = formatDateBRSafe(value || '')
+    return out || '—'
   }
 
   // ----- Fluxo de status (similar ao sheet lateral) -----

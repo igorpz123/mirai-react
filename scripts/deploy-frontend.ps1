@@ -2,7 +2,8 @@ param(
   [Parameter(Mandatory=$true)] [string]$ServerHost,
   [Parameter(Mandatory=$true)] [string]$KeyPath,
   [string]$User = "ubuntu",
-  [string]$RemoteDir = "~/mirai-react"
+  [string]$RemoteDir = "~/mirai-react",
+  [switch]$Restart
 )
 
 function ExecOrFail {
@@ -23,11 +24,14 @@ try {
   $remoteSpec = "${User}@${ServerHost}:${RemoteDir}/"
   ExecOrFail "scp -i `"$KeyPath`" -r dist $remoteSpec"
 
-  Write-Host "[3/3] (Opcional) Reiniciar app para limpar cache" -ForegroundColor Green
-  $remoteRestart = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use --lts >/dev/null 2>&1 || nvm use default; pm2 restart mirai || true"
-  ExecOrFail "ssh -i `"$KeyPath`" ${User}@${ServerHost} `"$remoteRestart`""
+  if ($Restart) {
+    Write-Host "[3/3] Reiniciando app (pm2)" -ForegroundColor Green
+    ExecOrFail "ssh -i `"$KeyPath`" ${User}@${ServerHost} pm2 restart mirai"
+  } else {
+    Write-Host "[3/3] Reinício via pm2 pulado (use -Restart para executar)" -ForegroundColor Yellow
+  }
 
-  Write-Host "Deploy frontend concluído." -ForegroundColor Green
+  Write-Host "Deploy do frontend concluído (dist/ enviado)." -ForegroundColor Green
 } catch {
   Write-Host $_.Exception.Message -ForegroundColor Red
   exit 1

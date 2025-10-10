@@ -2,6 +2,7 @@
 import jsPDF from 'jspdf'
 import type { Task } from './tasks'
 import { getTasksByResponsavel } from './tasks'
+import { formatDateBRSafe, isDateOnlyYMD, normalizeToYMD, compareYMD } from '@/lib/date'
 
 export interface ExportOptions {
   title: string
@@ -17,12 +18,7 @@ export async function exportTasksToPdf(tasks: Task[], options: ExportOptions): P
   const contentWidth = pageWidth - margin * 2
   let y = margin
 
-  const fmtBR = (iso?: string) => {
-    if (!iso) return ''
-    const d = new Date(iso)
-    if (isNaN(d.getTime())) return iso
-    return d.toLocaleDateString('pt-BR')
-  }
+  const fmtBR = (iso?: string) => formatDateBRSafe(iso)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(14)
@@ -36,14 +32,19 @@ export async function exportTasksToPdf(tasks: Task[], options: ExportOptions): P
   // Group by date (prazo) in ascending order
   const grouped: Record<string, Task[]> = {}
   tasks.forEach(t => {
-    const d = t.prazo ? new Date(t.prazo).toLocaleDateString('pt-BR') : 'Sem data'
-    if (!grouped[d]) grouped[d] = []
-    grouped[d].push(t)
+    const ymd = normalizeToYMD(t.prazo)
+    const key = ymd ? formatDateBRSafe(ymd) : 'Sem data'
+    if (!grouped[key]) grouped[key] = []
+    grouped[key].push(t)
   })
   const dates = Object.keys(grouped).sort((a,b)=> {
     if (a === 'Sem data') return 1
     if (b === 'Sem data') return -1
-    return new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime()
+    // convert back to Y-M-D for comparison
+    const ay = normalizeToYMD(a)
+    const by = normalizeToYMD(b)
+    if (ay && by) return compareYMD(ay, by)
+    return a.localeCompare(b)
   })
 
   const addTextBlock = (text: string, fontSize = 10, bold = false, indent = 0) => {
@@ -93,12 +94,7 @@ export async function exportMultipleUsersAgendaToPdf(userIds: Array<{ id: number
   // Title
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(14)
-  const fmtBR = (iso?: string) => {
-    if (!iso) return ''
-    const d = new Date(iso)
-    if (isNaN(d.getTime())) return iso
-    return d.toLocaleDateString('pt-BR')
-  }
+  const fmtBR = (iso?: string) => formatDateBRSafe(iso)
   const titleRange = (range?.from || range?.to)
     ? ` (${fmtBR(range?.from)}${range?.from && range?.to ? ' — ' : ''}${fmtBR(range?.to)})`
     : ''
@@ -112,24 +108,42 @@ export async function exportMultipleUsersAgendaToPdf(userIds: Array<{ id: number
 
     const res = await getTasksByResponsavel(u.id)
     const tasks = (res.tasks || []).filter(t => {
-      if (!t.prazo) return false
-      const d = new Date(t.prazo)
-      if (isNaN(d.getTime())) return false
-      if (range?.from && d < new Date(range.from)) return false
-      if (range?.to && d > new Date(range.to)) return false
+      const ymd = normalizeToYMD(t.prazo)
+      if (!ymd) return false
+      // Range filtering: treat range.from/to as date-only if provided as YYYY-MM-DD; otherwise fallback to Date
+      if (range?.from) {
+        const rf = normalizeToYMD(range.from) || range.from
+        if (typeof rf === 'string' && isDateOnlyYMD(rf)) {
+          if (compareYMD(ymd, rf) < 0) return false
+        } else {
+          try { if (new Date(ymd) < new Date(range.from)) return false } catch {}
+        }
+      }
+      if (range?.to) {
+        const rt = normalizeToYMD(range.to) || range.to
+        if (typeof rt === 'string' && isDateOnlyYMD(rt)) {
+          if (compareYMD(ymd, rt) > 0) return false
+        } else {
+          try { if (new Date(ymd) > new Date(range.to)) return false } catch {}
+        }
+      }
       return true
     })
 
     const grouped: Record<string, Task[]> = {}
     tasks.forEach(t => {
-      const key = t.prazo ? new Date(t.prazo).toLocaleDateString('pt-BR') : 'Sem data'
+      const ymd = normalizeToYMD(t.prazo)
+      const key = ymd ? formatDateBRSafe(ymd) : 'Sem data'
       if (!grouped[key]) grouped[key] = []
       grouped[key].push(t)
     })
     const dates = Object.keys(grouped).sort((a,b)=> {
       if (a === 'Sem data') return 1
       if (b === 'Sem data') return -1
-      return new Date(a.split('/').reverse().join('-')).getTime() - new Date(b.split('/').reverse().join('-')).getTime()
+      const ay = normalizeToYMD(a)
+      const by = normalizeToYMD(b)
+      if (ay && by) return compareYMD(ay, by)
+      return a.localeCompare(b)
     })
 
     dates.forEach(date => {
