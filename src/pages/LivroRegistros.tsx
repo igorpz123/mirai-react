@@ -42,6 +42,8 @@ interface NewForm {
   data_conclusao: string
   modalidade: string
   sesmo: boolean
+  notaFiscal?: boolean
+  pratica?: boolean
   observacoes?: string
 }
 
@@ -55,7 +57,9 @@ const emptyForm: NewForm = {
   carga_horaria: 0,
   data_conclusao: '',
   modalidade: '',
-  sesmo: false
+  sesmo: false,
+  notaFiscal: false,
+  pratica: false,
 }
 
 // Formata data ISO/"YYYY-MM-DD" para padrão brasileiro dd/MM/yyyy
@@ -84,7 +88,7 @@ export default function LivroRegistrosPage() {
   const [form, setForm] = useState<NewForm>({ ...emptyForm })
   const [empresas, setEmpresas] = useState<Array<{ id: number; nome: string }>>([])
   const [cursos, setCursos] = useState<Curso[]>([])
-  const [filters, setFilters] = useState({ participante: '', modalidade: '', sesmo: 'all', empresa_id: '', curso_id: '' })
+  const [filters, setFilters] = useState({ participante: '', modalidade: '', sesmo: 'all', empresa_id: '', curso_id: '', notaFiscal: 'all', pratica: 'all' })
   const [dateRange, setDateRange] = useState({ inicio: '', fim: '' })
   // pagination + local table state (client-side paging for the already-filtered server result)
   const [pageIndex, setPageIndex] = useState(0)
@@ -104,6 +108,8 @@ export default function LivroRegistrosPage() {
         participante: filters.participante || undefined,
         modalidade: filters.modalidade || undefined,
         sesmo: filters.sesmo === 'all' ? undefined : (filters.sesmo === '1' ? 1 : 0),
+        notaFiscal: filters.notaFiscal === 'all' ? undefined : (filters.notaFiscal === '1' ? 1 : 0),
+        pratica: filters.pratica === 'all' ? undefined : (filters.pratica === '1' ? 1 : 0),
         empresa_id: filters.empresa_id ? Number(filters.empresa_id) : undefined,
         curso_id: filters.curso_id ? Number(filters.curso_id) : undefined,
         data_conclusao_inicio: dateRange.inicio || undefined,
@@ -139,7 +145,7 @@ export default function LivroRegistrosPage() {
   useEffect(() => {
     async function fetchAux() {
       try {
-        const emp = await getAllCompanies().catch(()=>({ companies: [] }))
+        const emp = await getAllCompanies().catch(() => ({ companies: [] }))
         setEmpresas(emp.companies?.map(c => ({ id: c.id, nome: c.nome })) || [])
         // cursos via catálogo de propostas
         const token = localStorage.getItem('token')
@@ -214,22 +220,24 @@ export default function LivroRegistrosPage() {
 
   function exportCSV() {
     if (!data.length) { toast.error('Nada para exportar'); return }
-    const headers = ['ID','Numero','Data_Aquisicao','Participante','Empresa','Curso','Instrutor','Carga_Horaria','Data_Conclusao','Modalidade','SESMO','Observacoes']
+    const headers = ['ID', 'Numero', 'Data_Aquisicao', 'Participante', 'Empresa', 'Curso', 'Instrutor', 'Carga_Horaria', 'Data_Conclusao', 'Modalidade', 'SESMO', 'Observacoes']
     const lines = data.map(r => [
       r.id,
-      r.numero||'',
-      formatDateBR(r.data_aquisicao)||'',
+      r.numero || '',
+      formatDateBR(r.data_aquisicao) || '',
       escapeCSV(r.participante),
-      escapeCSV(r.empresa_nome||String(r.empresa_id)),
-      escapeCSV(r.curso_nome||String(r.curso_id)),
-      escapeCSV(r.instrutor||''),
+      escapeCSV(r.empresa_nome || String(r.empresa_id)),
+      escapeCSV(r.curso_nome || String(r.curso_id)),
+      escapeCSV(r.instrutor || ''),
       r.carga_horaria,
       formatDateBR(r.data_conclusao),
       r.modalidade,
-      r.sesmo?'1':'0',
-      escapeCSV(r.observacoes||'')
+      r.sesmo ? '1' : '0',
+      r.notaFiscal ? '1' : '0',
+      r.pratica ? '1' : '0',
+      escapeCSV(r.observacoes || '')
     ].join(','))
-    const csv = [headers.join(','),...lines].join('\n')
+    const csv = [headers.join(','), ...lines].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -251,6 +259,8 @@ export default function LivroRegistrosPage() {
       data_conclusao: r.data_conclusao,
       modalidade: r.modalidade,
       sesmo: r.sesmo,
+      notaFiscal: r.notaFiscal,
+      pratica: r.pratica,
       observacoes: r.observacoes || ''
     })
     setEditId(null)
@@ -269,13 +279,15 @@ export default function LivroRegistrosPage() {
       data_conclusao: r.data_conclusao || '',
       modalidade: r.modalidade,
       sesmo: r.sesmo,
+      notaFiscal: r.notaFiscal,
+      pratica: r.pratica,
       observacoes: r.observacoes || ''
     })
     setEditId(r.id)
     setOpen(true)
   }
 
-  function escapeCSV(v: string) { return /[",;\n]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v }
+  function escapeCSV(v: string) { return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v }
 
   // client-side filtered + paginated list
   const filtered = useMemo(() => {
@@ -323,89 +335,99 @@ export default function LivroRegistrosPage() {
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-end">
           <div className="flex gap-2">
-            <Input placeholder="Buscar..." value={search} onChange={e=> setSearch(e.target.value)} className="h-8 w-[220px]" />
-            <Button variant="outline" size="sm" onClick={exportCSV} className="flex items-center gap-1"><IconDownload size={16}/> Exportar</Button>
-            <Sheet open={open} onOpenChange={(o)=> { setOpen(o); if (!o) { setForm({ ...emptyForm }); setEditId(null) } }}>
-            <SheetTrigger asChild>
-              <Button size="sm" className="button-primary">Novo Registro</Button>
-            </SheetTrigger>
-            <SheetContent className="overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>{editId ? 'Editar Registro' : 'Novo Registro'}</SheetTitle>
-                <SheetDescription>{editId ? 'Atualize as informações do registro selecionado.' : 'Cadastre um novo item no livro de registros.'}</SheetDescription>
-              </SheetHeader>
-              <form onSubmit={handleSubmit} className="mt-2 space-y-3 px-6">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Número</label>
-                    <input className="border rounded px-2 py-1" placeholder="Opcional" name="numero" value={form.numero} onChange={handleChange} />
+            <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 w-[220px]" />
+            <Button variant="outline" size="sm" onClick={exportCSV} className="flex items-center gap-1"><IconDownload size={16} /> Exportar</Button>
+            <Sheet open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setForm({ ...emptyForm }); setEditId(null) } }}>
+              <SheetTrigger asChild>
+                <Button size="sm" className="button-primary">Novo Registro</Button>
+              </SheetTrigger>
+              <SheetContent className="overflow-y-auto">
+                <SheetHeader>
+                  <SheetTitle>{editId ? 'Editar Registro' : 'Novo Registro'}</SheetTitle>
+                  <SheetDescription>{editId ? 'Atualize as informações do registro selecionado.' : 'Cadastre um novo item no livro de registros.'}</SheetDescription>
+                </SheetHeader>
+                <form onSubmit={handleSubmit} className="mt-2 space-y-3 px-6">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Número</label>
+                      <input className="border rounded px-2 py-1" placeholder="Opcional" name="numero" value={form.numero} onChange={handleChange} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Data Aquisição</label>
+                      <input className="border rounded px-2 py-1" type="date" name="data_aquisicao" value={form.data_aquisicao} onChange={handleChange} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Participante *</label>
+                      <input className="border rounded px-2 py-1" name="participante" value={form.participante} onChange={handleChange} required />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Empresa *</label>
+                      <Select value={String(form.empresa_id || '')} onValueChange={(v) => setForm(f => ({ ...f, empresa_id: Number(v) }))}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {empresas.map(e => <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Curso *</label>
+                      <Select value={String(form.curso_id || '')} onValueChange={(v) => setForm(f => ({ ...f, curso_id: Number(v) }))}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {cursos.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Instrutor</label>
+                      <input className="border rounded px-2 py-1" name="instrutor" value={form.instrutor} onChange={handleChange} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Carga Horária *</label>
+                      <input className="border rounded px-2 py-1" name="carga_horaria" value={form.carga_horaria} onChange={handleChange} required />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Data Conclusão</label>
+                      <input className="border rounded px-2 py-1" type="date" name="data_conclusao" value={form.data_conclusao} onChange={handleChange} />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-medium">Modalidade *</label>
+                      <Select value={form.modalidade} onValueChange={(v) => setForm(f => ({ ...f, modalidade: v }))}>
+                        <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Online">Online</SelectItem>
+                          <SelectItem value="Semipresencial">Semipresencial</SelectItem>
+                          <SelectItem value="Presencial">Presencial</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2 col-span-3">
+                      <div>
+                        <input id="sesmo" type="checkbox" name="sesmo" checked={form.sesmo} onChange={handleChange} />
+                        <label htmlFor="sesmo" className="text-sm">SESMO</label>
+                      </div>
+                      <div>
+                        <input id="notaFiscal" type="checkbox" name="notaFiscal" checked={form.notaFiscal} onChange={handleChange} />
+                        <label htmlFor="notaFiscal" className="text-sm">Nota Fiscal</label>
+                      </div>
+                      <div>
+                        <input id="pratica" type="checkbox" name="pratica" checked={form.pratica} onChange={handleChange} />
+                        <label htmlFor="pratica" className="text-sm">Prática</label>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1 col-span-3">
+                      <label className="text-xs font-medium">Observações</label>
+                      <Textarea name="observacoes" value={form.observacoes} onChange={handleChange} className="min-h-[50px]" />
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Data Aquisição</label>
-                    <input className="border rounded px-2 py-1" type="date" name="data_aquisicao" value={form.data_aquisicao} onChange={handleChange} />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Participante *</label>
-                    <input className="border rounded px-2 py-1" name="participante" value={form.participante} onChange={handleChange} required />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Empresa *</label>
-                    <Select value={String(form.empresa_id || '')} onValueChange={(v)=> setForm(f=>({...f, empresa_id: Number(v)}))}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        {empresas.map(e => <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Curso *</label>
-                    <Select value={String(form.curso_id || '')} onValueChange={(v)=> setForm(f=>({...f, curso_id: Number(v)}))}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        {cursos.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Instrutor</label>
-                    <input className="border rounded px-2 py-1" name="instrutor" value={form.instrutor} onChange={handleChange} />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Carga Horária *</label>
-                    <input className="border rounded px-2 py-1" name="carga_horaria" value={form.carga_horaria} onChange={handleChange} required />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Data Conclusão</label>
-                    <input className="border rounded px-2 py-1" type="date" name="data_conclusao" value={form.data_conclusao} onChange={handleChange} />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs font-medium">Modalidade *</label>
-                    <Select value={form.modalidade} onValueChange={(v)=> setForm(f=> ({ ...f, modalidade: v }))}>
-                      <SelectTrigger className="w-full"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Online">Online</SelectItem>
-                        <SelectItem value="Semipresencial">Semipresencial</SelectItem>
-                        <SelectItem value="Presencial">Presencial</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center gap-2 col-span-2">
-                    <input id="sesmo" type="checkbox" name="sesmo" checked={form.sesmo} onChange={handleChange} />
-                    <label htmlFor="sesmo" className="text-sm">SESMO</label>
-                  </div>
-                  <div className="flex flex-col gap-1 col-span-3">
-                    <label className="text-xs font-medium">Observações</label>
-                    <Textarea name="observacoes" value={form.observacoes} onChange={handleChange} className="min-h-[50px]" />
-                  </div>
-                </div>
-                <SheetFooter className="flex gap-2 pt-4">
-                  <Button type="submit" className="button-success">{editId ? 'Atualizar' : 'Salvar'}</Button>
-                  <SheetClose asChild>
-                    <Button type="button" className='cursor-pointer' variant="outline">Cancelar</Button>
-                  </SheetClose>
-                </SheetFooter>
-              </form>
-            </SheetContent>
+                  <SheetFooter className="flex gap-2 pt-4">
+                    <Button type="submit" className="button-success">{editId ? 'Atualizar' : 'Salvar'}</Button>
+                    <SheetClose asChild>
+                      <Button type="button" className='cursor-pointer' variant="outline">Cancelar</Button>
+                    </SheetClose>
+                  </SheetFooter>
+                </form>
+              </SheetContent>
             </Sheet>
           </div>
         </div>
@@ -413,35 +435,35 @@ export default function LivroRegistrosPage() {
         <div className="p-3 grid lg:grid-cols-7 md:grid-cols-3 gap-3 items-end">
           <div className="flex flex-col gap-1">
             <label className="text-xs">Participante</label>
-            <Input value={filters.participante} onChange={e=> setFilters(f=>({...f, participante: e.target.value}))} placeholder="Buscar..." className="h-8" />
+            <Input value={filters.participante} onChange={e => setFilters(f => ({ ...f, participante: e.target.value }))} placeholder="Buscar..." className="h-8" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs">Modalidade</label>
-            <Input value={filters.modalidade} onChange={e=> setFilters(f=>({...f, modalidade: e.target.value}))} placeholder="Modalidade" className="h-8" />
+            <Input value={filters.modalidade} onChange={e => setFilters(f => ({ ...f, modalidade: e.target.value }))} placeholder="Modalidade" className="h-8" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs">Empresa</label>
-            <Select value={filters.empresa_id ? String(filters.empresa_id) : 'all'} onValueChange={v=> setFilters(f=>({...f, empresa_id: v === 'all' ? '' : v }))}>
+            <Select value={filters.empresa_id ? String(filters.empresa_id) : 'all'} onValueChange={v => setFilters(f => ({ ...f, empresa_id: v === 'all' ? '' : v }))}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Todas" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {empresas.map(e=> <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>)}
+                {empresas.map(e => <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs">Curso</label>
-            <Select value={filters.curso_id ? String(filters.curso_id) : 'all'} onValueChange={v=> setFilters(f=>({...f, curso_id: v === 'all' ? '' : v }))}>
+            <Select value={filters.curso_id ? String(filters.curso_id) : 'all'} onValueChange={v => setFilters(f => ({ ...f, curso_id: v === 'all' ? '' : v }))}>
               <SelectTrigger className="w-full"><SelectValue placeholder="Todos" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {cursos.map(c=> <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
+                {cursos.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs">SESMO</label>
-            <Select value={filters.sesmo} onValueChange={v=> setFilters(f=>({...f, sesmo: v }))}>
+            <Select value={filters.sesmo} onValueChange={v => setFilters(f => ({ ...f, sesmo: v }))}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
@@ -452,11 +474,11 @@ export default function LivroRegistrosPage() {
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs">Conclusão Início</label>
-            <Input type="date" value={dateRange.inicio} onChange={e=> setDateRange(r=>({...r, inicio: e.target.value}))} className="h-8" />
+            <Input type="date" value={dateRange.inicio} onChange={e => setDateRange(r => ({ ...r, inicio: e.target.value }))} className="h-8" />
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-xs">Conclusão Fim</label>
-            <Input type="date" value={dateRange.fim} onChange={e=> setDateRange(r=>({...r, fim: e.target.value}))} className="h-8" />
+            <Input type="date" value={dateRange.fim} onChange={e => setDateRange(r => ({ ...r, fim: e.target.value }))} className="h-8" />
           </div>
         </div>
         {/* Table (styled) */}
@@ -476,6 +498,7 @@ export default function LivroRegistrosPage() {
                   <TableHead className="cursor-pointer select-none" onClick={() => onSort('data_conclusao')}>Data Conclusão {sortIndicator('data_conclusao')}</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => onSort('modalidade')}>Modalidade {sortIndicator('modalidade')}</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => onSort('sesmo')}>SESMO {sortIndicator('sesmo')}</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => onSort('notaFiscal')}>Nota Fiscal {sortIndicator('notaFiscal')}</TableHead>
                   <TableHead>Obs</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -504,6 +527,7 @@ export default function LivroRegistrosPage() {
                       <TableCell>{formatDateBR(r.data_conclusao)}</TableCell>
                       <TableCell>{r.modalidade}</TableCell>
                       <TableCell>{r.sesmo ? 'Sim' : 'Não'}</TableCell>
+                      <TableCell>{r.notaFiscal ? 'Sim' : 'Não'}</TableCell>
                       <TableCell className="max-w-[160px] truncate" title={r.observacoes || ''}>{r.observacoes ? r.observacoes : '-'}</TableCell>
                       <TableCell>
                         <LivroActionsMenu r={r} />
@@ -542,16 +566,16 @@ export default function LivroRegistrosPage() {
             </div>
           </div>
         </div>
-        
-        <Dialog open={confirmDelete.open} onOpenChange={(o)=> !o && setConfirmDelete({ id: null, open: false })}>
+
+        <Dialog open={confirmDelete.open} onOpenChange={(o) => !o && setConfirmDelete({ id: null, open: false })}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Confirmar exclusão</DialogTitle>
             </DialogHeader>
             <p className="text-sm">Tem certeza que deseja remover o registro ID {confirmDelete.id}?</p>
             <DialogFooter className="mt-4 flex gap-2 justify-end">
-              <Button variant="outline" onClick={()=> setConfirmDelete({ id: null, open: false })}>Cancelar</Button>
-              <Button variant="destructive" onClick={()=> confirmDelete.id && handleDelete(confirmDelete.id)}>Remover</Button>
+              <Button variant="outline" onClick={() => setConfirmDelete({ id: null, open: false })}>Cancelar</Button>
+              <Button variant="destructive" onClick={() => confirmDelete.id && handleDelete(confirmDelete.id)}>Remover</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

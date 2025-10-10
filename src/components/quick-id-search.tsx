@@ -40,8 +40,8 @@ export const QuickIdSearch: React.FC<QuickIdSearchProps> = ({ kind, className, p
         className="w-40"
         inputMode="numeric"
       />
-      <Button onClick={go} variant="default" size="sm">
-        <IconSearch className="mr-1" /> {buttonLabel ?? 'Pesquisar'}
+      <Button onClick={go} size="sm" className='button-primary'>
+        <IconSearch className="mr-0.5" /> {buttonLabel ?? 'Pesquisar'}
       </Button>
     </div>
   )

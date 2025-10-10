@@ -687,21 +687,28 @@ export const exportProposalDocx = async (
                 tipo: 'Programa',
                 nome: p.programa_nome,
                 qtd_ou_pontos: String(p.quantidade),
+                // expose both numeric and formatted values for template flexibility
+                valor_unitario: p.valor_unitario,
                 valor_unitario_fmt: p.valor_unitario_fmt,
+                valor_total: p.valor_total,
                 valor_total_fmt: p.valor_total_fmt,
             })),
             ...quimicosTpl.map(q => ({
                 tipo: 'Químico',
                 nome: q.grupo,
                 qtd_ou_pontos: String(q.pontos),
+                valor_unitario: q.valor_unitario,
                 valor_unitario_fmt: q.valor_unitario_fmt,
+                valor_total: q.valor_total,
                 valor_total_fmt: q.valor_total_fmt,
             })),
             ...produtosTpl.map(p => ({
                 tipo: 'Produto',
                 nome: p.produto_nome,
                 qtd_ou_pontos: String(p.quantidade),
+                valor_unitario: p.valor_unitario,
                 valor_unitario_fmt: p.valor_unitario_fmt,
+                valor_total: p.valor_total,
                 valor_total_fmt: p.valor_total_fmt,
             })),
         ]
@@ -794,6 +801,17 @@ export const exportProposalDocx = async (
                     geral: totalGeral,
                     geral_fmt: fmtBRL(totalGeral),
                 },
+                // Root-level aliases for convenience (some templates prefer flat names)
+                total_programas: totalProgramas,
+                total_programas_fmt: fmtBRL(totalProgramas),
+                total_cursos: totalCursos,
+                total_cursos_fmt: fmtBRL(totalCursos),
+                total_quimicos: totalQuimicos,
+                total_quimicos_fmt: fmtBRL(totalQuimicos),
+                total_produtos: totalProdutos,
+                total_produtos_fmt: fmtBRL(totalProdutos),
+                total_geral: totalGeral,
+                total_geral_fmt: fmtBRL(totalGeral),
             }
             try {
                 doc.render(templateData)

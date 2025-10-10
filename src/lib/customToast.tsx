@@ -33,7 +33,7 @@ const render = (variant: 'error' | 'warning' | 'success', title: string, content
           <div className="mt-1 text-sm leading-5 opacity-95">{typeof content === 'string' ? content : content}</div>
         </div>
         <div className="ml-3">
-          <button aria-label="Fechar" onClick={(e) => { e.stopPropagation(); sonnerToast.dismiss(t) }} className="inline-flex items-center justify-center rounded-md p-1 hover:opacity-90 cursor-pointer">
+          <button aria-label="Fechar" onClick={(e) => { e.stopPropagation(); sonnerToast.dismiss((t as any)?.id) }} className="inline-flex items-center justify-center rounded-md p-1 hover:opacity-90 cursor-pointer">
             <IconX className="w-4 h-4" />
           </button>
         </div>
@@ -64,7 +64,7 @@ export const toastNotification = (content: ToastContent, opts?: ToastOptions) =>
           <div className="mt-1 text-sm leading-5 opacity-90">{typeof content === 'string' ? content : content}</div>
         </div>
         <div className="ml-3">
-          <button aria-label="Fechar" onClick={(e) => { e.stopPropagation(); sonnerToast.dismiss(t) }} className="inline-flex items-center justify-center rounded-md p-1 hover:opacity-90 cursor-pointer">
+          <button aria-label="Fechar" onClick={(e) => { e.stopPropagation(); sonnerToast.dismiss((t as any)?.id) }} className="inline-flex items-center justify-center rounded-md p-1 hover:opacity-90 cursor-pointer">
             <IconX className="w-4 h-4" />
           </button>
         </div>

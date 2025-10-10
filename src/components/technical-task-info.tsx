@@ -21,6 +21,19 @@ import { useUnit } from "@/contexts/UnitContext"
 import { toastSuccess } from '@/lib/customToast'
 import type { Task } from '@/services/tasks'
 
+export const getStatusText = (status?: string | null): string => {
+  switch (status) {
+    case 'progress':
+      return 'Em Andamento'
+    case 'concluída':
+      return 'Concluída'
+    case 'pendente':
+      return 'Pendente'
+    default:
+      return status || '—'
+  }
+}
+
 export function TaskInfo({
     open,
     onOpenChange,
@@ -60,6 +73,7 @@ export function TaskInfo({
     const [selectedUserId, setSelectedUserId] = React.useState<number | null>(null)
     const [loading, setLoading] = React.useState(false)
     const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+    const statusFmt = getStatusText(status)
 
     // determine permissions
     // determine if current user is responsible: prefer numeric id when available,
@@ -179,18 +193,18 @@ export function TaskInfo({
     // load setores on mount
     React.useEffect(() => {
         let mounted = true
-        ;(async () => {
-            try {
-                setSetoresLoading(true)
-                const res = await getSetores()
-                if (!mounted) return
-                setSetores(res.setores || [])
-            } catch (e) {
-                setSetoresError(e instanceof Error ? e.message : String(e))
-            } finally {
-                setSetoresLoading(false)
-            }
-        })()
+            ; (async () => {
+                try {
+                    setSetoresLoading(true)
+                    const res = await getSetores()
+                    if (!mounted) return
+                    setSetores(res.setores || [])
+                } catch (e) {
+                    setSetoresError(e instanceof Error ? e.message : String(e))
+                } finally {
+                    setSetoresLoading(false)
+                }
+            })()
         return () => { mounted = false }
     }, [])
 
@@ -201,7 +215,7 @@ export function TaskInfo({
             setUsersForSetor(null)
             return
         }
-        ;(async () => {
+        ; (async () => {
             try {
                 setUsersForSetorLoading(true)
                 const uId = unitId ?? undefined
@@ -249,7 +263,7 @@ export function TaskInfo({
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-status">Status</Label>
-                            <Input disabled id="task-info-status" defaultValue={status} />
+                            <Input disabled id="task-info-status" defaultValue={statusFmt} />
                         </div>
                         <div className="grid gap-3">
                             <Label htmlFor="task-info-prioridade">Prioridade</Label>

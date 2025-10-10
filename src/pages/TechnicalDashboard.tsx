@@ -48,11 +48,12 @@ export default function TechnicalDashboard(): ReactElement {
 
   return (
     <div className="container-main">
-      <SiteHeader title='Meu Dashboard' />
+      <SiteHeader title='Dashboard | Técnico' />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <div className="px-4 lg:px-6 flex items-center justify-end">
+            <div className="px-4 lg:px-6 flex items-center justify-between">
+              <h2 className="text-lg text-foreground font-semibold">Faça o gerenciamento de suas tarefas</h2>
               <QuickIdSearch kind="task" placeholder="Nº da tarefa" />
             </div>
             <TechnicalDashboardCards stats={stats} loading={loadingStats} error={errorStats} />

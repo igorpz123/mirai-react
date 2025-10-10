@@ -34,6 +34,7 @@ import {
   IconDotsVertical,
   IconGripVertical,
   IconLayoutColumns,
+  IconTrash,
 } from "@tabler/icons-react"
 import {
   flexRender,
@@ -566,9 +567,9 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
                     Visualizar
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer">Favoritar</DropdownMenuItem>
+                {/* <DropdownMenuItem className="cursor-pointer">Favoritar</DropdownMenuItem> */}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (isAdmin) doDelete() }} disabled={!isAdmin} className={!isAdmin ? 'opacity-60 pointer-events-none' : ''}>Deletar</DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); if (isAdmin) doDelete() }} disabled={!isAdmin} className={!isAdmin ? 'opacity-60 pointer-events-none' : 'cursor-pointer text-destructive focus:text-destructive'}><IconTrash className='mr-0.5 text-destructive' /> Deletar</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 

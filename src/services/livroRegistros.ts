@@ -14,6 +14,8 @@ export interface LivroRegistro {
   data_conclusao: string
   modalidade: string
   sesmo: boolean
+  notaFiscal: boolean
+  pratica: boolean
   observacoes?: string | null
   criado_em?: string | null
   atualizado_em?: string | null
@@ -29,7 +31,7 @@ function authHeaders() {
   }
 }
 
-export async function listLivroRegistros(params?: Partial<{ empresa_id: number; curso_id: number; participante: string; modalidade: string; sesmo: number; data_conclusao_inicio: string; data_conclusao_fim: string; limit: number; offset: number; sort: string; order: string }>): Promise<LivroRegistrosResponse> {
+export async function listLivroRegistros(params?: Partial<{ empresa_id: number; curso_id: number; participante: string; modalidade: string; sesmo: number; pratica: number; notaFiscal: number; data_conclusao_inicio: string; data_conclusao_fim: string; limit: number; offset: number; sort: string; order: string }>): Promise<LivroRegistrosResponse> {
   const qs = params ? '?' + new URLSearchParams(Object.entries(params).filter(([_, v]) => v != null).map(([k, v]) => [k, String(v)])) : ''
   const res = await fetch(`${API_URL}/livro_registros${qs}`, { headers: authHeaders() })
   if (!res.ok) throw new Error('Erro ao listar registros')

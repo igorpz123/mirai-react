@@ -32,8 +32,10 @@ try {
   ExecOrFail "scp -i `"$KeyPath`" deploy.tar.gz $remoteSpec"
 
   Write-Host "[5/6] Aplicando no servidor" -ForegroundColor Green
-  $remote = "export NVM_DIR=\"$HOME/.nvm\"; [ -s \"$NVM_DIR/nvm.sh\" ] && . \"$NVM_DIR/nvm.sh\"; nvm use --lts >/dev/null 2>&1 || nvm use default; cd $RemoteDir && tar xzf deploy.tar.gz && npm --prefix server install --omit=dev && (pm2 restart mirai || pm2 start server/dist/server.js --name mirai) && rm deploy.tar.gz"
-  ExecOrFail "ssh -i `"$KeyPath`" ${User}@${ServerHost} `"$remote`""
+  $remote = @'
+export NVM_DIR="$HOME/.nvm"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; nvm use --lts >/dev/null 2>&1 || nvm use default; cd {0} && tar xzf deploy.tar.gz && npm --prefix server install --omit=dev && (pm2 restart mirai || pm2 start server/dist/server.js --name mirai) && rm deploy.tar.gz
+'@ -f $RemoteDir
+  ExecOrFail "ssh -i `"$KeyPath`" ${User}@${ServerHost} '$remote'"
 
   Write-Host "[6/6] Concluído com sucesso." -ForegroundColor Green
 } catch {

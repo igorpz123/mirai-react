@@ -108,11 +108,12 @@ export default function ComercialDashboard(): ReactElement {
 
   return (
     <div className="container-main">
-      <SiteHeader title='Comercial - Dashboard' />
+      <SiteHeader title='Dashboard | Comercial' />
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <div className="px-4 lg:px-6 flex items-center justify-end">
+            <div className="px-4 lg:px-6 flex items-center justify-between">
+              <h2 className="text-lg text-foreground font-semibold">Faça o gerenciamento de suas propostas</h2>
               <QuickIdSearch kind="proposal" placeholder="Nº da proposta" />
             </div>
             {/* Unique key to avoid sharing internal state with Admin dashboard */}

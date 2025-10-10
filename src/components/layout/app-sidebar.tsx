@@ -9,6 +9,9 @@ import {
   Calendar,
   Map,
   LayoutDashboard,
+  Activity,
+  SquarePen,
+  CircleDollarSign,
 } from "lucide-react"
 
 import { NavTechnical } from "@/components/layout/nav-technical"
@@ -37,6 +40,7 @@ const navComercialData = [
     ]
   },
   { title: "Livro de Registros", url: "/comercial/livro-de-registros", icon: FileSliders },
+  { title: "Controle de Prática", url: "/comercial/controle-pratica", icon: Activity },
 ];
 
 //Página comercial para usuários externos (fora da equipe comercial)
@@ -51,7 +55,7 @@ const navComercialDataOutside = [
 
 const navAdminData = [
   { title: "Dashboard Técnico", url: "/admin/dashboard-technical", icon: LayoutDashboard },
-  { title: "Dashboard Comercial", url: "/admin/dashboard-commercial", icon: LayoutDashboard },
+  { title: "Dashboard Comercial", url: "/admin/dashboard-commercial", icon: CircleDollarSign },
   { title: "Relatórios", url: "/admin/relatorios", icon: FileSliders },
   {
     title: "Gerenciar", url: "#", icon: HardHat, items: [
@@ -61,11 +65,11 @@ const navAdminData = [
       { title: "Empresas", url: "/empresas" },
     ]
   },
-  { title: "Changelog", url: "/changelog", icon: FileSliders },
+  { title: "Changelog", url: "/changelog", icon: SquarePen },
 ]
 
 const navAdminDataOutside = [
-  { title: "Changelog", url: "/changelog", icon: FileSliders },
+  { title: "Changelog", url: "/changelog", icon: SquarePen },
 ]
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {

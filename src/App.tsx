@@ -31,6 +31,7 @@ import AdminReportsPage from './pages/AdminReports';
 import Empresas from './pages/Empresas';
 import EmpresaDetails from './pages/EmpresaDetails';
 import LivroRegistrosPage from './pages/LivroRegistros';
+import ControlePraticaPage from './pages/ControlePratica';
 import NotificacoesPage from './pages/Notificacoes';
 import './App.css';
 import { useAuth } from './hooks/use-auth';
@@ -67,6 +68,7 @@ function AppContent() {
           <Route path="comercial/proposta/nova" element={<CommercialProposalNew />} />
           <Route path="comercial/proposta/:id" element={<CommercialProposalDetail />} />
           <Route path="comercial/items" element={<CommercialItemsPage />} />
+          <Route path="comercial/controle-pratica" element={<ControlePraticaPage />} />
           <Route path="technical/fluxograma/setor/:setorSlug" element={<TechnicalFluxogramaSetor />} />
           <Route path="technical/agenda" element={<TechnicalAgenda />} />
           <Route path="technical/agenda/:usuarioId" element={<TechnicalAgendaUser />} />

@@ -15,6 +15,8 @@ interface LivroRegistroRow extends RowDataPacket {
   data_conclusao: string | Date
   modalidade: string
   sesmo: number
+  nota_fiscal: number
+  pratica: number
   observacoes?: string | null
   criado_em?: string | Date
   atualizado_em?: string | Date
@@ -25,14 +27,14 @@ interface LivroRegistroRow extends RowDataPacket {
 // Listagem (com filtros simples opcionais)
 export const listLivroRegistros = async (
   req: Request<{}, {}, {}, {
-    empresa_id?: string; curso_id?: string; participante?: string; modalidade?: string; sesmo?: string;
+    empresa_id?: string; curso_id?: string; participante?: string; modalidade?: string; sesmo?: string; nota_fiscal?: string; pratica?: string;
     data_conclusao_inicio?: string; data_conclusao_fim?: string; limit?: string; offset?: string;
     sort?: string; order?: string
   }>,
   res: Response
 ): Promise<void> => {
   try {
-    const { empresa_id, curso_id, participante, modalidade, sesmo, data_conclusao_inicio, data_conclusao_fim } = req.query
+    const { empresa_id, curso_id, participante, modalidade, sesmo, nota_fiscal, pratica, data_conclusao_inicio, data_conclusao_fim } = req.query
     const { limit = '25', offset = '0', sort = 'data_conclusao', order = 'DESC' } = req.query
     const where: string[] = []
     const values: any[] = []
@@ -41,6 +43,8 @@ export const listLivroRegistros = async (
     if (participante) { where.push('lr.participante LIKE ?'); values.push(`%${participante}%`) }
     if (modalidade) { where.push('lr.modalidade LIKE ?'); values.push(`%${modalidade}%`) }
     if (sesmo === '1' || sesmo === '0') { where.push('lr.sesmo = ?'); values.push(Number(sesmo)) }
+    if (nota_fiscal === '1' || nota_fiscal === '0') { where.push('lr.nota_fiscal = ?'); values.push(Number(nota_fiscal)) }
+    if (pratica === '1' || pratica === '0') { where.push('lr.pratica = ?'); values.push(Number(pratica)) }
     if (data_conclusao_inicio) { where.push('lr.data_conclusao >= ?'); values.push(data_conclusao_inicio) }
     if (data_conclusao_fim) { where.push('lr.data_conclusao <= ?'); values.push(data_conclusao_fim) }
 
@@ -81,6 +85,8 @@ export const listLivroRegistros = async (
       data_conclusao: formatDate(r.data_conclusao),
       modalidade: r.modalidade,
       sesmo: !!r.sesmo,
+      nota_fiscal: !!r.nota_fiscal,
+      pratica: !!r.pratica,
       observacoes: r.observacoes || null,
       criado_em: r.criado_em ? new Date(r.criado_em).toISOString() : null,
       atualizado_em: r.atualizado_em ? new Date(r.atualizado_em).toISOString() : null,
@@ -121,6 +127,8 @@ export const getLivroRegistroById = async (req: Request<{ id: string }>, res: Re
       data_conclusao: formatDate(r.data_conclusao),
       modalidade: r.modalidade,
       sesmo: !!r.sesmo,
+      nota_fiscal: !!r.nota_fiscal,
+      pratica: !!r.pratica,
       observacoes: r.observacoes || null,
       criado_em: r.criado_em ? new Date(r.criado_em).toISOString() : null,
       atualizado_em: r.atualizado_em ? new Date(r.atualizado_em).toISOString() : null,
@@ -187,6 +195,8 @@ export const updateLivroRegistro = async (
       data_conclusao: 'data_conclusao',
       modalidade: 'modalidade',
       sesmo: 'sesmo',
+      nota_fiscal: 'nota_fiscal',
+      pratica: 'pratica',
       observacoes: 'observacoes'
     }
 

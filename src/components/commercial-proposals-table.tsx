@@ -1,5 +1,5 @@
 import React, { useState, useMemo, type ReactElement } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import type { Proposal } from '@/services/proposals'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -38,7 +38,6 @@ export function CommercialProposalsTable({
   onProposalsPatched?: (patches: Array<{ id: number | string; changes: Partial<Proposal> }>) => void
   onProposalDeleted?: (id: number | string) => void
 }): ReactElement {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -345,12 +344,11 @@ export function CommercialProposalsTable({
   ))
 
   return (
-    <div className="rounded-lg border bg-card mx-6">
-      <div className="flex items-center justify-between px-4 pt-4 pb-2">
-        <h3 className="text-lg font-semibold">Propostas</h3>
-        <Button onClick={() => navigate('/comercial/proposta/nova')}>Nova Proposta</Button>
-      </div>
-      <div className="px-4 pb-4">
+    <div className="bg-transparent mx-6">
+      {/* <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <Button onClick={() => navigate('/comercial/proposta/nova')} className='button-primary'>Nova Proposta</Button>
+      </div> */}
+      <div className="p-4">
         {/* Controls: search + filters */}
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:w-64">
@@ -402,8 +400,8 @@ export function CommercialProposalsTable({
           </div>
         </div>
 
-        <Table>
-          <TableHeader className="bg-muted/30">
+        <Table className='border rounded-lg'>
+          <TableHeader className="bg-card">
             <TableRow>
               <TableHead>Título</TableHead>
               <TableHead>Responsável</TableHead>
