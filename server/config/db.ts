@@ -12,6 +12,11 @@ const poolOptions: PoolOptions = {
   queueLimit: 0,
   // Return DECIMAL/NUMERIC as numbers instead of strings
   decimalNumbers: true,
+  // Avoid implicit timezone conversions: return DATE/DATETIME as plain strings ("YYYY-MM-DD" / "YYYY-MM-DD HH:mm:ss")
+  // This prevents JS Date from shifting -3h when converting to/from ISO/UTC
+  dateStrings: true,
+  // If you prefer driver-side timezone interpretation for TIMESTAMP, you can set timezone as needed (e.g., 'Z' or '+00:00' or 'local').
+  // timezone: 'Z',
 };
 
 // Cria o pool e exporta com tipagem Pool
