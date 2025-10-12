@@ -11,7 +11,7 @@ export interface LivroRegistro {
   curso_nome?: string | null
   instrutor?: string | null
   carga_horaria: number
-  data_conclusao: string
+  data_conclusao?: string | null
   modalidade: string
   sesmo: boolean
   notaFiscal: boolean

@@ -27,14 +27,16 @@ interface LivroRegistroRow extends RowDataPacket {
 // Listagem (com filtros simples opcionais)
 export const listLivroRegistros = async (
   req: Request<{}, {}, {}, {
-    empresa_id?: string; curso_id?: string; participante?: string; modalidade?: string; sesmo?: string; nota_fiscal?: string; pratica?: string;
+    empresa_id?: string; curso_id?: string; participante?: string; modalidade?: string; sesmo?: string; nota_fiscal?: string; notaFiscal?: string; pratica?: string;
     data_conclusao_inicio?: string; data_conclusao_fim?: string; limit?: string; offset?: string;
     sort?: string; order?: string
   }>,
   res: Response
 ): Promise<void> => {
   try {
-    const { empresa_id, curso_id, participante, modalidade, sesmo, nota_fiscal, pratica, data_conclusao_inicio, data_conclusao_fim } = req.query
+    const { empresa_id, curso_id, participante, modalidade, sesmo, pratica, data_conclusao_inicio, data_conclusao_fim } = req.query
+    // Accept both snake_case and camelCase for nota fiscal in query
+    const notaFiscalQuery = (req.query as any).notaFiscal ?? (req.query as any).nota_fiscal
     const { limit = '25', offset = '0', sort = 'data_conclusao', order = 'DESC' } = req.query
     const where: string[] = []
     const values: any[] = []
@@ -43,16 +45,16 @@ export const listLivroRegistros = async (
     if (participante) { where.push('lr.participante LIKE ?'); values.push(`%${participante}%`) }
     if (modalidade) { where.push('lr.modalidade LIKE ?'); values.push(`%${modalidade}%`) }
     if (sesmo === '1' || sesmo === '0') { where.push('lr.sesmo = ?'); values.push(Number(sesmo)) }
-    if (nota_fiscal === '1' || nota_fiscal === '0') { where.push('lr.nota_fiscal = ?'); values.push(Number(nota_fiscal)) }
+    if (notaFiscalQuery === '1' || notaFiscalQuery === '0') { where.push('lr.nota_fiscal = ?'); values.push(Number(notaFiscalQuery)) }
     if (pratica === '1' || pratica === '0') { where.push('lr.pratica = ?'); values.push(Number(pratica)) }
     if (data_conclusao_inicio) { where.push('lr.data_conclusao >= ?'); values.push(data_conclusao_inicio) }
     if (data_conclusao_fim) { where.push('lr.data_conclusao <= ?'); values.push(data_conclusao_fim) }
 
-    const sortable = new Set(['data_conclusao','carga_horaria','id','participante','modalidade'])
+    const sortable = new Set(['data_conclusao', 'carga_horaria', 'id', 'participante', 'modalidade'])
     const sortCol = sortable.has(sort) ? sort : 'data_conclusao'
     const sortDir = (order || '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC'
-    const lim = Math.min(Math.max(parseInt(limit,10)||25,1),100)
-    const off = Math.max(parseInt(offset,10)||0,0)
+    const lim = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100)
+    const off = Math.max(parseInt(offset, 10) || 0, 0)
 
     const baseFrom = `FROM livro_de_registros lr
                  JOIN empresas e ON e.id = lr.empresa_id
@@ -66,8 +68,8 @@ export const listLivroRegistros = async (
     const countSql = `SELECT COUNT(*) as total ${baseFrom} ${whereSql}`
 
     const [rows, countRows] = await Promise.all([
-      pool.query<LivroRegistroRow[]>(sql, [...values, lim, off]).then(r=>r[0]),
-      pool.query<RowDataPacket[]>(countSql, values).then(r=>r[0])
+      pool.query<LivroRegistroRow[]>(sql, [...values, lim, off]).then(r => r[0]),
+      pool.query<RowDataPacket[]>(countSql, values).then(r => r[0])
     ])
     const total = (countRows && countRows[0] && (countRows[0] as any).total) ? Number((countRows[0] as any).total) : 0
 
@@ -85,7 +87,7 @@ export const listLivroRegistros = async (
       data_conclusao: formatDate(r.data_conclusao),
       modalidade: r.modalidade,
       sesmo: !!r.sesmo,
-      nota_fiscal: !!r.nota_fiscal,
+      notaFiscal: !!r.nota_fiscal,
       pratica: !!r.pratica,
       observacoes: r.observacoes || null,
       criado_em: r.criado_em ? new Date(r.criado_em).toISOString() : null,
@@ -124,10 +126,10 @@ export const getLivroRegistroById = async (req: Request<{ id: string }>, res: Re
       curso_nome: r.curso_nome,
       instrutor: r.instrutor,
       carga_horaria: Number(r.carga_horaria),
-      data_conclusao: formatDate(r.data_conclusao),
+      data_conclusao: formatDate(r.data_conclusao) || null,
       modalidade: r.modalidade,
       sesmo: !!r.sesmo,
-      nota_fiscal: !!r.nota_fiscal,
+      notaFiscal: !!r.nota_fiscal,
       pratica: !!r.pratica,
       observacoes: r.observacoes || null,
       criado_em: r.criado_em ? new Date(r.criado_em).toISOString() : null,
@@ -141,28 +143,44 @@ export const getLivroRegistroById = async (req: Request<{ id: string }>, res: Re
 
 // Criar
 export const createLivroRegistro = async (
-  req: Request<{}, {}, { numero?: string | null; data_aquisicao?: string | null; participante: string; empresa_id: number; curso_id: number; instrutor?: string | null; carga_horaria: number; data_conclusao: string; modalidade: string; sesmo?: boolean; observacoes?: string | null }>,
+  req: Request<{}, {}, { numero?: string | null; data_aquisicao?: string | null; participante: string; empresa_id: number; curso_id: number; instrutor?: string | null; carga_horaria: number; data_conclusao?: string | null; modalidade: string; sesmo?: boolean; notaFiscal?: boolean; pratica?: boolean; observacoes?: string | null }>,
   res: Response
 ): Promise<void> => {
   try {
     const { numero, data_aquisicao, participante, empresa_id, curso_id, instrutor, carga_horaria, data_conclusao, modalidade, sesmo, observacoes } = req.body || ({} as any)
-    if (!participante || !empresa_id || !curso_id || !carga_horaria || !data_conclusao || !modalidade) {
-      res.status(400).json({ message: 'Campos obrigatórios ausentes' })
-      return
-    }
-    if (Number(carga_horaria) <= 0) {
+    // Accept camelCase synonyms from body
+    const notaFiscal = (req.body as any).notaFiscal != null ? !!(req.body as any).notaFiscal : undefined
+    const pratica = (req.body as any).pratica != null ? !!(req.body as any).pratica : undefined
+
+    // Coerce and validate
+    const eid = Number(empresa_id)
+    const cid = Number(curso_id)
+    const ch = Number(carga_horaria)
+    const participanteStr = (participante ?? '').toString().trim()
+    const modalidadeStr = (modalidade ?? '').toString().trim()
+    const dataConclusaoStr = (data_conclusao ?? '').toString().trim()
+
+    const missing: string[] = []
+    if (!participanteStr) missing.push('participante')
+    if (!eid) missing.push('empresa_id')
+    if (!cid) missing.push('curso_id')
+  if (!ch) missing.push('carga_horaria')
+    if (!modalidadeStr) missing.push('modalidade')
+    if (missing.length) { res.status(400).json({ message: 'Campos obrigatórios ausentes', missing }); return }
+
+    if (ch <= 0) {
       res.status(400).json({ message: 'carga_horaria deve ser > 0' })
       return
     }
-    if (data_aquisicao && data_conclusao && new Date(data_conclusao) < new Date(data_aquisicao)) {
+    if (data_aquisicao && dataConclusaoStr && new Date(dataConclusaoStr) < new Date(data_aquisicao)) {
       res.status(400).json({ message: 'data_conclusao não pode ser anterior à data_aquisicao' })
       return
     }
 
     const [result] = await pool.query<OkPacket>(
-      `INSERT INTO livro_de_registros (numero, data_aquisicao, participante, empresa_id, curso_id, instrutor, carga_horaria, data_conclusao, modalidade, sesmo, observacoes)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [numero || null, data_aquisicao || null, participante, empresa_id, curso_id, instrutor || null, carga_horaria, data_conclusao, modalidade, sesmo ? 1 : 0, observacoes || null]
+      `INSERT INTO livro_de_registros (numero, data_aquisicao, participante, empresa_id, curso_id, instrutor, carga_horaria, data_conclusao, modalidade, sesmo, nota_fiscal, pratica, observacoes)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [numero || null, data_aquisicao || null, participanteStr, eid, cid, instrutor || null, ch, dataConclusaoStr || null, modalidadeStr, sesmo ? 1 : 0, (notaFiscal ? 1 : 0), (pratica ? 1 : 0), observacoes || null]
     )
 
     const insertId = (result as any).insertId
@@ -195,7 +213,9 @@ export const updateLivroRegistro = async (
       data_conclusao: 'data_conclusao',
       modalidade: 'modalidade',
       sesmo: 'sesmo',
+      // accept both camelCase and snake_case for these flags
       nota_fiscal: 'nota_fiscal',
+      notaFiscal: 'nota_fiscal',
       pratica: 'pratica',
       observacoes: 'observacoes'
     }
@@ -204,7 +224,7 @@ export const updateLivroRegistro = async (
     const values: any[] = []
     for (const key of Object.keys(fieldsMap)) {
       if (Object.prototype.hasOwnProperty.call(payload, key)) {
-        if (key === 'sesmo') {
+        if (key === 'sesmo' || key === 'notaFiscal' || key === 'nota_fiscal' || key === 'pratica') {
           sets.push(`${fieldsMap[key]} = ?`)
           values.push((payload as any)[key] ? 1 : 0)
         } else {

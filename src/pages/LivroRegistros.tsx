@@ -182,7 +182,8 @@ export default function LivroRegistrosPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     try {
-      if (!form.participante || !form.empresa_id || !form.curso_id || !form.carga_horaria || !form.data_conclusao || !form.modalidade) {
+      // data_conclusao e instrutor não são obrigatórios
+      if (!form.participante || !form.empresa_id || !form.curso_id || !form.carga_horaria || !form.modalidade) {
         toast.error('Preencha os campos obrigatórios')
         return
       }
@@ -230,7 +231,7 @@ export default function LivroRegistrosPage() {
       escapeCSV(r.curso_nome || String(r.curso_id)),
       escapeCSV(r.instrutor || ''),
       r.carga_horaria,
-      formatDateBR(r.data_conclusao),
+      formatDateBR(r.data_conclusao) || '',
       r.modalidade,
       r.sesmo ? '1' : '0',
       r.notaFiscal ? '1' : '0',
@@ -256,7 +257,7 @@ export default function LivroRegistrosPage() {
       curso_id: r.curso_id,
       instrutor: r.instrutor || '',
       carga_horaria: r.carga_horaria,
-      data_conclusao: r.data_conclusao,
+      data_conclusao: r.data_conclusao || '',
       modalidade: r.modalidade,
       sesmo: r.sesmo,
       notaFiscal: r.notaFiscal,
@@ -353,8 +354,8 @@ export default function LivroRegistrosPage() {
                       <input className="border rounded px-2 py-1" placeholder="Opcional" name="numero" value={form.numero} onChange={handleChange} />
                     </div>
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-medium">Data Aquisição</label>
-                      <input className="border rounded px-2 py-1" type="date" name="data_aquisicao" value={form.data_aquisicao} onChange={handleChange} />
+                      <label className="text-xs font-medium">Data Aquisição *</label>
+                      <input className="border rounded px-2 py-1" type="date" name="data_aquisicao" value={form.data_aquisicao} onChange={handleChange} required/>
                     </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-medium">Participante *</label>
