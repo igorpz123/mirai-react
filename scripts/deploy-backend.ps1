@@ -17,12 +17,16 @@ function ExecOrFail {
 # powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\deploy-backend.ps1 -ServerHost 35.169.222.86 -KeyPath "C:\Users\igorp\.ssh\mirai-react.pem"
 
 try {
+  $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot '..') | Select-Object -ExpandProperty Path
+  $ServerDir = Join-Path $ProjectRoot 'server'
+  $ServerDist = Join-Path $ServerDir 'dist'
+
   Write-Host "[1/4] Build do backend" -ForegroundColor Green
-  ExecOrFail "npm --prefix server run build"
+  ExecOrFail "cd /d `"$ProjectRoot`" && npm --prefix `"$ServerDir`" run build"
 
   Write-Host "[2/4] Enviando server/dist" -ForegroundColor Green
   $remoteSpec = "${User}@${ServerHost}:${RemoteDir}/server/"
-  ExecOrFail "scp -i `"$KeyPath`" -r server/dist $remoteSpec"
+  ExecOrFail "scp -i `"$KeyPath`" -r `"$ServerDist`" $remoteSpec"
 
   Write-Host "[3/4] Aplicando no servidor (deps + restart)" -ForegroundColor Green
   $remoteScript = @'

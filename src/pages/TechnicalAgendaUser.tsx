@@ -10,6 +10,7 @@ import { getEventsByResponsavel } from '@/services/agenda'
 import TechnicalCalendar from '@/components/technical-calendar'
 import { TechnicalTaskTable } from '@/components/technical-task-table'
 import { Button } from '@/components/ui/button'
+import CreateEventDialog from '@/components/agenda/create-event-dialog'
 
 export default function TechnicalAgendaUser() {
   const { usuarioId } = useParams()
@@ -156,6 +157,8 @@ export default function TechnicalAgendaUser() {
       })()
     }
   }, [unitId, unitLoading, usersCtx])
+
+  // (Create Event dialog moved to a memoized component to avoid heavy page re-renders while typing)
   
   return (
     <div className="container-main">
@@ -212,7 +215,7 @@ export default function TechnicalAgendaUser() {
                   className="border-input rounded-md px-2 py-1 text-sm"
                   aria-label="Até"
                 />
-                <Button size="sm" className='button-primary' onClick={async () => {
+                <Button size="sm" className='button-success' onClick={async () => {
                   // build title and filter tasks according to date range
                   const title = `Agenda ${user?.nome || usuarioId}`
                   const filtered = tasks.filter(t => {
@@ -242,6 +245,23 @@ export default function TechnicalAgendaUser() {
                     alert('Falha ao gerar PDF')
                   }
                 }}>Exportar</Button>
+              </div>
+              <div>
+                <CreateEventDialog
+                  usuarioId={uid}
+                  triggerClassName='button-success'
+                  onCreated={async () => {
+                    // invalidate and refetch events for the month
+                    const key = `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth()+1).padStart(2,'0')}`
+                    eventsCacheRef.map.delete(key)
+                    const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1)
+                    const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0)
+                    const from = monthStart.toISOString().slice(0, 10)
+                    const to = monthEnd.toISOString().slice(0, 10)
+                    const evResp = await getEventsByResponsavel(uid, { from, to })
+                    setEvents(evResp.events || [])
+                  }}
+                />
               </div>
             </div>
 

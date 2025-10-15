@@ -23,7 +23,7 @@ try {
   # Normaliza caminhos relativos
   $LocalFull = Resolve-Path $LocalPath | Select-Object -ExpandProperty Path
   Write-Host "Local:  $LocalFull" -ForegroundColor Yellow
-  Write-Host "Remoto: $User@$ServerHost:$RemoteDir" -ForegroundColor Yellow
+  Write-Host ("Remoto: {0}@{1}:{2}" -f $User, $ServerHost, $RemoteDir) -ForegroundColor Yellow
 
   Write-Host "[1/4] Garantindo diretório remoto" -ForegroundColor Green
   $mk = "mkdir -p $RemoteDir"

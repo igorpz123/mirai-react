@@ -17,12 +17,14 @@ function ExecOrFail {
 # powershell -File [deploy-frontend.ps1](http://_vscodecontentref_/8) -Host 35.169.222.86 -KeyPath "C:\Users\igorp\.ssh\mirai-react.pem"
 
 try {
+  $ProjectRoot = Resolve-Path (Join-Path $PSScriptRoot '..') | Select-Object -ExpandProperty Path
+  $DistDir = Join-Path $ProjectRoot 'dist'
   Write-Host "[1/3] Build do frontend" -ForegroundColor Green
-  ExecOrFail "npm run build"
+  ExecOrFail "cd /d `"$ProjectRoot`" && npm run build"
 
   Write-Host "[2/3] Enviando dist/" -ForegroundColor Green
   $remoteSpec = "${User}@${ServerHost}:${RemoteDir}/"
-  ExecOrFail "scp -i `"$KeyPath`" -r dist $remoteSpec"
+  ExecOrFail "scp -i `"$KeyPath`" -r `"$DistDir`" $remoteSpec"
 
   if ($Restart) {
     Write-Host "[3/3] Reiniciando app (pm2)" -ForegroundColor Green

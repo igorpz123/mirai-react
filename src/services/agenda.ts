@@ -7,6 +7,7 @@ export interface AgendaEvent {
   end_date: string;
   title: string;
   description?: string;
+  color?: string | null;
   tipo_tarefa_id?: number; // finalidade_id da tarefa, quando vinculado
 }
 
@@ -38,12 +39,13 @@ export async function getEventsByResponsavel(responsavelId: number, range?: { fr
     end_date: e.end_date || e.end,
     title: e.title,
     description: e.description,
+    color: e.color || null,
     tipo_tarefa_id: e.tipo_tarefa_id ?? e.finalidade_id,
   })) as AgendaEvent[]
   return { events }
 }
 
-export async function updateAgendaEvent(id: number, payload: { start?: string; end?: string }): Promise<{ message: string }>{
+export async function updateAgendaEvent(id: number, payload: { start?: string; end?: string; title?: string; description?: string | null }): Promise<{ message: string }> {
   const token = localStorage.getItem('token')
   const res = await fetch(`${API_URL}/tarefas/agenda/evento/${id}`, {
     method: 'PUT',
@@ -58,4 +60,42 @@ export async function updateAgendaEvent(id: number, payload: { start?: string; e
     throw new Error(err.message || 'Erro ao atualizar evento')
   }
   return res.json()
+}
+
+export interface CreateAgendaEventPayload {
+  title: string;
+  description?: string;
+  color?: string | null; // rgb or hex string
+  start: string; // 'YYYY-MM-DD HH:mm:ss' or ISO with date/time
+  end?: string | null;
+  tarefa_id?: number | null;
+  usuario_id: number;
+}
+
+export async function createAgendaEvent(payload: CreateAgendaEventPayload): Promise<{ message: string; event: AgendaEvent }>{
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/tarefas/agenda/evento`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.message || 'Erro ao criar evento')
+  }
+  const e = data.event
+  const event: AgendaEvent = {
+    id: e.id,
+    tarefa_id: e.tarefa_id ?? null,
+    start_date: e.start_date || e.start,
+    end_date: e.end_date || e.end,
+    title: e.title,
+    description: e.description,
+    color: e.color,
+    tipo_tarefa_id: e.tipo_tarefa_id ?? e.finalidade_id,
+  }
+  return { message: data.message || 'Evento criado', event }
 }

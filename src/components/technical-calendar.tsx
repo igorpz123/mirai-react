@@ -10,6 +10,7 @@ import './technical-calendar.css'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 
 export default function TechnicalCalendar(
@@ -26,6 +27,8 @@ export default function TechnicalCalendar(
   const [formDate, setFormDate] = useState('') // YYYY-MM-DD
   const [formStart, setFormStart] = useState('') // HH:MM
   const [formEnd, setFormEnd] = useState('') // HH:MM (optional)
+  const [formTitle, setFormTitle] = useState('')
+  const [formDesc, setFormDesc] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [origDurationMs, setOrigDurationMs] = useState(0)
 
@@ -36,26 +39,53 @@ export default function TechnicalCalendar(
 
   useEffect(() => {
     setFcEvents((events || []).map(e => {
-      // Define colors by tipo_tarefa: rotina (4) = green, renovação (1) & inspeção inicial (2) = yellow
+      // Prefer explicit color, fallback to tipo_tarefa palette
       let backgroundColor: string | undefined
       let borderColor: string | undefined
       let textColor: string | undefined
-  const tipoId = (e.tipo_tarefa_id != null ? Number(e.tipo_tarefa_id) : undefined)
-      if (tipoId === 4) {
-        backgroundColor = '#16a34a' // green-600
-        borderColor = '#15803d' // green-700
-        textColor = '#ffffff'
-      } else if (tipoId === 1 || tipoId === 2) {
-        backgroundColor = '#eab308' // yellow-500
-        borderColor = '#ca8a04' // yellow-600
-        textColor = '#1f2937' // gray-800 for readability on yellow
+      const tipoId = (e.tipo_tarefa_id != null ? Number(e.tipo_tarefa_id) : undefined)
+      if (e.color && typeof e.color === 'string' && e.color.trim()) {
+        backgroundColor = e.color
+        borderColor = e.color
+        // Heuristic for text color based on rgb/hex luminance
+        const c = e.color.trim()
+        const toRGB = (col: string): { r: number; g: number; b: number } | null => {
+          if (col.startsWith('#')) {
+            const hex = col.slice(1)
+            const v = hex.length === 3 ? hex.split('').map(ch => ch + ch).join('') : hex
+            if (v.length !== 6) return null
+            const int = parseInt(v, 16)
+            if (isNaN(int)) return null
+            return { r: (int >> 16) & 255, g: (int >> 8) & 255, b: int & 255 }
+          }
+          const m = /rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i.exec(col)
+          if (m) return { r: Number(m[1]), g: Number(m[2]), b: Number(m[3]) }
+          return null
+        }
+        const rgb = toRGB(c)
+        if (rgb) {
+          const lum = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b
+          textColor = lum > 140 ? '#111827' : '#ffffff'
+        } else {
+          textColor = '#111827'
+        }
+      } else {
+        if (tipoId === 4) {
+          backgroundColor = '#16a34a' // green-600
+          borderColor = '#15803d' // green-700
+          textColor = '#ffffff'
+        } else if (tipoId === 1 || tipoId === 2) {
+          backgroundColor = '#eab308' // yellow-500
+          borderColor = '#ca8a04' // yellow-600
+          textColor = '#1f2937' // gray-800 for readability on yellow
+        }
       }
       return ({
       id: e.id,
       title: e.title || `Tarefa ${e.tarefa_id}`,
       start: e.start_date,
       end: e.end_date,
-        extendedProps: { tarefa_id: e.tarefa_id, description: e.description, tipo_tarefa_id: e.tipo_tarefa_id },
+        extendedProps: { tarefa_id: e.tarefa_id, description: e.description, tipo_tarefa_id: e.tipo_tarefa_id, color: e.color },
         backgroundColor,
         borderColor,
         textColor,
@@ -125,6 +155,9 @@ export default function TechnicalCalendar(
           setFormDate(toYMDLocal(start))
           setFormStart(toHMLocal(start))
           setFormEnd(end ? toHMLocal(end) : '')
+          setFormTitle(String(ev.title || ''))
+          const desc = ev.extendedProps?.description ?? ''
+          setFormDesc(typeof desc === 'string' ? desc : '')
           setOrigDurationMs(end ? (end.getTime() - start.getTime()) : 0)
           setFormError(null)
           setEditOpen(true)
@@ -136,9 +169,17 @@ export default function TechnicalCalendar(
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>Alterar agendamento</DialogTitle>
-            <DialogDescription>Defina a nova data e horário do evento.</DialogDescription>
+            <DialogDescription>Edite as informações do evento.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 py-2">
+            <div className="grid gap-1">
+              <Label htmlFor="edit-title">Título</Label>
+              <Input id="edit-title" value={formTitle} onChange={(e) => setFormTitle(e.target.value)} />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="edit-desc">Descrição</Label>
+              <Textarea id="edit-desc" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} rows={3} />
+            </div>
             <div className="grid gap-1">
               <Label htmlFor="edit-date">Data</Label>
               <Input id="edit-date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} />
@@ -164,8 +205,9 @@ export default function TechnicalCalendar(
               const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(formDate)
               const timeOk = /^\d{2}:\d{2}$/.test(formStart)
               const endOk = !formEnd || /^\d{2}:\d{2}$/.test(formEnd)
-              if (!dateOk || !timeOk || !endOk) {
-                setFormError('Preencha data e horas válidas (formato AAAA-MM-DD e HH:MM).')
+              const titleOk = formTitle.trim().length > 0
+              if (!dateOk || !timeOk || !endOk || !titleOk) {
+                setFormError(!titleOk ? 'O título é obrigatório.' : 'Preencha data e horas válidas (formato AAAA-MM-DD e HH:MM).')
                 return
               }
               const [y, m, d] = formDate.split('-').map(n => Number(n))
@@ -187,7 +229,7 @@ export default function TechnicalCalendar(
                 setEditing(true)
                 const startSql = toSqlLocal(startDate)
                 const endSql = endDate ? toSqlLocal(endDate) : undefined
-                await updateAgendaEvent(Number(selectedEvent.id), { start: startSql, end: endSql })
+                await updateAgendaEvent(Number(selectedEvent.id), { start: startSql, end: endSql, title: formTitle.trim(), description: formDesc.trim() || null })
 
                 // Optimistic UI update
                 try {
@@ -197,6 +239,8 @@ export default function TechnicalCalendar(
                     selectedEvent.setStart(startDate)
                     if (endDate) selectedEvent.setEnd(endDate)
                   }
+                  selectedEvent.setProp('title', formTitle.trim())
+                  selectedEvent.setExtendedProp('description', formDesc.trim() || null)
                 } catch {}
 
                 // Notify parent to adjust month and refresh
