@@ -190,7 +190,7 @@ export async function getCompanyByCNPJ(cnpj: string): Promise<Company | null> {
   return res.json()
 }
 
-export async function createCompany(payload: { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string; periodicidade?: number | null; data_renovacao?: string | null; tecnico_responsavel?: number | null; unidade_responsavel?: number | null }): Promise<Company> {
+export async function createCompany(payload: { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string; telefone?: string; periodicidade?: number | null; data_renovacao?: string | null; tecnico_responsavel?: number | null; unidade_responsavel?: number | null }): Promise<Company> {
   const token = localStorage.getItem('token')
   const res = await fetch(`${API_URL}/empresas`, {
     method: 'POST',

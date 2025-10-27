@@ -14,11 +14,14 @@ import { IconDotsVertical, IconTrash } from '@tabler/icons-react'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toastError } from '@/lib/customToast'
-import { getAllCompanies, type Company, generateAutoTasksForUnit, updateCompany } from '@/services/companies'
+import { getAllCompanies, type Company, generateAutoTasksForUnit, updateCompany, createCompany, getCompanyByCNPJ } from '@/services/companies'
 import { toastSuccess } from '@/lib/customToast'
 import { getUnidades } from '@/services/unidades'
 import { getAllUsers, type User } from '@/services/users'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { IconPlus } from '@tabler/icons-react'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Label } from '@/components/ui/label'
 
 export default function Empresas() {
   const navigate = useNavigate()
@@ -35,6 +38,81 @@ export default function Empresas() {
   const [sortKey, setSortKey] = useState<'nome' | 'razao_social' | 'cnpj' | 'tecnico'>('nome')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [confirmInativar, setConfirmInativar] = useState<{ open: boolean; id?: number; nome?: string }>({ open: false })
+  const [createSheetOpen, setCreateSheetOpen] = useState(false)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    cnpj: '',
+    razao_social: '',
+    nome_fantasia: '',
+    cidade: '',
+    telefone: '',
+    periodicidade: '',
+    data_renovacao: '',
+    tecnico_responsavel: '',
+    unidade_responsavel: ''
+  })
+
+  // Função para formatar CNPJ
+  function formatCNPJ(value: string) {
+    const cleanValue = value.replace(/\D/g, '')
+    return cleanValue
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d)/, '$1-$2')
+      .substring(0, 18)
+  }
+
+  // Função para formatar telefone
+  function formatPhone(value: string) {
+    const cleanValue = value.replace(/\D/g, '')
+    if (cleanValue.length <= 10) {
+      return cleanValue
+        .replace(/^(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+    } else {
+      return cleanValue
+        .replace(/^(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+    }
+  }
+
+  // Função para validar CNPJ
+  function isValidCNPJ(cnpj: string) {
+    const cleanCnpj = cnpj.replace(/\D/g, '')
+    if (cleanCnpj.length !== 14) return false
+    
+    // Elimina CNPJs inválidos conhecidos
+    if (/^(\d)\1{13}$/.test(cleanCnpj)) return false
+    
+    // Valida DVs
+    let tamanho = cleanCnpj.length - 2
+    let numeros = cleanCnpj.substring(0, tamanho)
+    let digitos = cleanCnpj.substring(tamanho)
+    let soma = 0
+    let pos = tamanho - 7
+    
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--
+      if (pos < 2) pos = 9
+    }
+    
+    let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
+    if (resultado !== parseInt(digitos.charAt(0))) return false
+    
+    tamanho = tamanho + 1
+    numeros = cleanCnpj.substring(0, tamanho)
+    soma = 0
+    pos = tamanho - 7
+    
+    for (let i = tamanho; i >= 1; i--) {
+      soma += parseInt(numeros.charAt(tamanho - i)) * pos--
+      if (pos < 2) pos = 9
+    }
+    
+    resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
+    return resultado === parseInt(digitos.charAt(1))
+  }
 
   async function fetchAll() {
     setLoading(true)
@@ -163,6 +241,73 @@ export default function Empresas() {
     }
   }
 
+  async function handleCreateCompany() {
+    if (!formData.cnpj || !formData.razao_social || !formData.nome_fantasia) {
+      toastError('CNPJ, Razão Social e Nome Fantasia são obrigatórios.')
+      return
+    }
+
+    if (!isValidCNPJ(formData.cnpj)) {
+      toastError('CNPJ inválido. Verifique o número informado.')
+      return
+    }
+
+    try {
+      setCreateLoading(true)
+      
+      // Verificar se já existe empresa com esse CNPJ
+      const existingCompany = await getCompanyByCNPJ(formData.cnpj.replace(/\D/g, ''))
+      if (existingCompany) {
+        toastError('Já existe uma empresa cadastrada com este CNPJ.')
+        return
+      }
+
+      const payload: any = {
+        cnpj: formData.cnpj.replace(/\D/g, ''), // Remove formatação para enviar
+        razao_social: formData.razao_social,
+        nome_fantasia: formData.nome_fantasia,
+      }
+
+      if (formData.cidade) payload.cidade = formData.cidade
+      if (formData.telefone) payload.telefone = formData.telefone
+      if (formData.periodicidade) payload.periodicidade = Number(formData.periodicidade) || null
+      if (formData.data_renovacao) payload.data_renovacao = formData.data_renovacao
+      if (formData.tecnico_responsavel) payload.tecnico_responsavel = Number(formData.tecnico_responsavel) || null
+      if (formData.unidade_responsavel) payload.unidade_responsavel = Number(formData.unidade_responsavel) || null
+
+      const newCompany = await createCompany(payload)
+      
+      // Adicionar a nova empresa à lista local
+      setItems(prev => [...prev, {
+        ...newCompany,
+        nome: newCompany.nome || formData.nome_fantasia,
+        razao_social: formData.razao_social,
+        cnpj: formData.cnpj,
+        tecnico_responsavel: Number(formData.tecnico_responsavel) || null,
+        tecnico_nome: usuarios.find(u => u.id === Number(formData.tecnico_responsavel))?.nome || null,
+      }])
+
+      // Limpar formulário e fechar sheet
+      setFormData({
+        cnpj: '',
+        razao_social: '',
+        nome_fantasia: '',
+        cidade: '',
+        telefone: '',
+        periodicidade: '',
+        data_renovacao: '',
+        tecnico_responsavel: '',
+        unidade_responsavel: ''
+      })
+      setCreateSheetOpen(false)
+      toastSuccess('Empresa criada com sucesso!')
+    } catch (e: any) {
+      toastError(e?.message || 'Erro ao criar empresa')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
+
   return (
     <div className="container-main">
       <SiteHeader title="Empresas" />
@@ -195,6 +340,188 @@ export default function Empresas() {
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
             <Input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder="Buscar por nome, razão social ou CNPJ..." className="max-w-xl" />
             <div className="flex items-center gap-2">
+              <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
+                <SheetTrigger asChild>
+                  <Button size="sm">
+                    <IconPlus className="mr-2" />
+                    Nova Empresa
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-[400px] sm:w-[540px]">
+                  <SheetHeader>
+                    <SheetTitle>Criar Nova Empresa</SheetTitle>
+                    <SheetDescription>
+                      Preencha os dados da nova empresa
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="grid gap-4 py-4 mx-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="cnpj">CNPJ *</Label>
+                      <div className="relative">
+                        <Input
+                          id="cnpj"
+                          value={formData.cnpj}
+                          onChange={(e) => {
+                            const formattedCNPJ = formatCNPJ(e.target.value)
+                            setFormData(prev => ({ ...prev, cnpj: formattedCNPJ }))
+                          }}
+                          placeholder="00.000.000/0000-00"
+                          disabled={createLoading}
+                          maxLength={18}
+                          className={formData.cnpj && !isValidCNPJ(formData.cnpj) ? 'border-red-500' : ''}
+                        />
+                        {formData.cnpj && (
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            {isValidCNPJ(formData.cnpj) ? (
+                              <span className="text-green-600 text-sm">✓</span>
+                            ) : (
+                              <span className="text-red-600 text-sm">✗</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {formData.cnpj && !isValidCNPJ(formData.cnpj) && (
+                        <span className="text-red-600 text-xs">CNPJ inválido</span>
+                      )}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="razao_social">Razão Social *</Label>
+                      <Input
+                        id="razao_social"
+                        value={formData.razao_social}
+                        onChange={(e) => setFormData(prev => ({ ...prev, razao_social: e.target.value }))}
+                        placeholder="Razão social da empresa"
+                        disabled={createLoading}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="nome_fantasia">Nome Fantasia *</Label>
+                      <Input
+                        id="nome_fantasia"
+                        value={formData.nome_fantasia}
+                        onChange={(e) => setFormData(prev => ({ ...prev, nome_fantasia: e.target.value }))}
+                        placeholder="Nome fantasia da empresa"
+                        disabled={createLoading}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="cidade">Cidade</Label>
+                        <Input
+                          id="cidade"
+                          value={formData.cidade}
+                          onChange={(e) => setFormData(prev => ({ ...prev, cidade: e.target.value }))}
+                          placeholder="Cidade da empresa"
+                          disabled={createLoading}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="telefone">Telefone</Label>
+                        <Input
+                          id="telefone"
+                          value={formData.telefone}
+                          onChange={(e) => {
+                            const formattedPhone = formatPhone(e.target.value)
+                            setFormData(prev => ({ ...prev, telefone: formattedPhone }))
+                          }}
+                          placeholder="(00) 00000-0000"
+                          disabled={createLoading}
+                          maxLength={15}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="unidade_responsavel">Unidade Responsável</Label>
+                      <select
+                        id="unidade_responsavel"
+                        className="border rounded-md px-3 py-2 text-sm bg-background"
+                        value={formData.unidade_responsavel}
+                        onChange={(e) => setFormData(prev => ({ ...prev, unidade_responsavel: e.target.value }))}
+                        disabled={createLoading}
+                      >
+                        <option value="">Selecione uma unidade</option>
+                        {unidades.map(u => (
+                          <option key={u.id} value={u.id}>{u.nome}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="tecnico_responsavel">Técnico Responsável</Label>
+                      <select
+                        id="tecnico_responsavel"
+                        className="border rounded-md px-3 py-2 text-sm bg-background"
+                        value={formData.tecnico_responsavel}
+                        onChange={(e) => setFormData(prev => ({ ...prev, tecnico_responsavel: e.target.value }))}
+                        disabled={createLoading}
+                      >
+                        <option value="">Selecione um técnico</option>
+                        {usuarios.map(u => (
+                          <option key={u.id} value={u.id}>{`${u.nome}${u.sobrenome ? ' ' + u.sobrenome : ''}`}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="periodicidade">Periodicidade (dias)</Label>
+                        <Input
+                          id="periodicidade"
+                          type="number"
+                          value={formData.periodicidade}
+                          onChange={(e) => setFormData(prev => ({ ...prev, periodicidade: e.target.value }))}
+                          placeholder="30"
+                          disabled={createLoading}
+                          min="1"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="data_renovacao">Data de Renovação</Label>
+                        <Input
+                          id="data_renovacao"
+                          type="date"
+                          value={formData.data_renovacao}
+                          onChange={(e) => setFormData(prev => ({ ...prev, data_renovacao: e.target.value }))}
+                          disabled={createLoading}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setFormData({
+                          cnpj: '',
+                          razao_social: '',
+                          nome_fantasia: '',
+                          cidade: '',
+                          telefone: '',
+                          periodicidade: '',
+                          data_renovacao: '',
+                          tecnico_responsavel: '',
+                          unidade_responsavel: ''
+                        })
+                      }}
+                      disabled={createLoading}
+                      type="button"
+                    >
+                      Limpar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setCreateSheetOpen(false)}
+                      disabled={createLoading}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      onClick={handleCreateCompany}
+                      disabled={createLoading || !formData.cnpj || !formData.razao_social || !formData.nome_fantasia || (!!formData.cnpj && !isValidCNPJ(formData.cnpj))}
+                    >
+                      {createLoading ? 'Criando...' : 'Criar Empresa'}
+                    </Button>
+                  </div>
+                </SheetContent>
+              </Sheet>
               <Button size="sm" variant="outline" onClick={onGenerateAutoTasksForUnit} disabled={loading || selectedUnidade === ''}>Gerar tarefas automáticas (Unidade)</Button>
             </div>
             <div className="flex items-center gap-2">
