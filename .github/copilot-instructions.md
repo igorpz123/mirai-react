@@ -106,9 +106,21 @@ Both connect to the same Socket.IO server in `server/server.ts`. The server main
 4. **New DB table:** Update schema manually (no migrations framework), adjust `server/config/db.ts` if needed
 5. **New notification type:** Call `createNotification()` in backend service, frontend will auto-receive via Socket.IO
 
+## AI Integration (Google Gemini)
+- **Service:** `server/services/aiService.ts` provides `generateText()`, `analyzeImage()`, `chatMultiTurn()` methods
+- **Rate limiting:** 100 requests/minute per user via `server/middleware/rateLimiter.ts`
+- **Cache:** Prompt responses cached 15min in-memory to save tokens
+- **Retry:** Exponential backoff (3 attempts) for transient failures (429, 500, timeout)
+- **Token logging:** All requests logged with input/output token counts for monitoring
+- **Image analysis:** Essential for checklist features - accepts base64 images with `data:image/[type];base64,` format
+- **API endpoints:** `/api/ai/text`, `/api/ai/image`, `/api/ai/chat`, `/api/ai/stats`, `/api/ai/cache/clear`
+- **Frontend:** `/ai/chat` page with multi-turn conversation UI, rate limit warnings, cached response indicators
+- **Environment:** Set `GEMINI_API_KEY` in `.env` (backend), model defaults to `gemini-1.5-flash`
+
 ## Important Files to Reference
 - **Authentication flow:** `server/services/authService.ts`, `src/contexts/AuthContext.tsx`
 - **Realtime architecture:** `server/server.ts` (Socket.IO setup), `src/contexts/RealtimeContext.tsx`
 - **Role-based access:** `src/constants/roles.ts`, `src/components/auth/AdminRoute.tsx`
 - **API aggregation:** `server/routes/router.ts` (all `/api/*` routes)
 - **Database config:** `server/config/db.ts` (connection pool, dateStrings mode)
+- **AI integration:** `server/services/aiService.ts`, `server/controllers/AIController.ts`, `src/pages/AIChat.tsx`

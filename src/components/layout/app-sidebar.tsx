@@ -12,6 +12,7 @@ import {
   Activity,
   SquarePen,
   CircleDollarSign,
+  Sparkles,
 } from "lucide-react"
 
 import { NavTechnical } from "@/components/layout/nav-technical"
@@ -41,6 +42,7 @@ const navComercialData = [
   },
   { title: "Livro de Registros", url: "/comercial/livro-de-registros", icon: FileSliders },
   { title: "Controle de Prática", url: "/comercial/controle-pratica", icon: Activity },
+  { title: "Chat IA", url: "/ai/chat", icon: Sparkles },
 ];
 
 //Página comercial para usuários externos (fora da equipe comercial)
@@ -62,14 +64,17 @@ const navAdminData = [
       { title: "Usuários", url: "/admin/usuarios" },
       { title: "Unidades", url: "/admin/unidades" },
       { title: "Setores", url: "/admin/setores" },
+      { title: "Permissões", url: "/admin/permissoes" },
       { title: "Empresas", url: "/empresas" },
     ]
   },
   { title: "Changelog", url: "/changelog", icon: SquarePen },
+  { title: "Chat IA", url: "/ai/chat", icon: Sparkles },
 ]
 
 const navAdminDataOutside = [
   { title: "Changelog", url: "/changelog", icon: SquarePen },
+  { title: "Chat IA", url: "/ai/chat", icon: Sparkles },
 ]
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
@@ -171,6 +176,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         : [
           { title: "Nenhum Setor Cadastrado", url: "#" },
         ],
+    },
+    {
+      title: "Chat IA",
+      url: "/ai/chat",
+      icon: Sparkles,
     },
   ];
 

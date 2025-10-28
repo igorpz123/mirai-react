@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         fotoUrl:  payload.fotoUrl,
         unidades: payload.unidades  || [],
         setores:  payload.setores   || [],
+        permissions: payload.permissions || [], // Novo: array de permissões
       }
     } catch {
       return null

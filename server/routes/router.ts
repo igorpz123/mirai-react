@@ -14,6 +14,8 @@ import comercialItemsRoutes from './comercial_items'
 import livroRegistrosRoutes from './livro_registros'
 import changelogRoutes from './changelog'
 import relatoriosRoutes from './relatorios'
+import aiRoutes from './ai'
+import permissoesRoutes from './permissoes'
 
 const router = Router()
 
@@ -32,5 +34,7 @@ router.use('/comercial', comercialItemsRoutes)
 router.use('/livro_registros', livroRegistrosRoutes)
 router.use('/changelog', changelogRoutes)
 router.use('/relatorios', relatoriosRoutes)
+router.use('/ai', aiRoutes)
+router.use('/permissoes', permissoesRoutes)
 
 export default router

@@ -28,13 +28,16 @@ import AdminUnidades from './pages/AdminUnidades';
 import AdminSetores from './pages/AdminSetores';
 import AdminChangelog from './pages/AdminChangelog';
 import AdminReportsPage from './pages/AdminReports';
+import AdminPermissions from './pages/AdminPermissions';
 import Empresas from './pages/Empresas';
 import EmpresaDetails from './pages/EmpresaDetails';
 import LivroRegistrosPage from './pages/LivroRegistros';
 import ControlePraticaPage from './pages/ControlePratica';
 import NotificacoesPage from './pages/Notificacoes';
+import AIChat from './pages/AIChat';
 import './App.css';
 import { useAuth } from './hooks/use-auth';
+import { usePermissions } from './hooks/use-permissions';
 
 // Separa a lógica que utiliza o hook, garantindo que ela será renderizada
 // dentro do SidebarProvider.
@@ -59,6 +62,7 @@ function AppContent() {
           <Route path="admin/usuario/:id" element={<AdminOrSelfRoute><AdminUsersDetails /></AdminOrSelfRoute>} />
           <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
           <Route path="admin/setores" element={<AdminRoute><AdminSetores /></AdminRoute>} />
+          <Route path="admin/permissoes" element={<AdminRoute><AdminPermissions /></AdminRoute>} />
           <Route path="admin/relatorios" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
           {/* Changelog visível para todos os usuários autenticados */}
           <Route path="changelog" element={<AdminChangelog />} />
@@ -80,20 +84,36 @@ function AppContent() {
           <Route path="empresa/:id" element={<EmpresaDetails />} />
           <Route path="comercial/livro-de-registros" element={<LivroRegistrosPage />} />
           <Route path="notificacoes" element={<NotificacoesPage />} />
+          {/* Chat de IA - disponível para todos os usuários autenticados */}
+          <Route path="ai/chat" element={<AIChat />} />
         </Route>
       </Routes>
     </Router>
   )
 }
 
-// Redireciona o usuário logado para a dashboard correta com base no cargoId.
+// Redireciona o usuário logado para a dashboard correta com base nas permissões.
 function HomeRedirect() {
   const { user } = useAuth();
+  const { isAdmin, hasComercialAccess } = usePermissions();
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
+  // Usar sistema de permissões se disponível
+  if (user.permissions) {
+    if (isAdmin) {
+      return <Navigate to="/admin/dashboard-technical" replace />;
+    }
+    if (hasComercialAccess) {
+      return <Navigate to="/comercial/dashboard" replace />;
+    }
+    // Padrão: dashboard técnico
+    return <Navigate to="/technical/dashboard" replace />;
+  }
+
+  // Fallback para sistema antigo baseado em cargoId
   const cargoId = user.cargoId;
 
   if (cargoId === 1 || cargoId === 2 || cargoId === 3) {

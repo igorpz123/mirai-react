@@ -23,6 +23,7 @@ export interface User {
   fotoUrl?: string;
   unidades?: Unidade[];
   setores?: Setor[];
+  permissions?: string[]; // Novo: array de permissões ['admin', 'comercial', 'tecnico']
   // adicione outros campos se necessário
 }
 

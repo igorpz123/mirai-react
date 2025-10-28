@@ -1,69 +1,132 @@
-# React + TypeScript + Vite
+````markdown
+# Mirai React - Sistema de Gestão
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema completo de gestão com React (Vite) no frontend e Express no backend, incluindo integração com Google Gemini AI.
 
-Currently, two official plugins are available:
+## 🚀 Início Rápido
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Desenvolvimento Local
 
-## Expanding the ESLint configuration
+```bash
+# Instalar dependências (root + server)
+npm run install:all
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+# Terminal 1 - Frontend (Vite dev server)
+npm run dev
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Terminal 2 - Backend (Express + Socket.IO)
+npm --prefix server run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Acesse: `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Build de Produção
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Build completo (frontend + backend)
+npm run build:full
+
+# Servir em produção
+cd server && SERVE_FRONT=true npm start
 ```
+
+## 📁 Estrutura do Projeto
+
+```
+mirai-react/
+├── src/                    # Frontend React + Vite
+├── server/                 # Backend Express + Socket.IO
+├── docs/                   # Documentação
+│   ├── ai/                 # Docs de integração com IA
+│   └── deployment/         # Docs e configs de deploy
+├── config/                 # Arquivos de configuração
+│   ├── .env.example        # Template de variáveis
+│   └── components.json     # Configuração de componentes UI
+├── scripts/                # Scripts de deploy (PowerShell)
+└── public/                 # Arquivos estáticos
+
+```
+
+## 🤖 Integração com IA
+
+Este projeto inclui integração completa com **Google Gemini 2.5 Flash**.
+
+**Guias disponíveis:**
+- 📖 [Setup Completo](docs/ai/AI_SETUP.md) - Instalação detalhada
+- ⚡ [Quickstart](docs/ai/AI_QUICKSTART.md) - Início rápido (3 passos)
+- 💡 [Exemplos de Prompts](docs/ai/AI_PROMPT_EXAMPLES.md) - 20+ exemplos práticos
+- 🔑 [Guia de API Key](docs/ai/GEMINI_API_KEY_GUIDE.md) - Como gerar sua chave
+
+**Funcionalidades:**
+- ✨ Chat multi-turno com histórico
+- 🖼️ Análise de imagens (base64)
+- ⚡ Cache de respostas (15 min)
+- 🚦 Rate limiting (100 req/min/usuário)
+- 🔄 Retry com backoff exponencial
+- 📊 Logging de tokens consumidos
+
+## 🛠️ Tecnologias
+
+**Frontend:**
+- React 18 + TypeScript
+- Vite 6
+- Tailwind CSS v4
+- Radix UI
+- React Router v7
+- Socket.IO Client
+
+**Backend:**
+- Node.js + Express
+- TypeScript
+- MySQL (mysql2/promise)
+- Socket.IO (realtime)
+- JWT Authentication
+- Google Gemini AI
+
+## 📚 Documentação Adicional
+
+- [Deploy Lightsail](docs/deployment/DEPLOY_LIGHTSAIL.md)
+- [Copilot Instructions](.github/copilot-instructions.md)
+
+## 🔐 Configuração
+
+Copie `config/.env.example` para `server/.env` e configure:
+
+```env
+# Database
+MYSQL_HOST=localhost
+MYSQL_USER=root
+MYSQL_PASSWORD=sua_senha
+MYSQL_DATABASE=mirai
+
+# Auth
+JWT_SECRET=seu_segredo_jwt
+
+# AI (opcional)
+GEMINI_API_KEY=sua_chave_api
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+## 📦 Scripts Disponíveis
+
+```bash
+npm run dev              # Dev frontend (Vite)
+npm run build            # Build frontend
+npm run build:server     # Build backend
+npm run build:full       # Build frontend + backend
+npm run install:all      # Instalar todas as dependências
+```
+
+## 🚢 Deploy
+
+Scripts PowerShell disponíveis em `scripts/`:
+- `deploy-all.ps1` - Deploy completo
+- `deploy-frontend.ps1` - Deploy apenas frontend
+- `deploy-backend.ps1` - Deploy apenas backend
+
+Veja [DEPLOY_LIGHTSAIL.md](docs/deployment/DEPLOY_LIGHTSAIL.md) para instruções detalhadas.
+
+---
+
+**Desenvolvido com ❤️ usando React + TypeScript + Vite**
+````

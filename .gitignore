@@ -26,6 +26,8 @@ dist-ssr
 # Env files
 .env
 .env.*
+!.env.example
+!config/.env.example
 server/.env
 server/.env.*
 server/uploads

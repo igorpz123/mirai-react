@@ -12,4 +12,7 @@ const config: AuthConfig = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h'
 }
 
+// Export individual values for easier use
+export const JWT_SECRET = config.jwtSecret
+
 export default config

@@ -4,6 +4,7 @@ import jwt, { Secret, SignOptions } from 'jsonwebtoken';
 import { RowDataPacket } from 'mysql2';
 import db from '../config/db';
 import authConfig from '../config/auth';
+import * as permissionService from './permissionService';
 
 interface DbUserRow extends RowDataPacket {
   id: number;
@@ -28,6 +29,7 @@ export interface User {
   fotoUrl?: string;
   unidades: Unidade[];
   setores: Setor[];
+  permissions?: string[]; // Array de permissões: ['admin', 'comercial', 'tecnico']
 }
 
 export interface Unidade {
@@ -197,7 +199,10 @@ export async function authenticateUser(
   const unidades: Unidade[] = JSON.parse(raw.unidades) as Unidade[];
   const setores: Setor[] = JSON.parse(raw.setores) as Setor[];
 
-  // 5) Monta o usuário sem a senha
+  // 5) Buscar permissões do usuário
+  const userPermissions = await permissionService.getUserPermissions(raw.id);
+
+  // 6) Monta o usuário sem a senha
   const user: User = {
     id: raw.id,
     email: raw.email,
@@ -208,9 +213,10 @@ export async function authenticateUser(
     fotoUrl: raw.fotoUrl ?? undefined,
     unidades,
     setores,
+    permissions: userPermissions.permissions,
   };
 
-  // 6) Gera o JWT
+  // 7) Gera o JWT
   const token = signUserToken(user)
 
   return { token, user };
