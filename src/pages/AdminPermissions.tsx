@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/use-auth'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { IconShield, IconRefresh, IconCheck, IconX } from '@tabler/icons-react'
 import { toastSuccess, toastError } from '@/lib/customToast'
+import { SiteHeader } from '@/components/layout/site-header'
 
 // ==========================================
 // INTERFACES
@@ -28,7 +27,6 @@ interface CargoPermission {
 // ==========================================
 
 export default function AdminPermissions() {
-  const { user } = useAuth()
   const [permissions, setPermissions] = useState<Permission[]>([])
   const [cargos, setCargos] = useState<CargoPermission[]>([])
   const [loading, setLoading] = useState(true)
@@ -108,11 +106,11 @@ export default function AdminPermissions() {
         prev.map(cargo =>
           cargo.cargoId === cargoId
             ? {
-                ...cargo,
-                permissions: currentlyHas
-                  ? cargo.permissions.filter(p => p !== permissionName)
-                  : [...cargo.permissions, permissionName]
-              }
+              ...cargo,
+              permissions: currentlyHas
+                ? cargo.permissions.filter(p => p !== permissionName)
+                : [...cargo.permissions, permissionName]
+            }
             : cargo
         )
       )
@@ -169,150 +167,127 @@ export default function AdminPermissions() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <IconShield className="w-8 h-8" />
-            Gerenciamento de Permissões
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Configure as permissões de acesso por cargo
-          </p>
+      <SiteHeader title="Admin | Gerenciamento de Permissões" />
+
+      <div className="mx-6 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-light flex items-center gap-2">
+              Configure as permissões de acesso por cargo
+            </h1>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={fetchData}>
+              <IconRefresh className="w-4 h-4 mr-2" />
+              Atualizar
+            </Button>
+            <Button variant="outline" onClick={clearCache}>
+              Limpar Cache
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchData}>
-            <IconRefresh className="w-4 h-4 mr-2" />
-            Atualizar
-          </Button>
-          <Button variant="outline" onClick={clearCache}>
-            Limpar Cache
-          </Button>
-        </div>
+
+        {/* Legenda de Permissões */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Permissões Disponíveis</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {permissions.map(perm => (
+                <div key={perm.id} className="border rounded-lg p-4">
+                  <div className="font-semibold text-sm mb-1">{perm.nome}</div>
+                  <div className="text-xs text-muted-foreground">{perm.descricao}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Matriz de Permissões por Cargo */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Matriz de Permissões</CardTitle>
+            <CardDescription>
+              Marque/desmarque as permissões para cada cargo
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {cargos.map(cargo => (
+                <div key={cargo.cargoId} className="border rounded-lg p-4">
+                  <h3 className="font-semibold text-lg mb-4">{cargo.cargoNome}</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {permissions.map(perm => {
+                      const hasPermission = cargo.permissions.includes(perm.nome)
+                      const isSaving = saving === cargo.cargoId
+
+                      return (
+                        <label
+                          key={perm.nome}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded transition-colors"
+                        >
+                          <Checkbox
+                            checked={hasPermission}
+                            disabled={isSaving}
+                            onCheckedChange={() =>
+                              togglePermission(cargo.cargoId, perm.nome, hasPermission)
+                            }
+                          />
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">{perm.nome}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {perm.descricao}
+                            </div>
+                          </div>
+                          {hasPermission ? (
+                            <IconCheck className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <IconX className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </label>
+                      )
+                    })}
+                  </div>
+                  {saving === cargo.cargoId && (
+                    <div className="mt-2 text-sm text-muted-foreground">Salvando...</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Informações */}
+        <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <CardContent>
+            <div className="flex gap-3">
+              <IconShield className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <div className="text-sm space-y-2">
+                <p className="font-medium text-blue-900 dark:text-blue-100">
+                  💡 Dicas sobre Permissões
+                </p>
+                <ul className="text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                  <li>
+                    <strong>admin</strong> - Acesso completo a todas as funcionalidades
+                  </li>
+                  <li>
+                    <strong>comercial</strong> - Acesso ao módulo comercial (propostas, itens)
+                  </li>
+                  <li>
+                    <strong>tecnico</strong> - Acesso ao módulo técnico (tarefas, agenda)
+                  </li>
+                  <li>Alterações aplicam-se imediatamente após salvar</li>
+                  <li>Usuários precisam fazer logout/login para ver mudanças (ou aguardar 5 min)</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Minhas Permissões */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Minhas Permissões</CardTitle>
-          <CardDescription>
-            Você está logado como <strong>{user?.nome}</strong> ({user?.cargo})
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {user?.permissions && user.permissions.length > 0 ? (
-              user.permissions.map(perm => (
-                <Badge key={perm} variant="secondary" className="text-sm">
-                  <IconCheck className="w-3 h-3 mr-1" />
-                  {perm}
-                </Badge>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-sm">Nenhuma permissão específica</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Legenda de Permissões */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Permissões Disponíveis</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {permissions.map(perm => (
-              <div key={perm.id} className="border rounded-lg p-4">
-                <div className="font-semibold text-sm mb-1">{perm.nome}</div>
-                <div className="text-xs text-muted-foreground">{perm.descricao}</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Matriz de Permissões por Cargo */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Matriz de Permissões</CardTitle>
-          <CardDescription>
-            Marque/desmarque as permissões para cada cargo
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {cargos.map(cargo => (
-              <div key={cargo.cargoId} className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-4">{cargo.cargoNome}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {permissions.map(perm => {
-                    const hasPermission = cargo.permissions.includes(perm.nome)
-                    const isSaving = saving === cargo.cargoId
-
-                    return (
-                      <label
-                        key={perm.nome}
-                        className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded transition-colors"
-                      >
-                        <Checkbox
-                          checked={hasPermission}
-                          disabled={isSaving}
-                          onCheckedChange={() =>
-                            togglePermission(cargo.cargoId, perm.nome, hasPermission)
-                          }
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{perm.nome}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {perm.descricao}
-                          </div>
-                        </div>
-                        {hasPermission ? (
-                          <IconCheck className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <IconX className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </label>
-                    )
-                  })}
-                </div>
-                {saving === cargo.cargoId && (
-                  <div className="mt-2 text-sm text-muted-foreground">Salvando...</div>
-                )}
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Informações */}
-      <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-        <CardContent className="pt-6">
-          <div className="flex gap-3">
-            <IconShield className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-            <div className="text-sm space-y-2">
-              <p className="font-medium text-blue-900 dark:text-blue-100">
-                💡 Dicas sobre Permissões
-              </p>
-              <ul className="text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
-                <li>
-                  <strong>admin</strong> - Acesso completo a todas as funcionalidades
-                </li>
-                <li>
-                  <strong>comercial</strong> - Acesso ao módulo comercial (propostas, itens)
-                </li>
-                <li>
-                  <strong>tecnico</strong> - Acesso ao módulo técnico (tarefas, agenda)
-                </li>
-                <li>Alterações aplicam-se imediatamente após salvar</li>
-                <li>Usuários precisam fazer logout/login para ver mudanças (ou aguardar 5 min)</li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }
