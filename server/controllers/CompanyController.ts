@@ -243,11 +243,11 @@ export const getCompanyByCNPJ = async (req: Request<{ cnpj: string }>, res: Resp
 
 // Create minimal company
 export const createCompany = async (
-  req: Request<{}, {}, { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string; periodicidade?: number | null; data_renovacao?: string | null; tecnico_responsavel?: number | null; unidade_responsavel?: number | null }>,
+  req: Request<{}, {}, { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string; telefone?: string; periodicidade?: number | null; data_renovacao?: string | null; tecnico_responsavel?: number | null; unidade_responsavel?: number | null }>,
   res: Response
 ): Promise<void> => {
   try {
-    const { cnpj, razao_social, nome_fantasia, cidade, periodicidade = null, data_renovacao = null, tecnico_responsavel = null, unidade_responsavel = null } = req.body || ({} as any)
+    const { cnpj, razao_social, nome_fantasia, cidade, telefone, periodicidade = null, data_renovacao = null, tecnico_responsavel = null, unidade_responsavel = null } = req.body || ({} as any)
     if (!cnpj || !razao_social || !nome_fantasia) {
       res.status(400).json({ message: 'cnpj, razao_social e nome_fantasia são obrigatórios' })
       return
@@ -263,14 +263,14 @@ export const createCompany = async (
       return
     }
     const [ins] = await pool.query<OkPacket>(
-      `INSERT INTO empresas (cnpj, razao_social, nome_fantasia, cidade, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
-      [clean, razao_social, nome_fantasia, cidade || null, periodicidade, data_renovacao || null, tecnico_responsavel, unidade_responsavel]
+      `INSERT INTO empresas (cnpj, razao_social, nome_fantasia, cidade, telefone, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+      [clean, razao_social, nome_fantasia, cidade || null, telefone || null, periodicidade, data_renovacao || null, tecnico_responsavel, unidade_responsavel]
     )
     const id = (ins as any).insertId
     // Try to generate automatic tasks (will no-op if lacks dates/periodicity)
     try { await generateAutomaticTasksForCompany(Number(id)) } catch (e) { console.warn('autoTasks(createCompany) failed:', e) }
-    res.status(201).json({ id, nome: nome_fantasia, razao_social, cnpj: clean, cidade: cidade || null, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel })
+    res.status(201).json({ id, nome: nome_fantasia, razao_social, cnpj: clean, cidade: cidade || null, telefone: telefone || null, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel })
   } catch (error) {
     console.error('Erro ao criar empresa:', error)
     res.status(500).json({ message: 'Erro ao criar empresa' })
