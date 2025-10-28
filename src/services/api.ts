@@ -28,22 +28,13 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Exemplo de interceptor de response
+// Interceptor de response - redireciona para login apenas em 401
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
+    // Apenas redireciona para login se for erro de autenticação (401)
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
-
-api.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+      console.warn('Token inválido ou expirado. Redirecionando para login...')
       localStorage.removeItem('token')
       window.location.href = '/login'
     }

@@ -64,6 +64,7 @@ const navAdminData = [
       { title: "Unidades", url: "/admin/unidades" },
       { title: "Setores", url: "/admin/setores" },
       { title: "Permissões", url: "/admin/permissoes" },
+      { title: "Agenda", url: "/admin/agenda" },
       { title: "Empresas", url: "/empresas" },
     ]
   },

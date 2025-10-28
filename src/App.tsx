@@ -29,6 +29,7 @@ import AdminSetores from './pages/AdminSetores';
 import AdminChangelog from './pages/AdminChangelog';
 import AdminReportsPage from './pages/AdminReports';
 import AdminPermissions from './pages/AdminPermissions';
+import AdminAgenda from './pages/AdminAgenda';
 import Empresas from './pages/Empresas';
 import EmpresaDetails from './pages/EmpresaDetails';
 import LivroRegistrosPage from './pages/LivroRegistros';
@@ -63,6 +64,7 @@ function AppContent() {
           <Route path="admin/unidades" element={<AdminRoute><AdminUnidades /></AdminRoute>} />
           <Route path="admin/setores" element={<AdminRoute><AdminSetores /></AdminRoute>} />
           <Route path="admin/permissoes" element={<AdminRoute><AdminPermissions /></AdminRoute>} />
+          <Route path="admin/agenda" element={<AdminRoute><AdminAgenda /></AdminRoute>} />
           <Route path="admin/relatorios" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
           {/* Changelog visível para todos os usuários autenticados */}
           <Route path="changelog" element={<AdminChangelog />} />

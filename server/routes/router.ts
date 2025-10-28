@@ -16,6 +16,7 @@ import changelogRoutes from './changelog'
 import relatoriosRoutes from './relatorios'
 import aiRoutes from './ai'
 import permissoesRoutes from './permissoes'
+import agendaUsersRoutes from './agendaUsers'
 
 const router = Router()
 
@@ -36,5 +37,6 @@ router.use('/changelog', changelogRoutes)
 router.use('/relatorios', relatoriosRoutes)
 router.use('/ai', aiRoutes)
 router.use('/permissoes', permissoesRoutes)
+router.use('/agenda-users', agendaUsersRoutes)
 
 export default router

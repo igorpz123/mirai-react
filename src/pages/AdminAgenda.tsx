@@ -1,0 +1,361 @@
+import { useEffect, useState } from 'react'
+import { SiteHeader } from '@/components/layout/site-header'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { IconCheck, IconX, IconTrash, IconPlus, IconRefresh } from '@tabler/icons-react'
+import {
+  getAllAgendaConfigs,
+  addUserToAgenda,
+  removeUserFromAgenda,
+  deleteAgendaConfig,
+  activateAgendaUser,
+  getAgendaStats,
+  type AgendaUserConfig,
+  type AgendaStats
+} from '@/services/agendaUsers'
+import { getAllUsers } from '@/services/users'
+import { toastSuccess, toastError, toastWarning } from '@/lib/customToast'
+
+interface User {
+  id: number
+  nome: string
+  email: string
+  cargoNome?: string
+}
+
+export default function AdminAgenda() {
+  const [configs, setConfigs] = useState<AgendaUserConfig[]>([])
+  const [stats, setStats] = useState<AgendaStats | null>(null)
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selectedUserId, setSelectedUserId] = useState<number | ''>('')
+  const [selectedUnidadeId, setSelectedUnidadeId] = useState<number | null>(null)
+  const [newOrdem, setNewOrdem] = useState<number>(0)
+
+  // Fetch data
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      
+      // Tenta carregar os dados, mas não falha se tabela não existir
+      const results = await Promise.allSettled([
+        getAllAgendaConfigs().catch(err => {
+          console.warn('Erro ao carregar configs:', err)
+          return []
+        }),
+        getAgendaStats().catch(err => {
+          console.warn('Erro ao carregar stats:', err)
+          return { totalConfigs: 0, ativos: 0, inativos: 0, usuariosUnicos: 0 }
+        }),
+        getAllUsers().catch(err => {
+          console.warn('Erro ao carregar usuários:', err)
+          return { users: [] }
+        })
+      ])
+      
+      const configsData = results[0].status === 'fulfilled' ? results[0].value : []
+      const statsData = results[1].status === 'fulfilled' ? results[1].value : { totalConfigs: 0, ativos: 0, inativos: 0, usuariosUnicos: 0 }
+      const usersData = results[2].status === 'fulfilled' ? results[2].value : { users: [] }
+      
+      setConfigs(Array.isArray(configsData) ? configsData : [])
+      setStats(statsData)
+      setAllUsers(Array.isArray(usersData.users) ? usersData.users : [])
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error)
+      // Não mostra toast de erro para não alarmar o usuário
+      setConfigs([])
+      setStats({ totalConfigs: 0, ativos: 0, inativos: 0, usuariosUnicos: 0 })
+      setAllUsers([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
+
+  // Add user to agenda
+  const handleAddUser = async () => {
+    if (!selectedUserId) {
+      toastWarning('Selecione um usuário')
+      return
+    }
+
+    try {
+      await addUserToAgenda(Number(selectedUserId), selectedUnidadeId, newOrdem)
+      toastSuccess('Usuário adicionado à agenda')
+      setSelectedUserId('')
+      setSelectedUnidadeId(null)
+      setNewOrdem(0)
+      fetchData()
+    } catch (error) {
+      console.error('Erro ao adicionar usuário:', error)
+      toastError('Erro ao adicionar usuário')
+    }
+  }
+
+  // Toggle active status
+  const handleToggleActive = async (config: AgendaUserConfig) => {
+    try {
+      if (config.ativo) {
+        // Deactivate
+        await removeUserFromAgenda(config.usuarioId, config.unidadeId)
+        toastSuccess('Usuário desativado')
+      } else {
+        // Activate
+        await activateAgendaUser(config.usuarioId, config.unidadeId)
+        toastSuccess('Usuário ativado')
+      }
+      fetchData()
+    } catch (error) {
+      console.error('Erro ao alterar status:', error)
+      toastError('Erro ao alterar status')
+    }
+  }
+
+  // Delete config
+  const handleDelete = async (configId: number) => {
+    if (!confirm('Tem certeza que deseja deletar esta configuração permanentemente?')) {
+      return
+    }
+
+    try {
+      await deleteAgendaConfig(configId)
+      toastSuccess('Configuração deletada')
+      fetchData()
+    } catch (error) {
+      console.error('Erro ao deletar configuração:', error)
+      toastError('Erro ao deletar configuração')
+    }
+  }
+
+  // Group configs by user
+  const configsByUser = configs.reduce((acc, config) => {
+    if (!acc[config.usuarioId]) {
+      acc[config.usuarioId] = []
+    }
+    acc[config.usuarioId].push(config)
+    return acc
+  }, {} as Record<number, AgendaUserConfig[]>)
+
+  if (loading) {
+    return (
+      <div className="w-full">
+        <SiteHeader title="Gerenciar Agenda" />
+        <div className="p-4">
+          <div className="text-center py-8">Carregando...</div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="w-full">
+      <SiteHeader title="Gerenciar Agenda" />
+      <div className="p-4 space-y-6">
+        {/* Warning se não houver dados */}
+        {!loading && stats && stats.totalConfigs === 0 && allUsers.length > 0 && (
+          <Card className="border-yellow-500 bg-yellow-50">
+            <CardHeader>
+              <CardTitle className="text-yellow-800">⚠️ Tabela não encontrada</CardTitle>
+              <CardDescription className="text-yellow-700">
+                A tabela <code>agenda_usuarios_visiveis</code> ainda não foi criada no banco de dados.
+                Execute a migration SQL em <code>server/migrations/create_agenda_users_config.sql</code>
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
+        
+        {/* Stats Cards */}
+        {stats && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Total de Configurações</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalConfigs}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Usuários Únicos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.usuariosUnicos}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Ativos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{stats.ativos}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Inativos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{stats.inativos}</div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Add User Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Adicionar Usuário à Agenda</CardTitle>
+            <CardDescription>
+              Configure quais usuários aparecem na página de Agenda. Se "Unidade" for deixado em branco,
+              o usuário aparecerá em todas as unidades.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-1 block">Usuário</label>
+                <select
+                  className="w-full border rounded-md px-3 py-2"
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value ? Number(e.target.value) : '')}
+                >
+                  <option value="">Selecione um usuário</option>
+                  {allUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.nome} - {user.email} {user.cargoNome ? `(${user.cargoNome})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-32">
+                <label className="text-sm font-medium mb-1 block">Unidade ID</label>
+                <input
+                  type="number"
+                  className="w-full border rounded-md px-3 py-2"
+                  placeholder="Todas"
+                  value={selectedUnidadeId ?? ''}
+                  onChange={(e) => setSelectedUnidadeId(e.target.value ? Number(e.target.value) : null)}
+                />
+              </div>
+              <div className="w-24">
+                <label className="text-sm font-medium mb-1 block">Ordem</label>
+                <input
+                  type="number"
+                  className="w-full border rounded-md px-3 py-2"
+                  value={newOrdem}
+                  onChange={(e) => setNewOrdem(Number(e.target.value))}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={handleAddUser} className="gap-2">
+                  <IconPlus size={18} />
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Configurations List */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Configurações Atuais</CardTitle>
+              <CardDescription>
+                Gerencie a visibilidade dos usuários na agenda por unidade
+              </CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
+              <IconRefresh size={18} />
+              Atualizar
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {configs.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhuma configuração encontrada. Adicione usuários acima.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(configsByUser).map(([userId, userConfigs]) => {
+                  const firstConfig = userConfigs[0]
+                  return (
+                    <div key={userId} className="border rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-lg">{firstConfig.usuarioNome}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {firstConfig.usuarioEmail} • {firstConfig.cargoNome}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {userConfigs.map((config) => (
+                          <div
+                            key={config.configId}
+                            className="flex items-center justify-between p-3 bg-muted/50 rounded-md"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="font-medium">
+                                {config.unidadeNome || 'Todas as unidades'}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                Ordem: {config.ordem}
+                              </span>
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${
+                                  config.ativo
+                                    ? 'bg-green-100 text-green-700'
+                                    : 'bg-red-100 text-red-700'
+                                }`}
+                              >
+                                {config.ativo ? 'Ativo' : 'Inativo'}
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant={config.ativo ? 'outline' : 'default'}
+                                onClick={() => handleToggleActive(config)}
+                                className="gap-1"
+                              >
+                                {config.ativo ? (
+                                  <>
+                                    <IconX size={16} />
+                                    Desativar
+                                  </>
+                                ) : (
+                                  <>
+                                    <IconCheck size={16} />
+                                    Ativar
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDelete(config.configId)}
+                                className="gap-1"
+                              >
+                                <IconTrash size={16} />
+                                Deletar
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}

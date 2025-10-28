@@ -2,21 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { SiteHeader } from '@/components/layout/site-header'
 // ...existing code...
 import { useUnit } from '@/contexts/UnitContext'
-import { useUsers } from '@/contexts/UsersContext'
-import { isTecnicoUser } from '@/lib/roles'
-import { getAllUsers } from '@/services/users'
+import { getVisibleAgendaUsers, type AgendaUser } from '@/services/agendaUsers'
 import { TechUserCard } from '@/components/technical-user-card'
 import { Button } from '@/components/ui/button'
 import { exportMultipleUsersAgendaToPdf } from '@/services/export'
 
 export default function TechnicalAgenda() {
   // no need for the current user here
-  const [users, setUsers] = useState<any[]>([])
+  const [users, setUsers] = useState<AgendaUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const { unitId, isLoading: unitLoading } = useUnit()
-  const usersCtx = useUsers()
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [fromDate, setFromDate] = useState<string | undefined>(undefined)
   const [toDate, setToDate] = useState<string | undefined>(undefined)
@@ -32,36 +29,17 @@ export default function TechnicalAgenda() {
           setUsers([])
           return
         }
-        try {
-          await usersCtx.ensureUsersForUnit(Number(unitId))
-          const { users: all } = usersCtx.getFilteredUsersForTask({ unidadeId: Number(unitId) })
-          if (!mounted) return
-          let list = (all || []).filter(isTecnicoUser)
-          if (list.length === 0) {
-            try {
-              const global = await getAllUsers().catch(() => ({ users: [] }))
-              const uid = Number(unitId)
-              if (!Number.isNaN(uid) && uid > 0) {
-                list = (global.users || []).filter(u => {
-                  if (!isTecnicoUser(u)) return false
-                  const csv = (u as any).unidades
-                  if (typeof csv === 'string' && csv.trim()) {
-                    const ids = csv.split(',').map(p => Number(p.trim())).filter(n => !isNaN(n))
-                    return ids.includes(uid)
-                  }
-                  return false
-                })
-              }
-            } catch { /* ignore fallback errors */ }
-          }
-          setUsers(list)
-        } catch (e) {
-          if (!mounted) return
-          setUsers([])
-        }
+        // Busca usuários visíveis da agenda via API
+        const list = await getVisibleAgendaUsers(Number(unitId)).catch(() => {
+          console.warn('Tabela agenda_usuarios_visiveis não existe. Execute a migration SQL.')
+          return []
+        })
+        if (!mounted) return
+        setUsers(list)
       } catch (err) {
         if (!mounted) return
-        setError(err instanceof Error ? err.message : String(err))
+        console.error('Erro ao buscar usuários da agenda:', err)
+        setError('Erro ao carregar agenda. A tabela pode não existir ainda.')
       } finally {
         if (!mounted) return
         setLoading(false)
