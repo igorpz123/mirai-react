@@ -35,7 +35,8 @@ export const decimalFormatterBR = new Intl.NumberFormat('pt-BR', {
 
 // Helper functions using cached formatters
 export function formatCurrency(value: number | null | undefined): string {
-  return currencyFormatterBR.format(Number(value || 0))
+  if (value == null || isNaN(Number(value))) return currencyFormatterBR.format(0)
+  return currencyFormatterBR.format(Number(value))
 }
 
 export function formatDate(date: Date | string | null | undefined): string {
@@ -57,9 +58,11 @@ export function formatDateTimeFull(date: Date | string | null | undefined): stri
 }
 
 export function formatNumber(value: number | null | undefined): string {
-  return numberFormatterBR.format(Number(value || 0))
+  if (value == null || isNaN(Number(value))) return numberFormatterBR.format(0)
+  return numberFormatterBR.format(Number(value))
 }
 
 export function formatDecimal(value: number | null | undefined): string {
-  return decimalFormatterBR.format(Number(value || 0))
+  if (value == null || isNaN(Number(value))) return decimalFormatterBR.format(0)
+  return decimalFormatterBR.format(Number(value))
 }
