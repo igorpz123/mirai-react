@@ -1,7 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { io, Socket } from 'socket.io-client'
+import { Socket } from 'socket.io-client'
 import { useAuth } from '@/hooks/use-auth'
 import { toastNotification } from '@/lib/customToast'
+import { createSocket, setupPresencePing } from '@/lib/socketUtils'
 
 // Presence state
 type PresenceState = Record<number, { online: boolean; updatedAt: number }>
@@ -46,13 +47,6 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const unread = notifications.filter(n => !n.read_at).length
 
-  const resolveSocketURL = () => {
-    if (import.meta.env.VITE_API_WS_URL) return import.meta.env.VITE_API_WS_URL as string
-    const { protocol, hostname, port } = window.location
-    if (port === '5173') return `${protocol}//${hostname}:5000`
-    return window.location.origin
-  }
-
   const refreshNotifications = useCallback(async () => {
     if (!token) return
     try {
@@ -65,8 +59,8 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Socket lifecycle
   useEffect(() => {
     if (!token || !user) return
-    const url = resolveSocketURL()
-    const s = io(url, { transports: ['websocket'], autoConnect: true })
+    
+    const s = createSocket()
     socketRef.current = s
 
     s.on('connect', () => {
@@ -75,6 +69,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       s.emit('auth:init', { token })
       s.emit('presence:ping')
     })
+    
     s.on('disconnect', (reason) => {
       if (import.meta.env.DEV) console.debug('[RT] socket disconnected', reason)
       setConnected(false)
@@ -82,10 +77,10 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Presence events
     s.on('presence:update', (payload: { userId: number; state: 'online' | 'offline' }) => {
-      // debug presence updates
       if (import.meta.env.DEV && payload.userId === user?.id) console.debug('[RT] presence:update (self)', payload)
       setPresence(prev => ({ ...prev, [payload.userId]: { online: payload.state === 'online', updatedAt: Date.now() } }))
     })
+    
     s.on('presence:snapshot', (payload: { users: number[] }) => {
       if (import.meta.env.DEV) console.debug('[RT] presence:snapshot', payload.users)
       const ts = Date.now()
@@ -113,7 +108,6 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const opts: any = {}
         if (!Number.isNaN(nid)) opts.id = nid
         if (link) opts.onClick = () => { try { window.location.assign(link) } catch {} }
-        // Always use the neutral Notification toast variant per request
         toastNotification(msg, opts)
       } catch {}
     })
@@ -129,20 +123,11 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     loadNotifications()
 
-    // Periodic presence ping
-    const pingInt = setInterval(() => { s.emit('presence:ping') }, 10_000)
-    // HTTP fallback
-    const httpInt = setInterval(() => {
-      if (!socketRef.current?.connected) {
-        fetch('/api/presenca/ping', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {})
-      }
-    }, 15_000)
-
-    fetch('/api/presenca/ping', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {})
+    // Setup presence ping with cleanup
+    const cleanupPing = setupPresencePing(s, token)
 
     return () => {
-      clearInterval(pingInt)
-      clearInterval(httpInt)
+      cleanupPing()
       s.disconnect()
     }
   }, [token, user])
