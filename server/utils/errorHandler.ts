@@ -17,6 +17,18 @@ interface MySQLError extends Error {
 }
 
 /**
+ * Type guard to check if error is a MySQL error
+ */
+function isMySQLError(error: unknown): error is MySQLError {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof (error as MySQLError).code === 'string'
+  )
+}
+
+/**
  * Centralized error handler for controllers
  * Logs the error and sends an appropriate response
  */
@@ -29,21 +41,22 @@ export function handleControllerError(
   console.error(`Erro em ${context}:`, error)
 
   // Handle specific MySQL errors
-  const mysqlError = error as MySQLError
-  if (mysqlError?.code === 'ER_ROW_IS_REFERENCED' || mysqlError?.code === 'ER_ROW_IS_REFERENCED_2') {
-    res.status(409).json({ 
-      message: 'Não é possível excluir: está vinculado a outros registros.',
-      code: mysqlError.code 
-    })
-    return
-  }
+  if (isMySQLError(error)) {
+    if (error.code === 'ER_ROW_IS_REFERENCED' || error.code === 'ER_ROW_IS_REFERENCED_2') {
+      res.status(409).json({ 
+        message: 'Não é possível excluir: está vinculado a outros registros.',
+        code: error.code 
+      })
+      return
+    }
 
-  if (mysqlError?.code === 'ER_DUP_ENTRY') {
-    res.status(409).json({ 
-      message: 'Registro duplicado',
-      code: mysqlError.code 
-    })
-    return
+    if (error.code === 'ER_DUP_ENTRY') {
+      res.status(409).json({ 
+        message: 'Registro duplicado',
+        code: error.code 
+      })
+      return
+    }
   }
 
   // Default 500 error

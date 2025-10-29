@@ -67,6 +67,12 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
    */
   const create = async (req: Request, res: Response): Promise<void> => {
     try {
+      // Validate request body is an object
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        res.status(400).json({ message: 'Corpo da requisição inválido' })
+        return
+      }
+
       const data = req.body as Record<string, unknown>
       const validation = validateRequiredString(data[nameField], nameField.charAt(0).toUpperCase() + nameField.slice(1))
       
@@ -91,6 +97,12 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
    */
   const update = async (req: Request, res: Response): Promise<void> => {
     try {
+      // Validate request body is an object
+      if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+        res.status(400).json({ message: 'Corpo da requisição inválido' })
+        return
+      }
+
       const { id } = req.params
       const data = req.body as Record<string, unknown>
       const validation = validateRequiredString(data[nameField], nameField.charAt(0).toUpperCase() + nameField.slice(1))
