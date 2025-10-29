@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Skeleton } from '@/components/ui/skeleton'
 import { IconDownload, IconTrash, IconCopy, IconDotsVertical, IconPencil } from '@tabler/icons-react'
 import { getAllCompanies } from '@/services/companies'
+import * as XLSX from 'xlsx'
 import {
   Table,
   TableBody,
@@ -219,33 +220,57 @@ export default function LivroRegistrosPage() {
 
   // sort not implemented for this table (server-side sorting could be added)
 
-  function exportCSV() {
-    if (!data.length) { toast.error('Nada para exportar'); return }
-    const headers = ['ID', 'Numero', 'Data_Aquisicao', 'Participante', 'Empresa', 'Curso', 'Instrutor', 'Carga_Horaria', 'Data_Conclusao', 'Modalidade', 'SESMO', 'Observacoes']
-    const lines = data.map(r => [
-      r.id,
-      r.numero || '',
-      formatDateBR(r.data_aquisicao) || '',
-      escapeCSV(r.participante),
-      escapeCSV(r.empresa_nome || String(r.empresa_id)),
-      escapeCSV(r.curso_nome || String(r.curso_id)),
-      escapeCSV(r.instrutor || ''),
-      r.carga_horaria,
-      formatDateBR(r.data_conclusao) || '',
-      r.modalidade,
-      r.sesmo ? '1' : '0',
-      r.notaFiscal ? '1' : '0',
-      r.pratica ? '1' : '0',
-      escapeCSV(r.observacoes || '')
-    ].join(','))
-    const csv = [headers.join(','), ...lines].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'livro_registros.csv'
-    a.click()
-    URL.revokeObjectURL(url)
+  function exportExcel() {
+    if (!data.length) { 
+      toast.error('Nada para exportar')
+      return 
+    }
+
+    // Preparar dados para a planilha
+    const excelData = data.map(r => ({
+      'ID': r.id,
+      'Número': r.numero || '',
+      'Data Aquisição': formatDateBR(r.data_aquisicao) || '',
+      'Participante': r.participante,
+      'Empresa': r.empresa_nome || String(r.empresa_id),
+      'Curso': r.curso_nome || String(r.curso_id),
+      'Instrutor': r.instrutor || '',
+      'Carga Horária': r.carga_horaria,
+      'Data Conclusão': formatDateBR(r.data_conclusao) || '',
+      'Modalidade': r.modalidade,
+      'SESMO': r.sesmo ? 'Sim' : 'Não',
+      'Nota Fiscal': r.notaFiscal ? 'Sim' : 'Não',
+      'Prática': r.pratica ? 'Sim' : 'Não',
+      'Observações': r.observacoes || ''
+    }))
+
+    // Criar workbook e worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Livro de Registros')
+
+    // Ajustar largura das colunas
+    const colWidths = [
+      { wch: 8 },  // ID
+      { wch: 12 }, // Número
+      { wch: 18 }, // Data Aquisição
+      { wch: 30 }, // Participante
+      { wch: 30 }, // Empresa
+      { wch: 40 }, // Curso
+      { wch: 25 }, // Instrutor
+      { wch: 15 }, // Carga Horária
+      { wch: 18 }, // Data Conclusão
+      { wch: 18 }, // Modalidade
+      { wch: 10 }, // SESMO
+      { wch: 12 }, // Nota Fiscal
+      { wch: 10 }, // Prática
+      { wch: 50 }  // Observações
+    ]
+    ws['!cols'] = colWidths
+
+    // Gerar arquivo Excel
+    XLSX.writeFile(wb, 'livro_registros.xlsx')
+    toast.success('Arquivo exportado com sucesso!')
   }
 
   function duplicate(r: LivroRegistro) {
@@ -287,8 +312,6 @@ export default function LivroRegistrosPage() {
     setEditId(r.id)
     setOpen(true)
   }
-
-  function escapeCSV(v: string) { return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v }
 
   // client-side filtered + paginated list
   const filtered = useMemo(() => {
@@ -337,7 +360,7 @@ export default function LivroRegistrosPage() {
         <div className="flex items-center justify-end">
           <div className="flex gap-2">
             <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="h-8 w-[220px]" />
-            <Button variant="outline" size="sm" onClick={exportCSV} className="flex items-center gap-1"><IconDownload size={16} /> Exportar</Button>
+            <Button variant="outline" size="sm" onClick={exportExcel} className="flex items-center gap-1"><IconDownload size={16} /> Exportar Excel</Button>
             <Sheet open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setForm({ ...emptyForm }); setEditId(null) } }}>
               <SheetTrigger asChild>
                 <Button size="sm" className="button-primary">Novo Registro</Button>
