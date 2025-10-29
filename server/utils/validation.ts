@@ -6,7 +6,7 @@
  * Validates that a required string field is present and not empty after trimming
  */
 export function validateRequiredString(
-  value: any,
+  value: unknown,
   fieldName: string
 ): { valid: boolean; error?: string } {
   if (!value || String(value).trim() === '') {
@@ -19,7 +19,7 @@ export function validateRequiredString(
  * Validates that a required field is present
  */
 export function validateRequired(
-  value: any,
+  value: unknown,
   fieldName: string
 ): { valid: boolean; error?: string } {
   if (value === undefined || value === null) {
@@ -33,7 +33,7 @@ export function validateRequired(
  * Returns the first error found or null if all valid
  */
 export function validateRequiredFields(
-  data: Record<string, any>,
+  data: Record<string, unknown>,
   fields: string[]
 ): string | null {
   for (const field of fields) {

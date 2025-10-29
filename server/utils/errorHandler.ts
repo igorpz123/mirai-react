@@ -6,7 +6,14 @@ import { Response } from 'express'
 export interface ErrorResponse {
   message: string
   code?: string
-  details?: any
+  details?: unknown
+}
+
+/**
+ * MySQL error with code property
+ */
+interface MySQLError extends Error {
+  code?: string
 }
 
 /**
@@ -14,7 +21,7 @@ export interface ErrorResponse {
  * Logs the error and sends an appropriate response
  */
 export function handleControllerError(
-  error: any,
+  error: unknown,
   res: Response,
   context: string,
   defaultMessage: string = 'Erro interno do servidor'
@@ -22,18 +29,19 @@ export function handleControllerError(
   console.error(`Erro em ${context}:`, error)
 
   // Handle specific MySQL errors
-  if (error?.code === 'ER_ROW_IS_REFERENCED' || error?.code === 'ER_ROW_IS_REFERENCED_2') {
+  const mysqlError = error as MySQLError
+  if (mysqlError?.code === 'ER_ROW_IS_REFERENCED' || mysqlError?.code === 'ER_ROW_IS_REFERENCED_2') {
     res.status(409).json({ 
       message: 'Não é possível excluir: está vinculado a outros registros.',
-      code: error.code 
+      code: mysqlError.code 
     })
     return
   }
 
-  if (error?.code === 'ER_DUP_ENTRY') {
+  if (mysqlError?.code === 'ER_DUP_ENTRY') {
     res.status(409).json({ 
       message: 'Registro duplicado',
-      code: error.code 
+      code: mysqlError.code 
     })
     return
   }
@@ -45,16 +53,16 @@ export function handleControllerError(
 /**
  * Async wrapper for controllers to handle errors automatically
  */
-export function asyncHandler(
-  fn: (req: any, res: any, next?: any) => Promise<any>,
+export function asyncHandler<T = unknown, U = unknown, V = unknown>(
+  fn: (req: T, res: U, next?: V) => Promise<void>,
   context: string,
   defaultErrorMessage?: string
 ) {
-  return async (req: any, res: any, next?: any) => {
+  return async (req: T, res: U, next?: V) => {
     try {
       await fn(req, res, next)
     } catch (error) {
-      handleControllerError(error, res, context, defaultErrorMessage)
+      handleControllerError(error, res as Response, context, defaultErrorMessage)
     }
   }
 }

@@ -55,7 +55,7 @@ export class ApiClient {
   /**
    * GET request
    */
-  async get<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  async get<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(this.buildURL(path), {
       ...options,
       method: 'GET',
@@ -75,7 +75,7 @@ export class ApiClient {
   /**
    * POST request
    */
-  async post<T = any>(path: string, data?: any, options: RequestInit = {}): Promise<T> {
+  async post<T = unknown>(path: string, data?: unknown, options: RequestInit = {}): Promise<T> {
     const response = await fetch(this.buildURL(path), {
       ...options,
       method: 'POST',
@@ -101,7 +101,7 @@ export class ApiClient {
   /**
    * PUT request
    */
-  async put<T = any>(path: string, data?: any, options: RequestInit = {}): Promise<T> {
+  async put<T = unknown>(path: string, data?: unknown, options: RequestInit = {}): Promise<T> {
     const response = await fetch(this.buildURL(path), {
       ...options,
       method: 'PUT',
@@ -122,7 +122,7 @@ export class ApiClient {
   /**
    * DELETE request
    */
-  async delete<T = any>(path: string, options: RequestInit = {}): Promise<T> {
+  async delete<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
     const response = await fetch(this.buildURL(path), {
       ...options,
       method: 'DELETE',

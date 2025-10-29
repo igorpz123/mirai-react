@@ -33,7 +33,7 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
     try {
       const [rows] = await pool.query(
         `SELECT ${primaryKey}, ${nameField} FROM ${tableName} ORDER BY ${nameField} ASC`
-      ) as [RowDataPacket[], any]
+      ) as [RowDataPacket[], unknown]
 
       res.status(200).json({ [entityNamePlural]: rows, total: rows.length })
     } catch (error) {
@@ -50,7 +50,7 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
       const [rows] = await pool.query(
         `SELECT ${primaryKey}, ${nameField} FROM ${tableName} WHERE ${primaryKey} = ? LIMIT 1`,
         [id]
-      ) as [RowDataPacket[], any]
+      ) as [RowDataPacket[], unknown]
 
       if (!Array.isArray(rows) || rows.length === 0) {
         res.status(404).json({ message: `${entityName.charAt(0).toUpperCase() + entityName.slice(1)} não encontrado(a)` })
@@ -67,7 +67,7 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
    */
   const create = async (req: Request, res: Response): Promise<void> => {
     try {
-      const data = req.body
+      const data = req.body as Record<string, unknown>
       const validation = validateRequiredString(data[nameField], nameField.charAt(0).toUpperCase() + nameField.slice(1))
       
       if (!validation.valid) {
@@ -78,7 +78,7 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
       const [result] = await pool.query(
         `INSERT INTO ${tableName} (${nameField}) VALUES (?)`,
         [data[nameField]]
-      ) as [OkPacket, any]
+      ) as [OkPacket, unknown]
 
       res.status(201).json({ [primaryKey]: result.insertId, [nameField]: data[nameField] })
     } catch (error) {
@@ -92,7 +92,7 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
   const update = async (req: Request, res: Response): Promise<void> => {
     try {
       const { id } = req.params
-      const data = req.body
+      const data = req.body as Record<string, unknown>
       const validation = validateRequiredString(data[nameField], nameField.charAt(0).toUpperCase() + nameField.slice(1))
       
       if (!validation.valid) {
@@ -103,7 +103,7 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
       const [result] = await pool.query(
         `UPDATE ${tableName} SET ${nameField} = ? WHERE ${primaryKey} = ?`,
         [data[nameField], id]
-      ) as [OkPacket, any]
+      ) as [OkPacket, unknown]
 
       if (result.affectedRows === 0) {
         res.status(404).json({ message: `${entityName.charAt(0).toUpperCase() + entityName.slice(1)} não encontrado(a)` })
@@ -125,7 +125,7 @@ export function createCrudController(pool: Pool, config: CrudConfig) {
       const [result] = await pool.query(
         `DELETE FROM ${tableName} WHERE ${primaryKey} = ?`,
         [id]
-      ) as [OkPacket, any]
+      ) as [OkPacket, unknown]
 
       if (result.affectedRows === 0) {
         res.status(404).json({ message: `${entityName.charAt(0).toUpperCase() + entityName.slice(1)} não encontrado(a)` })
