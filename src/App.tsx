@@ -36,6 +36,7 @@ import LivroRegistrosPage from './pages/LivroRegistros';
 import ControlePraticaPage from './pages/ControlePratica';
 import NotificacoesPage from './pages/Notificacoes';
 import AIChat from './pages/AIChat';
+import NotFound from './pages/NotFound';
 import './App.css';
 import { useAuth } from './hooks/use-auth';
 import { usePermissions } from './hooks/use-permissions';
@@ -88,7 +89,11 @@ function AppContent() {
           <Route path="notificacoes" element={<NotificacoesPage />} />
           {/* Chat de IA - disponível para todos os usuários autenticados */}
           <Route path="ai/chat" element={<AIChat />} />
+          {/* Catch-all route for authenticated 404 pages */}
+          <Route path="*" element={<NotFound />} />
         </Route>
+        {/* Catch-all route for public 404 pages */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Router>
   )
