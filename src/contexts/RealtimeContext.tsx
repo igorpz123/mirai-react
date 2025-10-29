@@ -118,10 +118,16 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch {}
     })
 
-    // Initial fetch
-    refreshNotifications().then(() => {
-      console.debug('[RT] initial notifications loaded', { count: notifications.length })
-    })
+    // Initial fetch - use token directly instead of callback to avoid dependency
+    const loadNotifications = async () => {
+      try {
+        const res = await fetch('/api/notificacoes?limit=50', { headers: { Authorization: `Bearer ${token}` } })
+        const data = await res.json()
+        if (Array.isArray(data?.notifications)) setNotifications(data.notifications)
+        console.debug('[RT] initial notifications loaded', { count: data?.notifications?.length || 0 })
+      } catch {}
+    }
+    loadNotifications()
 
     // Periodic presence ping
     const pingInt = setInterval(() => { s.emit('presence:ping') }, 10_000)
@@ -139,7 +145,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       clearInterval(httpInt)
       s.disconnect()
     }
-  }, [token, user, refreshNotifications])
+  }, [token, user])
 
   const isOnline = (userId: number) => !!presence[userId]?.online
 

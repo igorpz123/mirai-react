@@ -93,6 +93,50 @@ export const UsersProvider: React.FC<React.PropsWithChildren<{}>> = ({ children 
     return () => { mounted = false }
   }, [ensureUsersForUnit, unitId])
 
+  // Helper function to check if user matches setorId - extracted and optimized
+  const userMatchesSetor = React.useCallback((user: User, setorId: number): boolean => {
+    const anyField = user as any
+    const candidates = [
+      anyField.setorId, 
+      anyField.setor_id, 
+      anyField.setor_ids, 
+      anyField.setores_ids, 
+      anyField.setores
+    ]
+
+    // check primitive numeric fields first
+    for (const c of candidates) {
+      if (c == null) continue
+      if (typeof c === 'number' && c === setorId) return true
+      if (typeof c === 'string') {
+        // maybe a single numeric string
+        const num = Number(c)
+        if (!isNaN(num) && num === setorId) return true
+        // maybe CSV like '1,2,3'
+        if (c.includes(',')) {
+          const parts = c.split(',')
+          for (const p of parts) {
+            const pNum = Number(p.trim())
+            if (!isNaN(pNum) && pNum === setorId) return true
+          }
+        }
+      }
+      // arrays
+      if (Array.isArray(c)) {
+        for (const el of c) {
+          const elNum = Number(el)
+          if (!isNaN(elNum) && elNum === setorId) return true
+        }
+      }
+    }
+
+    // as last resort, check campo 'setor' name equality to id as string
+    const fallback = anyField.setor || anyField.setor_nome
+    if (fallback && String(fallback) === String(setorId)) return true
+
+    return false
+  }, [])
+
   const getFilteredUsersForTask = React.useCallback(({ setorId, setorName, unidadeId }: { setorId?: number | null; setorName?: string | null; unidadeId?: number | null }) => {
     const preferredUnit = unidadeId ?? unitId ?? null
     const key = keyForUnit(preferredUnit)
@@ -106,46 +150,21 @@ export const UsersProvider: React.FC<React.PropsWithChildren<{}>> = ({ children 
     let list = users
     // filter by setorId when available
     if (typeof setorId !== 'undefined' && setorId !== null && setorId > 0) {
-      list = list.filter(u => {
-        // server may include setor ids in different fields; sometimes it's a CSV string '1,2,3'
-        const anyField = (u as any)
-        const candidates = [anyField.setorId, anyField.setor_id, anyField.setor_ids, anyField.setores_ids, anyField.setores, anyField.setores_ids]
-
-        // check primitive numeric fields first
-        for (const c of candidates) {
-          if (c == null) continue
-          if (typeof c === 'number' && Number(c) === Number(setorId)) return true
-          if (typeof c === 'string') {
-            // maybe a single numeric string
-            if (!isNaN(Number(c)) && Number(c) === Number(setorId)) return true
-            // maybe CSV like '1,2,3'
-            if (c.includes(',')) {
-              const parts = c.split(',').map(p => p.trim()).filter(Boolean)
-              if (parts.some(p => !isNaN(Number(p)) && Number(p) === Number(setorId))) return true
-            }
-          }
-          // arrays
-          if (Array.isArray(c)) {
-            if (c.some((el: any) => !isNaN(Number(el)) && Number(el) === Number(setorId))) return true
-          }
-        }
-
-        // as last resort, check campo 'setor' name equality to id as string
-        const fallback = (anyField as any).setor || (anyField as any).setor_nome
-        if (fallback && String(fallback) === String(setorId)) return true
-
-        return false
-      })
+      list = list.filter(u => userMatchesSetor(u, setorId))
     } else if (setorName) {
-      const s = String(setorName).toLowerCase()
+      const s = setorName.toLowerCase()
       list = list.filter(u => {
-        const candidates = [(u as any).setor_nomes, (u as any).setorNomes, (u as any).setores, (u as any).setor, (u as any).setor_nome]
-        return candidates.some((c: any) => typeof c === 'string' && c.toLowerCase().includes(s))
+        const anyField = u as any
+        const candidates = [anyField.setor_nomes, anyField.setorNomes, anyField.setores, anyField.setor, anyField.setor_nome]
+        for (const c of candidates) {
+          if (typeof c === 'string' && c.toLowerCase().includes(s)) return true
+        }
+        return false
       })
     }
 
     return { users: list, loading, error }
-  }, [cache, unitId])
+  }, [cache, unitId, userMatchesSetor])
 
   const value: UsersContextValue = React.useMemo(() => ({ getFilteredUsersForTask, ensureUsersForUnit, cache }), [getFilteredUsersForTask, ensureUsersForUnit, cache])
 
