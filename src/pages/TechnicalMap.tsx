@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useUnit } from '@/contexts/UnitContext'
-import { useUsers } from '@/contexts/UsersContext'
 import { useAuth } from '@/hooks/use-auth'
 import { getCompaniesByResponsible } from '@/services/companies'
 import type { Company } from '@/services/companies'
-import { isTecnicoUser } from '@/lib/roles'
-import { getAllUsers } from '@/services/users'
+import { getVisibleAgendaUsers, type AgendaUser } from '@/services/agendaUsers'
 import { TechUserCard } from '@/components/technical-user-card'
 
 export default function TechnicalMap() {
 	const { user } = useAuth()
 	const { unitId, isLoading: unitLoading } = useUnit()
 
-	const [techs, setTechs] = useState<any[]>([])
+	const [techs, setTechs] = useState<AgendaUser[]>([])
 	const [techsLoading, setTechsLoading] = useState(true)
 	const [techsError, setTechsError] = useState<string | null>(null)
-	const usersCtx = useUsers()
 
 	const [companies, setCompanies] = useState<Company[]>([])
 	const [companiesLoading, setCompaniesLoading] = useState(true)
@@ -37,38 +34,14 @@ export default function TechnicalMap() {
 					setTechs([])
 					return
 				}
-				try {
-					await usersCtx.ensureUsersForUnit(Number(unitId))
-					const { users: all } = usersCtx.getFilteredUsersForTask({ unidadeId: Number(unitId) })
-					if (!mounted) return
-					let list = (all || []).filter(isTecnicoUser)
-					// Fallback: se não veio nenhum técnico, tentar pegar todos os usuários e filtrar manualmente
-					if (list.length === 0) {
-						try {
-							const global = await getAllUsers().catch(() => ({ users: [] }))
-							const uid = Number(unitId)
-							if (!Number.isNaN(uid) && uid > 0) {
-								list = (global.users || []).filter(u => {
-									if (!isTecnicoUser(u)) return false
-									// Campo 'unidades' CSV: "1,2,3"
-									const csv = (u as any).unidades
-									if (typeof csv === 'string' && csv.trim()) {
-										const ids = csv.split(',').map(p => Number(p.trim())).filter(n => !isNaN(n))
-										return ids.includes(uid)
-									}
-									return false
-								})
-							}
-						} catch { /* ignore fallback errors */ }
-					}
-					setTechs(list)
-				} catch (e) {
-					// fallback to empty list
-					setTechs([])
-				}
+				// Busca usuários visíveis na agenda para a unidade selecionada
+				const users = await getVisibleAgendaUsers(Number(unitId))
+				if (!mounted) return
+				setTechs(users)
 			} catch (err) {
 				if (!mounted) return
-				setTechsError(err instanceof Error ? err.message : String(err))
+				console.error('Erro ao buscar usuários da agenda:', err)
+				setTechsError(err instanceof Error ? err.message : 'Erro ao carregar usuários')
 			} finally {
 				if (!mounted) return
 				setTechsLoading(false)
@@ -118,7 +91,11 @@ export default function TechnicalMap() {
 					) : techsError ? (
 						<div className="text-destructive">{techsError}</div>
 					) : techs.length === 0 ? (
-						<div>Nenhum técnico encontrado.</div>
+						<div className="text-muted-foreground">
+							Nenhum usuário configurado para esta unidade. 
+							<br />
+							Configure os usuários visíveis na página de Gerenciar Agenda.
+						</div>
 					) : (
 						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
 							{techs.map(t => (

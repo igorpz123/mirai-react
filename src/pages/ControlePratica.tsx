@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { IconDownload } from '@tabler/icons-react'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import * as XLSX from 'xlsx'
 
 // interface Curso removed; curso options will be derived from data
 
@@ -211,27 +212,40 @@ export default function ControlePraticaPage() {
     setPageIndex(0)
   }, [filters.empresa_id, filters.curso_id, filters.somentePendentes, filters.busca, pageSize])
 
-  function exportCSV() {
-    if (!filtered.length) { toast.error('Nada para exportar'); return }
-    const headers = ['Data_Aquisicao','Participante','Empresa','Curso','Pratica']
-    const lines = filtered.map(r => [
-      formatDateBR(r.data_aquisicao) || '',
-      escapeCSV(r.participante),
-      escapeCSV(r.empresa_nome || String(r.empresa_id)),
-      escapeCSV(r.curso_nome || String(r.curso_id)),
-      r.pratica ? 'Sim' : 'Não'
-    ].join(','))
-    const csv = [headers.join(','), ...lines].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'controle_pratica.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  function exportExcel() {
+    if (!filtered.length) { 
+      toast.error('Nada para exportar')
+      return 
+    }
 
-  function escapeCSV(v: string) { return /[",;\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v }
+    // Preparar dados para a planilha
+    const data = filtered.map(r => ({
+      'Data de Aquisição': formatDateBR(r.data_aquisicao) || '',
+      'Participante': r.participante,
+      'Empresa': r.empresa_nome || String(r.empresa_id),
+      'Curso': r.curso_nome || String(r.curso_id),
+      'Prática': r.pratica ? 'Sim' : 'Não'
+    }))
+
+    // Criar workbook e worksheet
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Controle de Prática')
+
+    // Ajustar largura das colunas
+    const colWidths = [
+      { wch: 18 }, // Data de Aquisição
+      { wch: 30 }, // Participante
+      { wch: 30 }, // Empresa
+      { wch: 40 }, // Curso
+      { wch: 10 }  // Prática
+    ]
+    ws['!cols'] = colWidths
+
+    // Gerar arquivo Excel
+    XLSX.writeFile(wb, 'controle_pratica.xlsx')
+    toast.success('Arquivo exportado com sucesso!')
+  }
 
 
   async function handleTogglePratica(r: LivroRegistro, next: boolean) {
@@ -314,7 +328,7 @@ export default function ControlePraticaPage() {
             )}
             <Button variant="outline" size="sm" onClick={() => openConfirmBulk(true)} disabled={bulkSaving || selectedIds.size === 0}>Marcar como realizada</Button>
             <Button variant="outline" size="sm" onClick={() => openConfirmBulk(false)} disabled={bulkSaving || selectedIds.size === 0}>Marcar como pendente</Button>
-            <Button variant="outline" size="sm" onClick={exportCSV} className="flex items-center gap-1"><IconDownload size={16} /> Exportar</Button>
+            <Button variant="outline" size="sm" onClick={exportExcel} className="flex items-center gap-1"><IconDownload size={16} /> Exportar Excel</Button>
           </div>
         </div>
 

@@ -95,7 +95,11 @@ export default function TechnicalAgenda() {
         ) : error ? (
           <div className="text-destructive">{error}</div>
         ) : users.length === 0 ? (
-          <div>Nenhum técnico encontrado.</div>
+          <div className="text-muted-foreground">
+            Nenhum usuário configurado para esta unidade.
+            <br />
+            Configure os usuários visíveis na página de Gerenciar Agenda.
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
             {users.map(u => (

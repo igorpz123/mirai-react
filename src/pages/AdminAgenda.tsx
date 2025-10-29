@@ -41,7 +41,7 @@ export default function AdminAgenda() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      
+
       // Tenta carregar os dados, mas não falha se tabela não existir
       const results = await Promise.allSettled([
         getAllAgendaConfigs().catch(err => {
@@ -61,7 +61,7 @@ export default function AdminAgenda() {
           return { unidades: [], total: 0 }
         })
       ])
-      
+
       const configsData = results[0].status === 'fulfilled' ? results[0].value : []
       const statsData = results[1].status === 'fulfilled' ? results[1].value : { totalConfigs: 0, ativos: 0, inativos: 0, usuariosUnicos: 0 }
       const usersData = results[2].status === 'fulfilled' ? results[2].value : { users: [] }
@@ -382,7 +382,7 @@ export default function AdminAgenda() {
                                   </Button>
                                 </div>
                               )}
-                              
+
                               <span
                                 className={`text-xs px-2 py-1 rounded ${
                                   config.ativo
