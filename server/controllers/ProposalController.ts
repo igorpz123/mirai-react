@@ -52,21 +52,36 @@ export const getProposalsByUser = async (
                 e.contabilidade AS empresa_contabilidade,
                 e.telefone AS empresa_telefone,
                 e.email AS empresa_email,
-                (SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id) AS curso_total,
-                (SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id) AS quimico_total,
-                                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
-                                (SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id) AS programa_total,
-                (
-                  COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
-                + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
-                                + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
-                ) AS total_itens
+                COALESCE(pc_sum.total, 0) AS curso_total,
+                COALESCE(pq_sum.total, 0) AS quimico_total,
+                COALESCE(pp_sum.total, 0) AS produto_total,
+                COALESCE(ppg_sum.total, 0) AS programa_total,
+                (COALESCE(pc_sum.total, 0) + COALESCE(pq_sum.total, 0) + COALESCE(pp_sum.total, 0) + COALESCE(ppg_sum.total, 0)) AS total_itens
             FROM 
                 propostas p
             LEFT JOIN usuarios usr_responsavel ON p.responsavel_id = usr_responsavel.id
             LEFT JOIN usuarios usr_indicacao ON p.indicacao_id = usr_indicacao.id
             LEFT JOIN empresas e ON p.empresa_id = e.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_cursos 
+                GROUP BY proposta_id
+            ) pc_sum ON pc_sum.proposta_id = p.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_quimicos 
+                GROUP BY proposta_id
+            ) pq_sum ON pq_sum.proposta_id = p.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_produtos 
+                GROUP BY proposta_id
+            ) pp_sum ON pp_sum.proposta_id = p.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_programas 
+                GROUP BY proposta_id
+            ) ppg_sum ON ppg_sum.proposta_id = p.id
             WHERE p.responsavel_id = ?
             ORDER BY p.data ASC
             `,
@@ -148,21 +163,36 @@ export const getProposalsByUnidade = async (
                 e.contabilidade AS empresa_contabilidade,
                 e.telefone AS empresa_telefone,
                 e.email AS empresa_email,
-                (SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id) AS curso_total,
-                (SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id) AS quimico_total,
-                                (SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id) AS produto_total,
-                                (SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id) AS programa_total,
-                (
-                  COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
-                + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                                + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
-                                + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
-                ) AS total_itens
+                COALESCE(pc_sum.total, 0) AS curso_total,
+                COALESCE(pq_sum.total, 0) AS quimico_total,
+                COALESCE(pp_sum.total, 0) AS produto_total,
+                COALESCE(ppg_sum.total, 0) AS programa_total,
+                (COALESCE(pc_sum.total, 0) + COALESCE(pq_sum.total, 0) + COALESCE(pp_sum.total, 0) + COALESCE(ppg_sum.total, 0)) AS total_itens
             FROM 
                 propostas p
             LEFT JOIN usuarios usr_responsavel ON p.responsavel_id = usr_responsavel.id
             LEFT JOIN usuarios usr_indicacao ON p.indicacao_id = usr_indicacao.id
             LEFT JOIN empresas e ON p.empresa_id = e.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_cursos 
+                GROUP BY proposta_id
+            ) pc_sum ON pc_sum.proposta_id = p.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_quimicos 
+                GROUP BY proposta_id
+            ) pq_sum ON pq_sum.proposta_id = p.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_produtos 
+                GROUP BY proposta_id
+            ) pp_sum ON pp_sum.proposta_id = p.id
+            LEFT JOIN (
+                SELECT proposta_id, SUM(valor_total) AS total 
+                FROM propostas_programas 
+                GROUP BY proposta_id
+            ) ppg_sum ON ppg_sum.proposta_id = p.id
             WHERE p.unidade_id = ?
             ORDER BY p.data ASC
       `,
@@ -354,26 +384,56 @@ export const getProposalStats = async (
             SELECT period, SUM(total_valor) AS total
             FROM (
                 SELECT 'current' AS period,
-                    (
-                        COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
-                      + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
-                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
-                    ) AS total_valor
+                    (COALESCE(pc_sum.total, 0) + COALESCE(pq_sum.total, 0) + COALESCE(pp_sum.total, 0) + COALESCE(ppg_sum.total, 0)) AS total_valor
                 FROM propostas p
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_cursos 
+                    GROUP BY proposta_id
+                ) pc_sum ON pc_sum.proposta_id = p.id
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_quimicos 
+                    GROUP BY proposta_id
+                ) pq_sum ON pq_sum.proposta_id = p.id
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_produtos 
+                    GROUP BY proposta_id
+                ) pp_sum ON pp_sum.proposta_id = p.id
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_programas 
+                    GROUP BY proposta_id
+                ) ppg_sum ON ppg_sum.proposta_id = p.id
                 WHERE p.data_alteracao IS NOT NULL
                   AND p.data_alteracao >= ? AND p.data_alteracao < ?
                   ${whereBase}
                   AND TRIM(LOWER(p.status)) LIKE 'aprovad%'
                 UNION ALL
                 SELECT 'previous' AS period,
-                    (
-                        COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
-                      + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
-                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
-                    ) AS total_valor
+                    (COALESCE(pc_sum.total, 0) + COALESCE(pq_sum.total, 0) + COALESCE(pp_sum.total, 0) + COALESCE(ppg_sum.total, 0)) AS total_valor
                 FROM propostas p
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_cursos 
+                    GROUP BY proposta_id
+                ) pc_sum ON pc_sum.proposta_id = p.id
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_quimicos 
+                    GROUP BY proposta_id
+                ) pq_sum ON pq_sum.proposta_id = p.id
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_produtos 
+                    GROUP BY proposta_id
+                ) pp_sum ON pp_sum.proposta_id = p.id
+                LEFT JOIN (
+                    SELECT proposta_id, SUM(valor_total) AS total 
+                    FROM propostas_programas 
+                    GROUP BY proposta_id
+                ) ppg_sum ON ppg_sum.proposta_id = p.id
                 WHERE p.data_alteracao IS NOT NULL
                   AND p.data_alteracao >= ? AND p.data_alteracao < ?
                   ${whereBase}
@@ -409,14 +469,29 @@ export const getProposalStats = async (
                             (
                                 CASE WHEN p.responsavel_id = ? THEN 0.05 ELSE 0 END
                               + CASE WHEN p.indicacao_id = ? THEN 0.02 ELSE 0 END
-                                                        ) * (
-                                COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
-                              + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
-                                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
-                            )
+                                                        ) * (COALESCE(pc_sum.total, 0) + COALESCE(pq_sum.total, 0) + COALESCE(pp_sum.total, 0) + COALESCE(ppg_sum.total, 0))
                         ) AS val
                     FROM propostas p
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_cursos 
+                        GROUP BY proposta_id
+                    ) pc_sum ON pc_sum.proposta_id = p.id
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_quimicos 
+                        GROUP BY proposta_id
+                    ) pq_sum ON pq_sum.proposta_id = p.id
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_produtos 
+                        GROUP BY proposta_id
+                    ) pp_sum ON pp_sum.proposta_id = p.id
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_programas 
+                        GROUP BY proposta_id
+                    ) ppg_sum ON ppg_sum.proposta_id = p.id
                     WHERE p.data_alteracao IS NOT NULL
                       AND p.data_alteracao >= ? AND p.data_alteracao < ?
                       AND TRIM(LOWER(p.status)) LIKE 'aprovad%'
@@ -427,14 +502,29 @@ export const getProposalStats = async (
                             (
                                 CASE WHEN p.responsavel_id = ? THEN 0.05 ELSE 0 END
                               + CASE WHEN p.indicacao_id = ? THEN 0.02 ELSE 0 END
-                                                        ) * (
-                                COALESCE((SELECT SUM(pc.valor_total) FROM propostas_cursos pc WHERE pc.proposta_id = p.id), 0)
-                              + COALESCE((SELECT SUM(pq.valor_total) FROM propostas_quimicos pq WHERE pq.proposta_id = p.id), 0)
-                                                            + COALESCE((SELECT SUM(pp.valor_total) FROM propostas_produtos pp WHERE pp.proposta_id = p.id), 0)
-                                                            + COALESCE((SELECT SUM(ppg.valor_total) FROM propostas_programas ppg WHERE ppg.proposta_id = p.id), 0)
-                            )
+                                                        ) * (COALESCE(pc_sum.total, 0) + COALESCE(pq_sum.total, 0) + COALESCE(pp_sum.total, 0) + COALESCE(ppg_sum.total, 0))
                         ) AS val
                     FROM propostas p
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_cursos 
+                        GROUP BY proposta_id
+                    ) pc_sum ON pc_sum.proposta_id = p.id
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_quimicos 
+                        GROUP BY proposta_id
+                    ) pq_sum ON pq_sum.proposta_id = p.id
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_produtos 
+                        GROUP BY proposta_id
+                    ) pp_sum ON pp_sum.proposta_id = p.id
+                    LEFT JOIN (
+                        SELECT proposta_id, SUM(valor_total) AS total 
+                        FROM propostas_programas 
+                        GROUP BY proposta_id
+                    ) ppg_sum ON ppg_sum.proposta_id = p.id
                     WHERE p.data_alteracao IS NOT NULL
                       AND p.data_alteracao >= ? AND p.data_alteracao < ?
                       AND TRIM(LOWER(p.status)) LIKE 'aprovad%'

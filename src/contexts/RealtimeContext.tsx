@@ -70,24 +70,24 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     socketRef.current = s
 
     s.on('connect', () => {
-      console.debug('[RT] socket connected', s.id)
+      if (import.meta.env.DEV) console.debug('[RT] socket connected', s.id)
       setConnected(true)
       s.emit('auth:init', { token })
       s.emit('presence:ping')
     })
     s.on('disconnect', (reason) => {
-      console.debug('[RT] socket disconnected', reason)
+      if (import.meta.env.DEV) console.debug('[RT] socket disconnected', reason)
       setConnected(false)
     })
 
     // Presence events
     s.on('presence:update', (payload: { userId: number; state: 'online' | 'offline' }) => {
       // debug presence updates
-      if (payload.userId === user?.id) console.debug('[RT] presence:update (self)', payload)
+      if (import.meta.env.DEV && payload.userId === user?.id) console.debug('[RT] presence:update (self)', payload)
       setPresence(prev => ({ ...prev, [payload.userId]: { online: payload.state === 'online', updatedAt: Date.now() } }))
     })
     s.on('presence:snapshot', (payload: { users: number[] }) => {
-      console.debug('[RT] presence:snapshot', payload.users)
+      if (import.meta.env.DEV) console.debug('[RT] presence:snapshot', payload.users)
       const ts = Date.now()
       setPresence(prev => {
         const next = { ...prev }
@@ -98,7 +98,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Notification events
     s.on('notification:new', (notif: RTNotification) => {
-      console.debug('[RT] notification:new', notif)
+      if (import.meta.env.DEV) console.debug('[RT] notification:new', notif)
       setNotifications(prev => {
         if (prev.find(n => n.id === notif.id)) return prev
         return [notif, ...prev].slice(0, 100)
@@ -118,10 +118,16 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       } catch {}
     })
 
-    // Initial fetch
-    refreshNotifications().then(() => {
-      console.debug('[RT] initial notifications loaded', { count: notifications.length })
-    })
+    // Initial fetch - use token directly instead of callback to avoid dependency
+    const loadNotifications = async () => {
+      try {
+        const res = await fetch('/api/notificacoes?limit=50', { headers: { Authorization: `Bearer ${token}` } })
+        const data = await res.json()
+        if (Array.isArray(data?.notifications)) setNotifications(data.notifications)
+        if (import.meta.env.DEV) console.debug('[RT] initial notifications loaded', { count: data?.notifications?.length || 0 })
+      } catch {}
+    }
+    loadNotifications()
 
     // Periodic presence ping
     const pingInt = setInterval(() => { s.emit('presence:ping') }, 10_000)
@@ -139,7 +145,7 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       clearInterval(httpInt)
       s.disconnect()
     }
-  }, [token, user, refreshNotifications])
+  }, [token, user])
 
   const isOnline = (userId: number) => !!presence[userId]?.online
 

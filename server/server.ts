@@ -215,10 +215,17 @@ io.on('connection', (socket) => {
 // Limpeza periódica para sessões sem ping
 setInterval(() => {
   const now = Date.now()
+  // Clean up stale presence entries
   for (const [userId, info] of presence.entries()) {
     if (now - info.lastPing > ONLINE_TTL_MS) {
       presence.delete(userId)
       io.emit('presence:update', { userId, state: 'offline' })
+    }
+  }
+  // Clean up empty socket sets to prevent memory leak
+  for (const [userId, socketSet] of socketsByUser.entries()) {
+    if (socketSet.size === 0) {
+      socketsByUser.delete(userId)
     }
   }
 }, 10_000)
