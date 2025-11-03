@@ -3,6 +3,8 @@ import { RowDataPacket } from 'mysql2'
 import pool from '../config/db'
 import { OkPacket } from 'mysql2'
 import { generateAutomaticTasksForCompany, purgeAutomaticTasksForCompany } from '../services/autoTasksService'
+import { backgroundJobService } from '../services/backgroundJobService'
+import { createNotification } from '../services/notificationService'
 
 type CompanyRow = RowDataPacket & {
   id: number
@@ -359,7 +361,7 @@ export const updateCompany = async (
   }
 }
 
-// Generate automatic tasks for all companies in a unit
+// Generate automatic tasks for all companies in a unit (async job)
 export const generateAutoTasksForUnit = async (req: Request<{ unidade_id: string }>, res: Response): Promise<void> => {
   try {
     const { unidade_id } = req.params
@@ -368,6 +370,19 @@ export const generateAutoTasksForUnit = async (req: Request<{ unidade_id: string
     if (!unidade_id) {
       res.status(400).json({ message: 'unidade_id é obrigatório' })
       return
+    }
+
+    // Extract userId from JWT token in Authorization header
+    let userId: number | undefined
+    try {
+      const authHeader = req.headers.authorization
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        const decoded = require('jsonwebtoken').decode(token) as any
+        userId = decoded?.id
+      }
+    } catch (e) {
+      console.warn('Could not extract userId from token:', e)
     }
 
     // Get all active companies for the unit
@@ -381,27 +396,97 @@ export const generateAutoTasksForUnit = async (req: Request<{ unidade_id: string
       return
     }
 
-    const details: Array<{ empresaId: number; created: number }> = []
-    let createdTotal = 0
-    for (const id of ids) {
+    // Create background job
+    const jobId = backgroundJobService.createJob('generate-auto-tasks-unit', userId)
+    
+    // Iniciar processamento em background
+    setImmediate(async () => {
       try {
-        const { created } = await generateAutomaticTasksForCompany(id, { futureYears })
-        createdTotal += Number(created || 0)
-        details.push({ empresaId: id, created: Number(created || 0) })
-      } catch (e) {
-        // Continue processing others; mark created as 0 for this one
-        details.push({ empresaId: id, created: 0 })
+        backgroundJobService.updateJobStatus(jobId, 'running')
+        
+        const details: Array<{ empresaId: number; created: number }> = []
+        let createdTotal = 0
+        
+        for (let i = 0; i < ids.length; i++) {
+          const id = ids[i]
+          try {
+            const { created } = await generateAutomaticTasksForCompany(id, { futureYears })
+            createdTotal += Number(created || 0)
+            details.push({ empresaId: id, created: Number(created || 0) })
+          } catch (e) {
+            console.error(`Erro ao gerar tarefas para empresa ${id}:`, e)
+            details.push({ empresaId: id, created: 0 })
+          }
+          
+          // Atualizar progresso
+          backgroundJobService.updateJobProgress(jobId, i + 1, ids.length)
+        }
+        
+        // Job completado com sucesso
+        backgroundJobService.setJobResult(jobId, {
+          processed: ids.length,
+          createdTotal,
+          details,
+          yearsProcessed: futureYears + 1,
+        })
+        
+        // Notificar usuário
+        if (userId) {
+          await createNotification({
+            user_id: userId,
+            type: 'auto-tasks-generated',
+            title: 'Tarefas Automáticas Geradas',
+            body: `${createdTotal} tarefas automáticas foram geradas para ${ids.length} empresas da unidade.`,
+            entity_type: 'unit',
+            entity_id: Number(unidade_id),
+          })
+        }
+        
+        console.log(`[Job ${jobId}] Completado: ${createdTotal} tarefas criadas para ${ids.length} empresas`)
+      } catch (error) {
+        console.error(`[Job ${jobId}] Erro:`, error)
+        backgroundJobService.setJobError(jobId, error instanceof Error ? error.message : 'Erro desconhecido')
+        
+        // Notificar erro ao usuário
+        if (userId) {
+          await createNotification({
+            user_id: userId,
+            type: 'auto-tasks-error',
+            title: 'Erro ao Gerar Tarefas Automáticas',
+            body: 'Ocorreu um erro ao gerar tarefas automáticas. Por favor, tente novamente.',
+            entity_type: 'unit',
+            entity_id: Number(unidade_id),
+          })
+        }
       }
-    }
+    })
 
-    res.status(200).json({ 
-      processed: ids.length, 
-      createdTotal, 
-      details,
-      yearsProcessed: futureYears + 1 // ano atual + anos futuros
+    // Retornar imediatamente com jobId
+    res.status(202).json({ 
+      jobId,
+      message: 'Processamento iniciado. Use o jobId para consultar o progresso.',
+      totalEmpresas: ids.length,
     })
   } catch (error) {
-    console.error('Erro ao gerar tarefas automáticas por unidade:', error)
-    res.status(500).json({ message: 'Erro ao gerar tarefas automáticas por unidade' })
+    console.error('Erro ao iniciar geração de tarefas automáticas por unidade:', error)
+    res.status(500).json({ message: 'Erro ao iniciar geração de tarefas automáticas por unidade' })
+  }
+}
+
+// Get job status
+export const getJobStatus = async (req: Request<{ jobId: string }>, res: Response): Promise<void> => {
+  try {
+    const { jobId } = req.params
+    const job = backgroundJobService.getJob(jobId)
+    
+    if (!job) {
+      res.status(404).json({ message: 'Job não encontrado' })
+      return
+    }
+    
+    res.status(200).json(job)
+  } catch (error) {
+    console.error('Erro ao buscar status do job:', error)
+    res.status(500).json({ message: 'Erro ao buscar status do job' })
   }
 }

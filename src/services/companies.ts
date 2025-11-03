@@ -141,15 +141,37 @@ export async function getAllCompanies(): Promise<CompaniesResponse> {
   return res.json()
 }
 
+export interface AutoTasksJob {
+  jobId: string
+  message: string
+  totalEmpresas: number
+}
+
+export interface JobStatus {
+  id: string
+  type: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  progress?: {
+    current: number
+    total: number
+    percentage: number
+  }
+  result?: {
+    processed: number
+    createdTotal: number
+    details: Array<{ empresaId: number; created: number }>
+    yearsProcessed?: number
+  }
+  error?: string
+  createdAt: string
+  startedAt?: string
+  completedAt?: string
+}
+
 export async function generateAutoTasksForUnit(
   unitId: number, 
   futureYears: number = 0
-): Promise<{ 
-  processed: number
-  createdTotal: number
-  details: Array<{ empresaId: number; created: number }>
-  yearsProcessed: number
-}> {
+): Promise<AutoTasksJob> {
   const token = localStorage.getItem('token')
   
   // Construir URL com query string se necessário
@@ -168,6 +190,22 @@ export async function generateAutoTasksForUnit(
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: 'Erro ao gerar tarefas automáticas por unidade' }))
     throw new Error(err.message || 'Erro ao gerar tarefas automáticas por unidade')
+  }
+  return res.json()
+}
+
+export async function getJobStatus(jobId: string): Promise<JobStatus> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/empresas/jobs/${jobId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ message: 'Erro ao consultar status do job' }))
+    throw new Error(err.message || 'Erro ao consultar status do job')
   }
   return res.json()
 }
