@@ -42,17 +42,25 @@ echo "[remote] Ensuring pm2..."
 if ! command -v pm2 >/dev/null 2>&1; then npm i -g pm2 || true; fi
 PM2_BIN="$(command -v pm2 || true)"
 if [ -z "$PM2_BIN" ]; then
-  PM2_CAND="$(npm bin -g 2>/dev/null)/pm2"
+  PM2_CAND="$(npm root -g 2>/dev/null)/../.bin/pm2"
   if [ -x "$PM2_CAND" ]; then PM2_BIN="$PM2_CAND"; fi
 fi
 if [ -n "$PM2_BIN" ]; then
   echo "[remote] Using pm2 at $PM2_BIN"
   $PM2_BIN restart mirai || $PM2_BIN start server/dist/server.js --name mirai
 else
-  echo "[remote] pm2 not found, using nohup fallback"
+  echo "[remote] pm2 not found, using nohup fallback with node from NVM"
   pkill -f "server/dist/server.js" || true
-  nohup node server/dist/server.js > server.out.log 2>&1 & echo $! > server.pid
-  echo "[remote] Started node (PID $(cat server.pid))"
+  export SERVE_FRONT=true
+  export FRONT_DIST_PATH="{0}/dist"
+  # Use node via full path from NVM
+  NODE_BIN="$(command -v node)"
+  if [ -z "$NODE_BIN" ]; then
+    echo "[remote] ERROR: node not found even after loading NVM"
+    exit 1
+  fi
+  nohup "$NODE_BIN" server/dist/server.js > server.out.log 2>&1 & echo $! > server.pid
+  echo "[remote] Started node at $NODE_BIN (PID $(cat server.pid))"
 fi
 echo "[remote] Done."
 '@ -f $RemoteDir

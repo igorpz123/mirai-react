@@ -263,6 +263,7 @@ export function TaskFormWithAIAnalysis() {
       <div>
         <label>Foto da tarefa</label>
         <input type="file" accept="image/*" onChange={handlePhotoChange} />
+        {photo && <p className="text-xs text-muted-foreground mt-1">Arquivo: {photo.name}</p>}
       </div>
       
       {aiSuggestions.length > 0 && (
