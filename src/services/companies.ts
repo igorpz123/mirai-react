@@ -141,9 +141,24 @@ export async function getAllCompanies(): Promise<CompaniesResponse> {
   return res.json()
 }
 
-export async function generateAutoTasksForUnit(unitId: number): Promise<{ processed: number; createdTotal: number; details: Array<{ empresaId: number; created: number }> }> {
+export async function generateAutoTasksForUnit(
+  unitId: number, 
+  futureYears: number = 0
+): Promise<{ 
+  processed: number
+  createdTotal: number
+  details: Array<{ empresaId: number; created: number }>
+  yearsProcessed: number
+}> {
   const token = localStorage.getItem('token')
-  const res = await fetch(`${API_URL}/empresas/unidade/${unitId}/auto-tarefas`, {
+  
+  // Construir URL com query string se necessário
+  let url = `${API_URL}/empresas/unidade/${unitId}/auto-tarefas`
+  if (futureYears > 0) {
+    url += `?futureYears=${futureYears}`
+  }
+  
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

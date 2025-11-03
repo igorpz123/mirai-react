@@ -23,7 +23,12 @@ function addDays(d: Date, days: number): Date {
   return n
 }
 
-export async function generateAutomaticTasksForCompany(empresaId: number): Promise<{ created: number }> {
+export async function generateAutomaticTasksForCompany(
+  empresaId: number,
+  options: { futureYears?: number } = {}
+): Promise<{ created: number }> {
+  const { futureYears = 0 } = options
+  
   // Load empresa data
   const [rows] = await pool.query<EmpresaRow[]>(
     `SELECT id, unidade_responsavel, periodicidade, data_renovacao, tecnico_responsavel, razao_social FROM empresas WHERE id = ? LIMIT 1`,
@@ -49,85 +54,117 @@ export async function generateAutomaticTasksForCompany(empresaId: number): Promi
   if (isNaN(dataRenovacaoBase.getTime())) return { created: 0 }
   const anoRenovacao = dataRenovacaoBase.getFullYear()
 
-  // Define tarefa principal (Inspeção Inicial vs Renovação) baseado no código PHP fornecido
-  let tipoTarefa = 2 // Renovação
-  // Ancorar SEMPRE no ano atual
-  let dataEvento = new Date(anoAtual, dataRenovacaoBase.getMonth(), dataRenovacaoBase.getDate())
-  let tipoTarefaTexto = 'Renovação'
-  let corEvento = 'rgb(167 150 0)'
-  let horaInicio = '13:00:00'
-  let horaFim = '14:00:00'
-
-  if (anoRenovacao === anoAtual) {
-    tipoTarefa = 1 // Inspeção Inicial
-    tipoTarefaTexto = 'Inspeção Inicial'
-  }
-
   let createdCount = 0
   const eventosRegistrados = new Set<string>()
 
-  const prazo = formatDate(dataEvento)
-  // Evitar duplicidade exatamente na mesma data para a empresa
-  {
-    const [existsRows] = await pool.query<RowDataPacket[]>(
-      `SELECT COUNT(*) as cnt FROM tarefas WHERE prazo = ? AND empresa_id = ?`,
-      [prazo, empresaId]
-    )
-    const exists = Number((existsRows as any)[0]?.cnt || 0)
-    if (exists === 0) {
-      const [ins] = await pool.query<OkPacket>(
-        `INSERT INTO tarefas (empresa_id, finalidade_id, prioridade, status, prazo, setor_id, responsavel_id, created_at, created_by, unidade_id)
-         VALUES (?, ?, 'Normal', 'Automático', ?, 2, ?, NOW(), 1, ?)`,
-        [empresaId, tipoTarefa, prazo, tecnicoId, unidadeId]
-      )
-      const tarefaId = (ins as any).insertId
-      await pool.query<OkPacket>(
-        `INSERT INTO agenda_events (title, description, color, start, end, tarefa_id, usuario_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          `${tipoTarefaTexto} (${nomeEmpresa})`,
-          `${tipoTarefaTexto} a ser realizada na empresa ${nomeEmpresa}`,
-          corEvento,
-          `${prazo} ${horaInicio}`,
-          `${prazo} ${horaFim}`,
-          tarefaId,
-          tecnicoId,
-        ]
-      )
-      createdCount++
-      eventosRegistrados.add(prazo)
-    }
+  // Gerar tarefas para o ano atual + anos futuros solicitados
+  const anosParaGerar = [anoAtual]
+  for (let i = 1; i <= futureYears; i++) {
+    anosParaGerar.push(anoAtual + i)
   }
 
-  // Rotinas baseadas em periodicidade, começando a contar no ANO ATUAL, alinhadas ao anchor (dataEvento)
-  if (periodicidade && periodicidade > 0) {
-    const inicioAno = new Date(anoAtual, 0, 1)
-    const fimAno = new Date(anoAtual, 11, 31)
+  for (const ano of anosParaGerar) {
+    // Define tarefa principal (Inspeção Inicial vs Renovação)
+    let tipoTarefa = 2 // Renovação
+    let dataEvento = new Date(ano, dataRenovacaoBase.getMonth(), dataRenovacaoBase.getDate())
+    let tipoTarefaTexto = 'Renovação'
+    let corEvento = 'rgb(167 150 0)'
+    let horaInicio = '13:00:00'
+    let horaFim = '14:00:00'
 
-    // Encontrar a primeira data de rotina >= início do ano e alinhada pela periodicidade em relação ao anchor (dataEvento)
-    // Retrocede em passos de periodicidade até ficar <= início do ano, depois avança até >= início do ano
-    let candidato = new Date(dataEvento.getTime())
-    const periodMs = periodicidade * 24 * 60 * 60 * 1000
-    while (candidato.getTime() - inicioAno.getTime() >= periodMs) {
-      candidato = addDays(candidato, -periodicidade)
-    }
-    while (candidato < inicioAno) {
-      candidato = addDays(candidato, periodicidade)
+    if (anoRenovacao === ano) {
+      tipoTarefa = 1 // Inspeção Inicial
+      tipoTarefaTexto = 'Inspeção Inicial'
     }
 
-    let dataRotina = new Date(candidato.getTime())
-    const primaryMs = dataEvento.getTime()
-    const THIRTEEN_DAYS = 13 * 24 * 60 * 60 * 1000
-
-    while (dataRotina.getTime() <= fimAno.getTime()) {
-      const prazoRotina = formatDate(dataRotina)
-      // pular janelas ±13 dias do evento principal
-      if (Math.abs(dataRotina.getTime() - primaryMs) <= THIRTEEN_DAYS) {
-        dataRotina = addDays(dataRotina, periodicidade)
-        continue
+    const prazo = formatDate(dataEvento)
+    let tarefaPrincipalCriada = false
+    
+    // Evitar duplicidade exatamente na mesma data para a empresa
+    {
+      const [existsRows] = await pool.query<RowDataPacket[]>(
+        `SELECT COUNT(*) as cnt FROM tarefas WHERE prazo = ? AND empresa_id = ?`,
+        [prazo, empresaId]
+      )
+      const exists = Number((existsRows as any)[0]?.cnt || 0)
+      if (exists === 0) {
+        const [ins] = await pool.query<OkPacket>(
+          `INSERT INTO tarefas (empresa_id, finalidade_id, prioridade, status, prazo, setor_id, responsavel_id, created_at, created_by, unidade_id)
+           VALUES (?, ?, 'Normal', 'Automático', ?, 2, ?, NOW(), 1, ?)`,
+          [empresaId, tipoTarefa, prazo, tecnicoId, unidadeId]
+        )
+        const tarefaId = (ins as any).insertId
+        await pool.query<OkPacket>(
+          `INSERT INTO agenda_events (title, description, color, start, end, tarefa_id, usuario_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            `${tipoTarefaTexto} (${nomeEmpresa})`,
+            `${tipoTarefaTexto} a ser realizada na empresa ${nomeEmpresa}`,
+            corEvento,
+            `${prazo} ${horaInicio}`,
+            `${prazo} ${horaFim}`,
+            tarefaId,
+            tecnicoId,
+          ]
+        )
+        createdCount++
+        tarefaPrincipalCriada = true
       }
-      if (!eventosRegistrados.has(prazoRotina)) {
-        // evitar duplicidade numa janela de 13 dias vs quaisquer tarefas existentes
+      // Sempre registrar o evento principal, mesmo se já existia
+      eventosRegistrados.add(prazo)
+    }
+
+    // Rotinas baseadas em periodicidade para o ano específico
+    if (periodicidade && periodicidade > 0) {
+      const inicioAno = new Date(ano, 0, 1)
+      const fimAno = new Date(ano, 11, 31)
+
+      // Encontrar a primeira data de rotina >= início do ano e alinhada pela periodicidade em relação ao anchor (dataEvento)
+      // Retrocede em passos de periodicidade até ficar <= início do ano, depois avança até >= início do ano
+      let candidato = new Date(dataEvento.getTime())
+      const periodMs = periodicidade * 24 * 60 * 60 * 1000
+      while (candidato.getTime() - inicioAno.getTime() >= periodMs) {
+        candidato = addDays(candidato, -periodicidade)
+      }
+      while (candidato < inicioAno) {
+        candidato = addDays(candidato, periodicidade)
+      }
+
+      let dataRotina = new Date(candidato.getTime())
+      const primaryMs = dataEvento.getTime()
+      const THIRTEEN_DAYS = 13 * 24 * 60 * 60 * 1000
+
+      while (dataRotina.getTime() <= fimAno.getTime()) {
+        const prazoRotina = formatDate(dataRotina)
+        
+        // pular janelas ±13 dias do evento principal
+        if (Math.abs(dataRotina.getTime() - primaryMs) <= THIRTEEN_DAYS) {
+          dataRotina = addDays(dataRotina, periodicidade)
+          continue
+        }
+        
+        // Verificar se a data já foi registrada nesta execução
+        if (eventosRegistrados.has(prazoRotina)) {
+          dataRotina = addDays(dataRotina, periodicidade)
+          continue
+        }
+        
+        // Verificar se alguma data registrada nesta execução está dentro da janela de 13 dias
+        let dentroJanelaRegistrada = false
+        for (const dataRegistrada of eventosRegistrados) {
+          const diffMs = Math.abs(dataRotina.getTime() - new Date(dataRegistrada).getTime())
+          if (diffMs <= THIRTEEN_DAYS) {
+            dentroJanelaRegistrada = true
+            break
+          }
+        }
+        
+        if (dentroJanelaRegistrada) {
+          dataRotina = addDays(dataRotina, periodicidade)
+          continue
+        }
+        
+        // evitar duplicidade numa janela de 13 dias vs quaisquer tarefas existentes no banco
         const [existRows] = await pool.query<RowDataPacket[]>(
           `SELECT COUNT(*) as cnt FROM tarefas WHERE empresa_id = ? AND ABS(DATEDIFF(prazo, ?)) <= 13`,
           [empresaId, prazoRotina]
@@ -156,10 +193,11 @@ export async function generateAutomaticTasksForCompany(empresaId: number): Promi
           createdCount++
           eventosRegistrados.add(prazoRotina)
         }
+        
+        dataRotina = addDays(dataRotina, periodicidade)
       }
-      dataRotina = addDays(dataRotina, periodicidade)
     }
-  }
+  } // Fecha o loop de anos
 
   return { created: createdCount }
 }

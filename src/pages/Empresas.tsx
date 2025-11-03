@@ -40,6 +40,8 @@ export default function Empresas() {
   const [confirmInativar, setConfirmInativar] = useState<{ open: boolean; id?: number; nome?: string }>({ open: false })
   const [createSheetOpen, setCreateSheetOpen] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
+  const [futureYearsDialog, setFutureYearsDialog] = useState(false)
+  const [futureYears, setFutureYears] = useState(1) // Padrão: gerar 1 ano futuro
   const [formData, setFormData] = useState({
     cnpj: '',
     razao_social: '',
@@ -226,10 +228,19 @@ export default function Empresas() {
       toastError('Selecione uma unidade para gerar as tarefas automáticas.')
       return
     }
+    
+    // Abrir diálogo para confirmar anos futuros
+    setFutureYearsDialog(true)
+  }
+
+  async function confirmGenerateAutoTasks() {
+    if (selectedUnidade === '') return
+    
     try {
       setLoading(true)
-      const result = await generateAutoTasksForUnit(Number(selectedUnidade))
-      const msg = `Processadas ${result.processed} empresas. Tarefas criadas: ${result.createdTotal}.`
+      setFutureYearsDialog(false)
+      const result = await generateAutoTasksForUnit(Number(selectedUnidade), futureYears)
+      const msg = `Processadas ${result.processed} empresas. Tarefas criadas: ${result.createdTotal} (${result.yearsProcessed} ano${result.yearsProcessed > 1 ? 's' : ''}).`
       // Use success toast to indicate completion
       import('@/lib/customToast').then(({ toastSuccess }) => toastSuccess(msg)).catch(() => alert(msg))
       // Optionally, refresh list or keep as-is
@@ -336,6 +347,42 @@ export default function Empresas() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog de configuração de anos futuros */}
+        <Dialog open={futureYearsDialog} onOpenChange={setFutureYearsDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Gerar Tarefas Automáticas</DialogTitle>
+              <DialogDescription>
+                Configure quantos anos futuros deseja gerar tarefas (além do ano atual).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="futureYears">Anos futuros a gerar</Label>
+              <Input
+                id="futureYears"
+                type="number"
+                min="0"
+                max="5"
+                value={futureYears}
+                onChange={(e) => setFutureYears(Math.max(0, Math.min(5, Number(e.target.value))))}
+                className="mt-2"
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                Será gerado para o ano atual ({new Date().getFullYear()})
+                {futureYears > 0 && ` + ${futureYears} ano${futureYears > 1 ? 's' : ''} futuro${futureYears > 1 ? 's' : ''}`}
+                {futureYears > 0 && ` (até ${new Date().getFullYear() + futureYears})`}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setFutureYearsDialog(false)}>Cancelar</Button>
+              <Button onClick={confirmGenerateAutoTasks}>
+                Gerar Tarefas
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <div className="flex flex-col gap-3">
           <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
             <Input value={query} onChange={(e) => { setQuery(e.target.value); setPage(1) }} placeholder="Buscar por nome, razão social ou CNPJ..." className="max-w-xl" />

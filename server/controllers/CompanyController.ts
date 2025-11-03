@@ -363,6 +363,8 @@ export const updateCompany = async (
 export const generateAutoTasksForUnit = async (req: Request<{ unidade_id: string }>, res: Response): Promise<void> => {
   try {
     const { unidade_id } = req.params
+    const futureYears = req.query.futureYears ? Number(req.query.futureYears) : 0
+    
     if (!unidade_id) {
       res.status(400).json({ message: 'unidade_id é obrigatório' })
       return
@@ -383,7 +385,7 @@ export const generateAutoTasksForUnit = async (req: Request<{ unidade_id: string
     let createdTotal = 0
     for (const id of ids) {
       try {
-        const { created } = await generateAutomaticTasksForCompany(id)
+        const { created } = await generateAutomaticTasksForCompany(id, { futureYears })
         createdTotal += Number(created || 0)
         details.push({ empresaId: id, created: Number(created || 0) })
       } catch (e) {
@@ -392,7 +394,12 @@ export const generateAutoTasksForUnit = async (req: Request<{ unidade_id: string
       }
     }
 
-    res.status(200).json({ processed: ids.length, createdTotal, details })
+    res.status(200).json({ 
+      processed: ids.length, 
+      createdTotal, 
+      details,
+      yearsProcessed: futureYears + 1 // ano atual + anos futuros
+    })
   } catch (error) {
     console.error('Erro ao gerar tarefas automáticas por unidade:', error)
     res.status(500).json({ message: 'Erro ao gerar tarefas automáticas por unidade' })
