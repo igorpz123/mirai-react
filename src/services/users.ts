@@ -25,8 +25,8 @@ export interface CreateUserData {
     email: string;
     senha: string;
     empresaId: number;
-    unidadeId: number;
-    setorId: number;
+    unidadeIds: number[];
+    setorIds: number[];
     cargo?: string;
     // optional numeric cargo id (preferred)
     cargoId?: number;

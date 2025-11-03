@@ -417,11 +417,11 @@ export const uploadUserPhoto = async (req: Request, res: Response): Promise<void
 
 /**
  * Criar um novo usuário
- * Body esperado: { nome, sobrenome, email, senha, cargoId?, unidadeId?, setorId? }
+ * Body esperado: { nome, sobrenome, email, senha, cargoId?, unidadeIds?: number[], setorIds?: number[] }
  */
 export const createUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { nome, sobrenome, email, senha, cargoId } = req.body as any
+    const { nome, sobrenome, email, senha, cargoId, unidadeIds, setorIds } = req.body as any
     if (!nome || !email || !senha) {
       res.status(400).json({ message: 'nome, email e senha são obrigatórios' })
       return
@@ -443,16 +443,20 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
     const [result] = await pool.query(insertSql, [nome, sobrenome, email, hash, cargo_id]) as any
     const newId = result.insertId
 
-    // optionally attach setor/unidade relations if provided
+    // insert multiple setores and unidades if provided
     try {
-      const { setorId, unidadeId } = req.body as any
-      if (setorId) {
-        await pool.query('INSERT INTO usuario_setores (usuario_id, setor_id) VALUES (?, ?)', [newId, Number(setorId)])
+      if (Array.isArray(setorIds) && setorIds.length > 0) {
+        const setorValues = setorIds.map(sid => [newId, Number(sid)])
+        await pool.query('INSERT IGNORE INTO usuario_setores (usuario_id, setor_id) VALUES ?', [setorValues])
       }
-      if (unidadeId) {
-        await pool.query('INSERT INTO usuario_unidades (usuario_id, unidade_id) VALUES (?, ?)', [newId, Number(unidadeId)])
+      if (Array.isArray(unidadeIds) && unidadeIds.length > 0) {
+        const unidadeValues = unidadeIds.map(uid => [newId, Number(uid)])
+        await pool.query('INSERT IGNORE INTO usuario_unidades (usuario_id, unidade_id) VALUES ?', [unidadeValues])
       }
-    } catch (e) { /* ignore relation errors */ }
+    } catch (e) { 
+      console.error('Erro ao vincular setores/unidades:', e)
+      // continue anyway
+    }
 
     // return created user minimal
     const [rows] = await pool.query('SELECT id, nome, sobrenome, email, cargo_id, foto_url FROM usuarios WHERE id = ? LIMIT 1', [newId]) as [any[], any]

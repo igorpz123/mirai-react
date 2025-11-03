@@ -10,6 +10,7 @@ import { toastError, toastSuccess } from '@/lib/customToast'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
+import { ImageUpload } from '@/components/ui/image-upload'
 import { getUnidades, type Unidade } from '@/services/unidades'
 import { getSetores, type Setor } from '@/services/setores'
 import { getCargos, type Cargo } from '@/services/cargos'
@@ -31,7 +32,16 @@ export default function AdminUsers() {
   const [setores, setSetores] = useState<Setor[]>([])
   const [cargos, setCargos] = useState<Cargo[]>([])
 
-  const [form, setForm] = useState({ nome: '', sobrenome: '', email: '', senha: '', empresaId: 0, unidadeId: 0, setorId: 0, cargo: '' })
+  const [form, setForm] = useState({
+    nome: '',
+    sobrenome: '',
+    email: '',
+    senha: '',
+    empresaId: 0,
+    unidadeIds: [] as number[],
+    setorIds: [] as number[],
+    cargo: ''
+  })
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [creating, setCreating] = useState(false)
 
@@ -108,7 +118,7 @@ export default function AdminUsers() {
   }
 
   function resetForm() {
-    setForm({ nome: '', sobrenome: '', email: '', senha: '', empresaId: 0, unidadeId: 0, setorId: 0, cargo: '' })
+    setForm({ nome: '', sobrenome: '', email: '', senha: '', empresaId: 0, unidadeIds: [], setorIds: [], cargo: '' })
     setSelectedFile(null)
   }
 
@@ -123,15 +133,15 @@ export default function AdminUsers() {
         email: form.email,
         senha: form.senha,
         empresaId: Number(form.empresaId) || 0,
-        unidadeId: Number(form.unidadeId) || 0,
-        setorId: Number(form.setorId) || 0,
+        unidadeIds: form.unidadeIds,
+        setorIds: form.setorIds,
         cargo: undefined,
         cargoId: form.cargo ? Number(form.cargo) : undefined,
       }
       const created = await createUser(payload)
       // created may be { user } or user directly; try to extract id
-  const anyCreated: any = created
-  const newUserId = anyCreated?.user?.id || anyCreated?.id
+      const anyCreated: any = created
+      const newUserId = anyCreated?.user?.id || anyCreated?.id
       // if a file was selected, upload it to /api/usuarios/:id/photo
       if (newUserId && selectedFile) {
         try {
@@ -163,7 +173,7 @@ export default function AdminUsers() {
     <div className="container-main">
       <SiteHeader title="Usuários | Administrativo" />
 
-  <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 py-4 md:py-6 px-4 lg:px-6">
         <div className="flex flex-col md:flex-row md:items-center gap-3 justify-between">
           <Input
             value={query}
@@ -181,33 +191,102 @@ export default function AdminUsers() {
                   <DialogTitle>Novo usuário</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-2">
+
                   <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="Nome" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
-                    <Input placeholder="Sobrenome" value={form.sobrenome} onChange={e => setForm(f => ({ ...f, sobrenome: e.target.value }))} />
+                    <div>
+                      <label className="text-sm mb-1 block">Nome</label>
+                      <Input placeholder="João" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="text-sm mb-1 block">Sobrenome</label>
+                      <Input placeholder="da Silva" value={form.sobrenome} onChange={e => setForm(f => ({ ...f, sobrenome: e.target.value }))} />
+                    </div>
                   </div>
-                  <Input placeholder="Email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-                  <Input placeholder="Senha" type="password" value={form.senha} onChange={e => setForm(f => ({ ...f, senha: e.target.value }))} />
-                  <Select onValueChange={v => setForm(f => ({ ...f, unidadeId: Number(v) }))}>
-                    <SelectTrigger size="sm"><SelectValue placeholder="Unidade" /></SelectTrigger>
-                    <SelectContent>
-                      {unidades.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select onValueChange={v => setForm(f => ({ ...f, setorId: Number(v) }))}>
-                    <SelectTrigger size="sm"><SelectValue placeholder="Setor" /></SelectTrigger>
-                    <SelectContent>
-                      {setores.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <Select onValueChange={v => setForm(f => ({ ...f, cargo: v }))}>
-                    <SelectTrigger size="sm"><SelectValue placeholder="Cargo" /></SelectTrigger>
-                    <SelectContent>
-                      {cargos.map(cg => <SelectItem key={cg.id} value={String(cg.id)}>{cg.nome}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-sm mb-1 block">Email</label>
+                      <Input placeholder="user@mail.com" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="text-sm mb-1 block">Senha</label>
+                      <Input placeholder="Senha" type="password" value={form.senha} onChange={e => setForm(f => ({ ...f, senha: e.target.value }))} />
+                    </div>
+                  </div>
                   <div>
-                    <label className="text-sm">Foto do usuário</label>
-                    <input type="file" accept="image/*" onChange={e => setSelectedFile(e.target.files ? e.target.files[0] : null)} />
+                    <label className="text-sm mb-1 block">Cargo</label>
+                    <Select onValueChange={v => setForm(f => ({ ...f, cargo: v }))}>
+                      <SelectTrigger className='w-full'><SelectValue placeholder="Selecione um Cargo" /></SelectTrigger>
+                      <SelectContent>
+                        {cargos.map(cg => <SelectItem key={cg.id} value={String(cg.id)}>{cg.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Unidades */}
+                  <div>
+                    <label className="text-sm mb-1 block">Unidades</label>
+                    <Select
+                      multiple
+                      value={form.unidadeIds.map(id => {
+                        const unidade = unidades.find(u => u.id === id)
+                        return unidade ? unidade.nome : String(id)
+                      })}
+                      onValueChange={(values: string[]) => {
+                        // Converter nomes de volta para IDs
+                        const ids = values.map(nome => {
+                          const unidade = unidades.find(u => u.nome === nome)
+                          return unidade ? unidade.id : parseInt(nome)
+                        }).filter(id => !isNaN(id))
+                        setForm(f => ({ ...f, unidadeIds: ids }))
+                      }}
+                    >
+                      <SelectTrigger className='w-full'>
+                        <SelectValue placeholder="Selecione unidades" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unidades.map(u => <SelectItem key={u.id} value={u.nome}>{u.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Setores */}
+                  <div>
+                    <label className="text-sm mb-1 block">Setores</label>
+                    <Select
+                      multiple
+                      value={form.setorIds.map(id => {
+                        const setor = setores.find(s => s.id === id)
+                        return setor ? setor.nome : String(id)
+                      })}
+                      onValueChange={(values: string[]) => {
+                        // Converter nomes de volta para IDs
+                        const ids = values.map(nome => {
+                          const setor = setores.find(s => s.nome === nome)
+                          return setor ? setor.id : parseInt(nome)
+                        }).filter(id => !isNaN(id))
+                        setForm(f => ({ ...f, setorIds: ids }))
+                      }}
+                    >
+                      <SelectTrigger className='w-full'>
+                        <SelectValue placeholder="Selecione setores" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {setores.map(s => <SelectItem key={s.id} value={s.nome}>{s.nome}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Foto do usuário */}
+                  <div>
+                    <label className="text-sm mb-2 block font-medium">Foto do usuário</label>
+                    <ImageUpload
+                      variant="avatar"
+                      value={selectedFile}
+                      onChange={(file) => setSelectedFile(file)}
+                      onRemove={() => setSelectedFile(null)}
+                      maxSize={5}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
