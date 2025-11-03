@@ -20,7 +20,7 @@ export const getStatusText = (status?: string | null): string => {
   }
 }
 
-export const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({ status, className }) => {
+export const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = React.memo(({ status, className }) => {
   if (!status) return null
   const text = getStatusText(status)
   let badgeClass = ''
@@ -43,6 +43,6 @@ export const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({ status, classN
       {text}
     </Badge>
   )
-}
+})
 
 export default TaskStatusBadge

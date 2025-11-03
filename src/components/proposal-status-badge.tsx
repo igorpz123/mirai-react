@@ -33,7 +33,7 @@ const getProposalStatusText = (status?: string | null): string => {
   }
 }
 
-export const ProposalStatusBadge: React.FC<ProposalStatusBadgeProps> = ({ status, className }) => {
+export const ProposalStatusBadge: React.FC<ProposalStatusBadgeProps> = React.memo(({ status, className }) => {
   if (!status) return null
   const key = (status || '').toLowerCase()
   const text = getProposalStatusText(status)
@@ -64,6 +64,6 @@ export const ProposalStatusBadge: React.FC<ProposalStatusBadgeProps> = ({ status
       {text}
     </Badge>
   )
-}
+})
 
 export default ProposalStatusBadge
