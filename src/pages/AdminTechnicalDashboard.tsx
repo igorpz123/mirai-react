@@ -9,6 +9,7 @@ import { TechnicalTaskTable } from "@/components/technical-task-table"
 import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
 import { SiteHeader } from "@/components/layout/site-header"
 import { getTaskStatsByUnit } from '@/services/tasks'
+import { TechnicalLeaderboard } from '@/components/technical-leaderboard';
 
 export default function AdminTechnicalDashboard(): ReactElement {
 
@@ -50,7 +51,10 @@ export default function AdminTechnicalDashboard(): ReactElement {
       <div className="flex flex-1 flex-col">
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-            <TechnicalDashboardCards stats={stats} loading={loadingStats} error={errorStats} />
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 mx-6'>
+              <TechnicalDashboardCards stats={stats} loading={loadingStats} error={errorStats} />
+                <TechnicalLeaderboard maxUsers={10} />
+            </div>
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive data={completedByDay} />
             </div>
