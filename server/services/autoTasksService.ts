@@ -52,7 +52,6 @@ export async function generateAutomaticTasksForCompany(
   const anoAtual = now.getFullYear()
   const dataRenovacaoBase = new Date(emp.data_renovacao as any)
   if (isNaN(dataRenovacaoBase.getTime())) return { created: 0 }
-  const anoRenovacao = dataRenovacaoBase.getFullYear()
 
   let createdCount = 0
   const eventosRegistrados = new Set<string>()
@@ -63,18 +62,28 @@ export async function generateAutomaticTasksForCompany(
     anosParaGerar.push(anoAtual + i)
   }
 
+  // Determinar se é primeira inspeção (no ano da data de renovação) ou renovação
+  const anoRenovacao = dataRenovacaoBase.getFullYear()
+  const isPrimeiraInspecao = anoAtual === anoRenovacao
+
   for (const ano of anosParaGerar) {
-    // Define tarefa principal (Inspeção Inicial vs Renovação)
-    let tipoTarefa = 2 // Renovação
+    // Define tarefa principal baseado no ano sendo gerado
+    let tipoTarefa = 2 // Renovação (padrão)
     let dataEvento = new Date(ano, dataRenovacaoBase.getMonth(), dataRenovacaoBase.getDate())
     let tipoTarefaTexto = 'Renovação'
     let corEvento = 'rgb(167 150 0)'
     let horaInicio = '13:00:00'
     let horaFim = '14:00:00'
 
-    if (anoRenovacao === ano) {
+    // Se estamos gerando para o ano da data de renovação, é Inspeção Inicial
+    if (ano === anoRenovacao) {
       tipoTarefa = 1 // Inspeção Inicial
       tipoTarefaTexto = 'Inspeção Inicial'
+    }
+
+    // **REGRA IMPORTANTE**: Não criar tarefas com data anterior à data de renovação
+    if (dataEvento < dataRenovacaoBase) {
+      continue // Pula este ano, pois a data seria anterior à renovação
     }
 
     const prazo = formatDate(dataEvento)
@@ -119,14 +128,17 @@ export async function generateAutomaticTasksForCompany(
       const inicioAno = new Date(ano, 0, 1)
       const fimAno = new Date(ano, 11, 31)
 
-      // Encontrar a primeira data de rotina >= início do ano e alinhada pela periodicidade em relação ao anchor (dataEvento)
-      // Retrocede em passos de periodicidade até ficar <= início do ano, depois avança até >= início do ano
+      // **IMPORTANTE**: Usar o maior valor entre início do ano e data de renovação
+      const dataInicioRotinas = inicioAno > dataRenovacaoBase ? inicioAno : dataRenovacaoBase
+
+      // Encontrar a primeira data de rotina >= dataInicioRotinas e alinhada pela periodicidade em relação ao anchor (dataEvento)
+      // Retrocede em passos de periodicidade até ficar <= dataInicioRotinas, depois avança até >= dataInicioRotinas
       let candidato = new Date(dataEvento.getTime())
       const periodMs = periodicidade * 24 * 60 * 60 * 1000
-      while (candidato.getTime() - inicioAno.getTime() >= periodMs) {
+      while (candidato.getTime() - dataInicioRotinas.getTime() >= periodMs) {
         candidato = addDays(candidato, -periodicidade)
       }
-      while (candidato < inicioAno) {
+      while (candidato < dataInicioRotinas) {
         candidato = addDays(candidato, periodicidade)
       }
 
@@ -136,6 +148,12 @@ export async function generateAutomaticTasksForCompany(
 
       while (dataRotina.getTime() <= fimAno.getTime()) {
         const prazoRotina = formatDate(dataRotina)
+        
+        // **REGRA IMPORTANTE**: Não criar rotinas anteriores à data de renovação
+        if (dataRotina < dataRenovacaoBase) {
+          dataRotina = addDays(dataRotina, periodicidade)
+          continue
+        }
         
         // pular janelas ±13 dias do evento principal
         if (Math.abs(dataRotina.getTime() - primaryMs) <= THIRTEEN_DAYS) {

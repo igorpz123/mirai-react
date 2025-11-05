@@ -128,6 +128,7 @@ async function searchTasks(query: string, userId: number, userCargoId: number, u
         t.prazo,
         e.nome_fantasia AS empresa_nome,
         e.cnpj,
+        e.caepf,
         u.nome AS responsavel_nome,
         tt.tipo AS tipo_nome
       FROM tarefas t
@@ -137,7 +138,8 @@ async function searchTasks(query: string, userId: number, userCargoId: number, u
       WHERE (
         t.id LIKE ? OR
         e.nome_fantasia LIKE ? OR
-        e.cnpj LIKE ?
+        e.cnpj LIKE ? OR
+        e.caepf LIKE ?
       )
       AND t.status != 'Automático'`
     
@@ -205,6 +207,7 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
         p.titulo,
         e.nome_fantasia AS nome_cliente,
         e.cnpj,
+        e.caepf,
         p.status,
         u.nome AS responsavel_nome,
         p.data_alteracao
@@ -214,10 +217,11 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
       WHERE (
         e.nome_fantasia LIKE ? OR
         e.cnpj LIKE ? OR
+        e.caepf LIKE ? OR
         p.titulo LIKE ?
       )`
     
-    const params: any[] = [searchPattern, searchPattern, searchPattern]
+    const params: any[] = [searchPattern, searchPattern, searchPattern, searchPattern]
     
     // Adicionar filtro de unidade se fornecido
     if (unitId) {
@@ -237,6 +241,7 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
       if (cliente.includes(lowerQuery)) relevance += 100
       if (cliente.startsWith(lowerQuery)) relevance += 50
       if (row.cnpj && row.cnpj.includes(query)) relevance += 80
+      if (row.caepf && row.caepf.includes(query)) relevance += 80
 
       // Boost para propostas pendentes
       if (row.status && row.status.toLowerCase().includes('pendent')) relevance += 15
@@ -272,6 +277,7 @@ async function searchCompanies(query: string, userId: number, unitId?: number): 
         e.id,
         e.nome_fantasia AS nome,
         e.cnpj,
+        e.caepf,
         e.razao_social,
         e.telefone,
         e.email,
@@ -282,11 +288,12 @@ async function searchCompanies(query: string, userId: number, unitId?: number): 
       WHERE (
         e.nome_fantasia LIKE ? OR
         e.cnpj LIKE ? OR
+        e.caepf LIKE ? OR
         e.razao_social LIKE ? OR
         e.email LIKE ?
       )`
     
-    const params: any[] = [searchPattern, searchPattern, searchPattern, searchPattern]
+    const params: any[] = [searchPattern, searchPattern, searchPattern, searchPattern, searchPattern]
     
     // Adicionar filtro de unidade se fornecido
     if (unitId) {
@@ -308,12 +315,13 @@ async function searchCompanies(query: string, userId: number, unitId?: number): 
       if (nome.startsWith(lowerQuery)) relevance += 50
       if (razao.includes(lowerQuery)) relevance += 80
       if (row.cnpj && row.cnpj.includes(query)) relevance += 90
+      if (row.caepf && row.caepf.includes(query)) relevance += 90
 
       return {
         id: row.id,
         type: 'company' as const,
         title: row.nome || 'Sem nome',
-        subtitle: row.cnpj || row.razao_social || 'Sem CNPJ',
+        subtitle: row.cnpj || row.caepf || row.razao_social || 'Sem documento',
         description: row.cidade && row.estado ? `${row.cidade} - ${row.estado}` : undefined,
         metadata: {
           telefone: row.telefone,
