@@ -14,7 +14,7 @@ import { IconDotsVertical, IconTrash } from '@tabler/icons-react'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toastError } from '@/lib/customToast'
-import { getAllCompanies, type Company, generateAutoTasksForUnit, updateCompany, createCompany, getCompanyByCNPJ } from '@/services/companies'
+import { getAllCompanies, type Company, generateAutoTasksForUnit, updateCompany, createCompany, getCompanyByCNPJ, getJobStatus } from '@/services/companies'
 import { toastSuccess } from '@/lib/customToast'
 import { getUnidades } from '@/services/unidades'
 import { getAllUsers, type User } from '@/services/users'
@@ -287,15 +287,46 @@ export default function Empresas() {
     try {
       setLoading(true)
       setFutureYearsDialog(false)
-      const result = await generateAutoTasksForUnit(Number(selectedUnidade), futureYears)
-      const msg = `Processadas ${result.processed} empresas. Tarefas criadas: ${result.createdTotal} (${result.yearsProcessed} ano${result.yearsProcessed > 1 ? 's' : ''}).`
-      // Use success toast to indicate completion
-      import('@/lib/customToast').then(({ toastSuccess }) => toastSuccess(msg)).catch(() => alert(msg))
-      // Optionally, refresh list or keep as-is
+      
+      // Iniciar job assíncrono
+      const jobData = await generateAutoTasksForUnit(Number(selectedUnidade), futureYears)
+      
+      toastSuccess(`Processamento iniciado para ${jobData.totalEmpresas} empresas. Você receberá uma notificação quando terminar.`)
+      
+      // Fazer polling do status do job
+      const pollInterval = setInterval(async () => {
+        try {
+          const status = await getJobStatus(jobData.jobId)
+          
+          if (status.status === 'completed') {
+            clearInterval(pollInterval)
+            setLoading(false)
+            
+            if (status.result) {
+              const msg = `Processadas ${status.result.processed} empresas. Tarefas criadas: ${status.result.createdTotal} (${status.result.yearsProcessed} ano${status.result.yearsProcessed && status.result.yearsProcessed > 1 ? 's' : ''}).`
+              toastSuccess(msg)
+            }
+          } else if (status.status === 'failed') {
+            clearInterval(pollInterval)
+            setLoading(false)
+            toastError(status.error || 'Falha ao gerar tarefas automáticas')
+          }
+          // Se ainda estiver running ou pending, continua o polling
+        } catch (pollError) {
+          console.error('Erro ao consultar status do job:', pollError)
+          // Não limpar o intervalo aqui para continuar tentando
+        }
+      }, 2000) // Consultar a cada 2 segundos
+      
+      // Timeout de segurança: parar polling após 10 minutos
+      setTimeout(() => {
+        clearInterval(pollInterval)
+        setLoading(false)
+      }, 600000)
+      
     } catch (e: any) {
       const m = e?.message || 'Falha ao gerar tarefas automáticas por unidade'
       toastError(m)
-    } finally {
       setLoading(false)
     }
   }

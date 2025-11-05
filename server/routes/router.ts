@@ -17,6 +17,7 @@ import relatoriosRoutes from './relatorios'
 import aiRoutes from './ai'
 import permissoesRoutes from './permissoes'
 import agendaUsersRoutes from './agendaUsers'
+import searchRoutes from './search'
 
 const router = Router()
 
@@ -38,5 +39,6 @@ router.use('/relatorios', relatoriosRoutes)
 router.use('/ai', aiRoutes)
 router.use('/permissoes', permissoesRoutes)
 router.use('/agenda-users', agendaUsersRoutes)
+router.use('/search', searchRoutes)
 
 export default router

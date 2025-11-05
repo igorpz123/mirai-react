@@ -12,6 +12,7 @@ import {
   Activity,
   SquarePen,
   CircleDollarSign,
+  Search,
   // Sparkles,
 } from "lucide-react"
 
@@ -20,6 +21,7 @@ import { NavComercial } from "./nav-comercial"
 import { NavAdmin } from "./nav-admin"
 import { NavUser } from "@/components/layout/nav-user"
 import { UnitSwitcher } from "@/components/layout/unit-switcher"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -28,6 +30,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useAuth } from '@/hooks/use-auth'
+import { useGlobalSearch } from '@/contexts/GlobalSearchContext'
 import { getTasksByUnitId } from '@/services/tasks'
 import { useEffect, useState } from 'react'
 
@@ -80,6 +83,7 @@ const navAdminDataOutside = [
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user, signOut } = useAuth();
   const { unitId, setUnitId } = useUnit()
+  const { open: openSearch } = useGlobalSearch()
 
   const isAdmin = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 3; // Ajuste conforme a lógica do seu sistema
   const isComercial = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 13; // Ajuste conforme a lógica do seu sistema
@@ -195,6 +199,19 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           unitId={unitId}
           onUnitChange={setUnitId}
         />
+        <div className="px-2 py-1">
+          <Button
+            variant="outline"
+            className="w-full justify-start text-sm text-muted-foreground font-normal h-9"
+            onClick={openSearch}
+          >
+            <Search className="mr-2 h-4 w-4" />
+            <span>Buscar...</span>
+            <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+              <span className="text-xs">⌘</span>K
+            </kbd>
+          </Button>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavTechnical items={NavTechnicalData} />
