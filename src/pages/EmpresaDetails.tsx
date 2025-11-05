@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toastError, toastSuccess } from '@/lib/customToast'
 import { TechnicalTaskTable } from '@/components/technical-task-table'
 import { CommercialProposalsTable } from '@/components/commercial-proposals-table'
@@ -57,6 +58,8 @@ export default function EmpresaDetails() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [proposals, setProposals] = useState<any[]>([])
   const [reactivating, setReactivating] = useState(false)
+  const [futureYearsDialog, setFutureYearsDialog] = useState(false)
+  const [futureYears, setFutureYears] = useState(1)
 
   const [form, setForm] = useState({
     nome_fantasia: '',
@@ -153,12 +156,22 @@ export default function EmpresaDetails() {
     return () => { mounted = false }
   }, [form.unidade_responsavel])
 
-  const handleSave = async () => {
+  const handleSave = async (skipDialog = false) => {
     if (!id) return
     if (!canSave) {
       toastError('Preencha os campos obrigatórios e verifique o CNPJ/CAEPF')
       return
     }
+
+    // Se tem mudanças em periodicidade ou data_renovacao e não foi confirmado ainda
+    if (!skipDialog && (
+      form.data_renovacao !== ((empresa as any)?.data_renovacao || '') ||
+      form.periodicidade !== ((empresa as any)?.periodicidade || null)
+    )) {
+      setFutureYearsDialog(true)
+      return
+    }
+
     setSaving(true)
     try {
       const payload: any = { ...form }
@@ -176,14 +189,31 @@ export default function EmpresaDetails() {
         if (d.length === 0) delete payload.caepf
         else payload.caepf = d
       }
-      const updated = await updateCompany(Number(id), payload)
+      
+      // Passa o parâmetro futureYears se foi confirmado via diálogo
+      const updated = await updateCompany(
+        Number(id), 
+        payload,
+        skipDialog ? futureYears : undefined
+      )
       setEmpresa(updated)
       toastSuccess('Empresa atualizada')
+      
+      // Recarrega as tarefas para mostrar as novas tarefas automáticas
+      if (skipDialog) {
+        const response = await getTasksByCompany(Number(id))
+        setTasks(Array.isArray(response) ? response : (response as any).tasks || [])
+      }
     } catch (e: any) {
       toastError(e?.message || 'Falha ao salvar')
     } finally {
       setSaving(false)
     }
+  }
+
+  const confirmSaveWithFutureYears = async () => {
+    setFutureYearsDialog(false)
+    await handleSave(true)
   }
 
   async function handleReactivate() {
@@ -341,7 +371,7 @@ export default function EmpresaDetails() {
                     data_renovacao: (empresa as any).data_renovacao ?? '',
                   })
                 }}>Cancelar</Button>
-                <Button onClick={handleSave} disabled={!canSave || saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
+                <Button onClick={() => handleSave()} disabled={!canSave || saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
               </div>
             </div>
 
@@ -366,6 +396,41 @@ export default function EmpresaDetails() {
             </div>
           </>
         )}
+
+        {/* Dialog de configuração de anos futuros */}
+        <Dialog open={futureYearsDialog} onOpenChange={setFutureYearsDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Gerar Tarefas Automáticas</DialogTitle>
+              <DialogDescription>
+                Configure quantos anos futuros deseja gerar tarefas (além do ano atual).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="futureYears">Anos futuros a gerar</Label>
+              <Input
+                id="futureYears"
+                type="number"
+                min="0"
+                max="5"
+                value={futureYears}
+                onChange={(e) => setFutureYears(Math.max(0, Math.min(5, Number(e.target.value))))}
+                className="mt-2"
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                Será gerado para o ano atual ({new Date().getFullYear()})
+                {futureYears > 0 && ` + ${futureYears} ano${futureYears > 1 ? 's' : ''} futuro${futureYears > 1 ? 's' : ''}`}
+                {futureYears > 0 && ` (até ${new Date().getFullYear() + futureYears})`}
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setFutureYearsDialog(false)}>Cancelar</Button>
+              <Button onClick={confirmSaveWithFutureYears}>
+                Salvar e Gerar Tarefas
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

@@ -260,9 +260,17 @@ export async function createCompany(payload: { cnpj: string; razao_social: strin
   return res.json()
 }
 
-export async function updateCompany(id: number, payload: Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null; periodicidade: number | null; data_renovacao: string | null }>): Promise<Company> {
+export async function updateCompany(
+  id: number, 
+  payload: Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; caepf: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null; periodicidade: number | null; data_renovacao: string | null }>,
+  futureYears?: number
+): Promise<Company> {
   const token = localStorage.getItem('token')
-  const res = await fetch(`${API_URL}/empresas/${id}`, {
+  let url = `${API_URL}/empresas/${id}`
+  if (futureYears !== undefined && futureYears > 0) {
+    url += `?futureYears=${futureYears}`
+  }
+  const res = await fetch(url, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
