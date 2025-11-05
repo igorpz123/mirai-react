@@ -4,6 +4,40 @@ Bem-vindo à documentação do projeto Mirai React!
 
 ## 🗂️ Índice de Documentação
 
+### 👤 Documentação do Usuário
+**Guias completos para uso do sistema, independente do nível técnico:**
+
+- **[📘 Documentação Completa do Usuário](DOCUMENTACAO_USUARIO.md)** - Guia abrangente e detalhado
+  - Login e navegação
+  - Todos os módulos explicados passo a passo
+  - Casos de uso práticos
+  - Troubleshooting completo
+  - Mais de 100 páginas de conteúdo
+
+- **[⚡ Guia Rápido](GUIA_RAPIDO.md)** - Resumo executivo de 2 páginas
+  - Tarefas mais comuns
+  - Atalhos essenciais
+  - Consulta rápida
+  - Ideal para imprimir
+
+- **[❓ FAQ Completo](FAQ_COMPLETO.md)** - Perguntas frequentes organizadas
+  - 100+ perguntas e respostas
+  - Organizado por módulo
+  - Soluções para problemas comuns
+  - Pesquisável (use Ctrl+F)
+
+- **[📖 Glossário](GLOSSARIO.md)** - Termos e definições
+  - Vocabulário do sistema
+  - Explicações claras
+  - Exemplos de uso
+  - Ordem alfabética
+
+- **[📋 Changelog do Usuário](CHANGELOG_USUARIO.md)** - Histórico de atualizações
+  - Novidades e melhorias
+  - Mudanças importantes
+  - Roadmap futuro
+  - Template para atualizações
+
 ### 🔍 Busca Global
 Sistema completo de busca rápida com atalho Ctrl+K:
 
