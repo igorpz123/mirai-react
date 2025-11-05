@@ -42,8 +42,10 @@ export default function Empresas() {
   const [createLoading, setCreateLoading] = useState(false)
   const [futureYearsDialog, setFutureYearsDialog] = useState(false)
   const [futureYears, setFutureYears] = useState(1) // Padrão: gerar 1 ano futuro
+  const [documentType, setDocumentType] = useState<'cnpj' | 'caepf'>('cnpj') // Controla qual tipo de documento está selecionado
   const [formData, setFormData] = useState({
     cnpj: '',
+    caepf: '',
     razao_social: '',
     nome_fantasia: '',
     cidade: '',
@@ -63,6 +65,16 @@ export default function Empresas() {
       .replace(/\.(\d{3})(\d)/, '.$1/$2')
       .replace(/(\d{4})(\d)/, '$1-$2')
       .substring(0, 18)
+  }
+
+  // Função para formatar CPF
+  function formatCPF(value: string) {
+    const cleanValue = value.replace(/\D/g, '')
+    return cleanValue
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1-$2')
+      .substring(0, 14)
   }
 
   // Função para formatar telefone
@@ -116,6 +128,35 @@ export default function Empresas() {
     return resultado === parseInt(digitos.charAt(1))
   }
 
+  // Função para validar CPF
+  function isValidCPF(cpf: string) {
+    const cleanCpf = cpf.replace(/\D/g, '')
+    if (cleanCpf.length !== 11) return false
+    
+    // Elimina CPFs inválidos conhecidos
+    if (/^(\d)\1{10}$/.test(cleanCpf)) return false
+    
+    // Valida primeiro dígito
+    let soma = 0
+    for (let i = 0; i < 9; i++) {
+      soma += parseInt(cleanCpf.charAt(i)) * (10 - i)
+    }
+    let resto = (soma * 10) % 11
+    if (resto === 10 || resto === 11) resto = 0
+    if (resto !== parseInt(cleanCpf.charAt(9))) return false
+    
+    // Valida segundo dígito
+    soma = 0
+    for (let i = 0; i < 10; i++) {
+      soma += parseInt(cleanCpf.charAt(i)) * (11 - i)
+    }
+    resto = (soma * 10) % 11
+    if (resto === 10 || resto === 11) resto = 0
+    if (resto !== parseInt(cleanCpf.charAt(10))) return false
+    
+    return true
+  }
+
   async function fetchAll() {
     setLoading(true)
     setError(null)
@@ -148,6 +189,13 @@ export default function Empresas() {
   }
 
   useEffect(() => { fetchAll() }, [])
+
+  // Reset documentType when sheet is closed
+  useEffect(() => {
+    if (!createSheetOpen) {
+      setDocumentType('cnpj')
+    }
+  }, [createSheetOpen])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -253,30 +301,53 @@ export default function Empresas() {
   }
 
   async function handleCreateCompany() {
-    if (!formData.cnpj || !formData.razao_social || !formData.nome_fantasia) {
-      toastError('CNPJ, Razão Social e Nome Fantasia são obrigatórios.')
+    // Validar que ao menos um dos dois foi preenchido
+    if ((!formData.cnpj && !formData.caepf) || !formData.razao_social || !formData.nome_fantasia) {
+      toastError('CNPJ ou CAEPF, Razão Social e Nome Fantasia são obrigatórios.')
       return
     }
 
-    if (!isValidCNPJ(formData.cnpj)) {
+    // Validar que apenas um foi preenchido
+    if (formData.cnpj && formData.caepf) {
+      toastError('Preencha apenas CNPJ ou CAEPF, não ambos.')
+      return
+    }
+
+    // Validar CNPJ se foi preenchido
+    if (formData.cnpj && !isValidCNPJ(formData.cnpj)) {
       toastError('CNPJ inválido. Verifique o número informado.')
+      return
+    }
+
+    // Validar CPF se foi preenchido
+    if (formData.caepf && !isValidCPF(formData.caepf)) {
+      toastError('CPF inválido. Verifique o número informado.')
       return
     }
 
     try {
       setCreateLoading(true)
       
-      // Verificar se já existe empresa com esse CNPJ
-      const existingCompany = await getCompanyByCNPJ(formData.cnpj.replace(/\D/g, ''))
-      if (existingCompany) {
-        toastError('Já existe uma empresa cadastrada com este CNPJ.')
-        return
+      // Verificar se já existe empresa com esse CNPJ ou CAEPF
+      if (formData.cnpj) {
+        const existingCompany = await getCompanyByCNPJ(formData.cnpj.replace(/\D/g, ''))
+        if (existingCompany) {
+          toastError('Já existe uma empresa cadastrada com este CNPJ.')
+          return
+        }
       }
 
       const payload: any = {
-        cnpj: formData.cnpj.replace(/\D/g, ''), // Remove formatação para enviar
         razao_social: formData.razao_social,
         nome_fantasia: formData.nome_fantasia,
+      }
+
+      // Adicionar CNPJ ou CAEPF
+      if (formData.cnpj) {
+        payload.cnpj = formData.cnpj.replace(/\D/g, '') // Remove formatação para enviar
+      }
+      if (formData.caepf) {
+        payload.caepf = formData.caepf.replace(/\D/g, '') // Remove formatação para enviar
       }
 
       if (formData.cidade) payload.cidade = formData.cidade
@@ -294,6 +365,7 @@ export default function Empresas() {
         nome: newCompany.nome || formData.nome_fantasia,
         razao_social: formData.razao_social,
         cnpj: formData.cnpj,
+        caepf: formData.caepf,
         tecnico_responsavel: Number(formData.tecnico_responsavel) || null,
         tecnico_nome: usuarios.find(u => u.id === Number(formData.tecnico_responsavel))?.nome || null,
       }])
@@ -301,6 +373,7 @@ export default function Empresas() {
       // Limpar formulário e fechar sheet
       setFormData({
         cnpj: '',
+        caepf: '',
         razao_social: '',
         nome_fantasia: '',
         cidade: '',
@@ -403,32 +476,95 @@ export default function Empresas() {
                   </SheetHeader>
                   <div className="grid gap-4 py-4 mx-4">
                     <div className="grid gap-2">
-                      <Label htmlFor="cnpj">CNPJ *</Label>
-                      <div className="relative">
-                        <Input
-                          id="cnpj"
-                          value={formData.cnpj}
-                          onChange={(e) => {
-                            const formattedCNPJ = formatCNPJ(e.target.value)
-                            setFormData(prev => ({ ...prev, cnpj: formattedCNPJ }))
-                          }}
-                          placeholder="00.000.000/0000-00"
-                          disabled={createLoading}
-                          maxLength={18}
-                          className={formData.cnpj && !isValidCNPJ(formData.cnpj) ? 'border-red-500' : ''}
-                        />
-                        {formData.cnpj && (
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                            {isValidCNPJ(formData.cnpj) ? (
-                              <span className="text-green-600 text-sm">✓</span>
-                            ) : (
-                              <span className="text-red-600 text-sm">✗</span>
+                      <div className="flex items-center gap-4 mb-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="documentType"
+                            checked={documentType === 'cnpj'}
+                            onChange={() => {
+                              setDocumentType('cnpj')
+                              setFormData(prev => ({ ...prev, caepf: '' }))
+                            }}
+                            disabled={createLoading}
+                          />
+                          <span className="text-sm font-medium">CNPJ</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="radio"
+                            name="documentType"
+                            checked={documentType === 'caepf'}
+                            onChange={() => {
+                              setDocumentType('caepf')
+                              setFormData(prev => ({ ...prev, cnpj: '' }))
+                            }}
+                            disabled={createLoading}
+                          />
+                          <span className="text-sm font-medium">CAEPF (CPF Rural)</span>
+                        </label>
+                      </div>
+                      
+                      {documentType === 'cnpj' ? (
+                        <>
+                          <Label htmlFor="cnpj">CNPJ *</Label>
+                          <div className="relative">
+                            <Input
+                              id="cnpj"
+                              value={formData.cnpj}
+                              onChange={(e) => {
+                                const formattedCNPJ = formatCNPJ(e.target.value)
+                                setFormData(prev => ({ ...prev, cnpj: formattedCNPJ, caepf: '' }))
+                              }}
+                              placeholder="00.000.000/0000-00"
+                              disabled={createLoading}
+                              maxLength={18}
+                              className={formData.cnpj && !isValidCNPJ(formData.cnpj) ? 'border-red-500' : ''}
+                            />
+                            {formData.cnpj && (
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                {isValidCNPJ(formData.cnpj) ? (
+                                  <span className="text-green-600 text-sm">✓</span>
+                                ) : (
+                                  <span className="text-red-600 text-sm">✗</span>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                      {formData.cnpj && !isValidCNPJ(formData.cnpj) && (
-                        <span className="text-red-600 text-xs">CNPJ inválido</span>
+                          {formData.cnpj && !isValidCNPJ(formData.cnpj) && (
+                            <span className="text-red-600 text-xs">CNPJ inválido</span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <Label htmlFor="caepf">CAEPF (CPF) *</Label>
+                          <div className="relative">
+                            <Input
+                              id="caepf"
+                              value={formData.caepf}
+                              onChange={(e) => {
+                                const formattedCPF = formatCPF(e.target.value)
+                                setFormData(prev => ({ ...prev, caepf: formattedCPF, cnpj: '' }))
+                              }}
+                              placeholder="000.000.000-00"
+                              disabled={createLoading}
+                              maxLength={14}
+                              className={formData.caepf && !isValidCPF(formData.caepf) ? 'border-red-500' : ''}
+                            />
+                            {formData.caepf && (
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                                {isValidCPF(formData.caepf) ? (
+                                  <span className="text-green-600 text-sm">✓</span>
+                                ) : (
+                                  <span className="text-red-600 text-sm">✗</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {formData.caepf && !isValidCPF(formData.caepf) && (
+                            <span className="text-red-600 text-xs">CPF inválido</span>
+                          )}
+                        </>
                       )}
                     </div>
                     <div className="grid gap-2">
@@ -536,8 +672,10 @@ export default function Empresas() {
                     <Button
                       variant="outline"
                       onClick={() => {
+                        setDocumentType('cnpj')
                         setFormData({
                           cnpj: '',
+                          caepf: '',
                           razao_social: '',
                           nome_fantasia: '',
                           cidade: '',
@@ -562,7 +700,14 @@ export default function Empresas() {
                     </Button>
                     <Button
                       onClick={handleCreateCompany}
-                      disabled={createLoading || !formData.cnpj || !formData.razao_social || !formData.nome_fantasia || (!!formData.cnpj && !isValidCNPJ(formData.cnpj))}
+                      disabled={
+                        createLoading || 
+                        (!formData.cnpj && !formData.caepf) || 
+                        !formData.razao_social || 
+                        !formData.nome_fantasia || 
+                        (!!formData.cnpj && !isValidCNPJ(formData.cnpj)) ||
+                        (!!formData.caepf && !isValidCPF(formData.caepf))
+                      }
                     >
                       {createLoading ? 'Criando...' : 'Criar Empresa'}
                     </Button>
@@ -622,7 +767,7 @@ export default function Empresas() {
               <TableRow>
                 <TableHead onClick={() => toggleSort('nome')} className="cursor-pointer select-none">Nome Fantasia{arrow('nome')}</TableHead>
                 <TableHead onClick={() => toggleSort('razao_social')} className="cursor-pointer select-none">Razão Social{arrow('razao_social')}</TableHead>
-                <TableHead onClick={() => toggleSort('cnpj')} className="cursor-pointer select-none">CNPJ{arrow('cnpj')}</TableHead>
+                <TableHead onClick={() => toggleSort('cnpj')} className="cursor-pointer select-none">CNPJ/CAEPF{arrow('cnpj')}</TableHead>
                 <TableHead onClick={() => toggleSort('tecnico')} className="cursor-pointer select-none">Técnico Responsável{arrow('tecnico')}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right"></TableHead>
@@ -633,7 +778,7 @@ export default function Empresas() {
                 <TableRow key={e.id}>
                   <TableCell>{e.nome || e.nome_fantasia || '-'}</TableCell>
                   <TableCell>{e.razao_social || '-'}</TableCell>
-                  <TableCell>{e.cnpj || '-'}</TableCell>
+                  <TableCell>{e.cnpj || e.caepf || '-'}</TableCell>
                   <TableCell>{e.tecnico_nome || e.tecnico_responsavel_nome || e.tecnico_responsavel || '-'}</TableCell>
                   <TableCell>
                     <Badge className={(String((e as any).status || 'ativo').toLowerCase() === 'inativo') ? 'button-remove' : 'button-success'}>

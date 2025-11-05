@@ -14,6 +14,39 @@ import { TechnicalTaskTable } from '@/components/technical-task-table'
 import { CommercialProposalsTable } from '@/components/commercial-proposals-table'
 import { onlyDigits, formatCNPJ, validateCNPJ } from '@/lib/utils'
 
+// CPF formatting and validation
+function formatCPF(value: string): string {
+  const digits = value.replace(/\D/g, '')
+  if (digits.length <= 3) return digits
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`
+}
+
+function isValidCPF(cpf: string): boolean {
+  const digits = cpf.replace(/\D/g, '')
+  if (digits.length !== 11) return false
+  if (/^(\d)\1{10}$/.test(digits)) return false // Rejects known invalid patterns like 111.111.111-11
+  
+  let sum = 0
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(digits.charAt(i)) * (10 - i)
+  }
+  let checkDigit = 11 - (sum % 11)
+  if (checkDigit >= 10) checkDigit = 0
+  if (checkDigit !== parseInt(digits.charAt(9))) return false
+  
+  sum = 0
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(digits.charAt(i)) * (11 - i)
+  }
+  checkDigit = 11 - (sum % 11)
+  if (checkDigit >= 10) checkDigit = 0
+  if (checkDigit !== parseInt(digits.charAt(10))) return false
+  
+  return true
+}
+
 export default function EmpresaDetails() {
   const { id } = useParams()
   const [loading, setLoading] = useState(false)
@@ -29,6 +62,7 @@ export default function EmpresaDetails() {
     nome_fantasia: '',
     razao_social: '',
     cnpj: '',
+    caepf: '',
     cidade: '',
     telefone: '',
     unidade_responsavel: null as number | null,
@@ -39,9 +73,11 @@ export default function EmpresaDetails() {
 
   const cnpjDigits = useMemo(() => onlyDigits(form.cnpj), [form.cnpj])
   const cnpjIsValid = useMemo(() => (cnpjDigits.length === 0 || validateCNPJ(cnpjDigits)), [cnpjDigits])
+  const caepfDigits = useMemo(() => form.caepf.replace(/\D/g, ''), [form.caepf])
+  const caepfIsValid = useMemo(() => (caepfDigits.length === 0 || isValidCPF(form.caepf)), [caepfDigits, form.caepf])
   const canSave = useMemo(() => {
-    return (form.nome_fantasia?.trim().length ?? 0) > 0 && cnpjIsValid
-  }, [form.nome_fantasia, cnpjIsValid])
+    return (form.nome_fantasia?.trim().length ?? 0) > 0 && cnpjIsValid && caepfIsValid
+  }, [form.nome_fantasia, cnpjIsValid, caepfIsValid])
 
   useEffect(() => {
     let mounted = true
@@ -60,6 +96,7 @@ export default function EmpresaDetails() {
             nome_fantasia: (data as any).nome_fantasia || (data as any).nome || '',
             razao_social: (data as any).razao_social || '',
             cnpj: formatCNPJ((data as any).cnpj || ''),
+            caepf: formatCPF((data as any).caepf || ''),
             cidade: (data as any).cidade || '',
             telefone: (data as any).telefone || '',
             unidade_responsavel: (data as any).unidade_id ?? (data as any).unidade_responsavel ?? null,
@@ -119,7 +156,7 @@ export default function EmpresaDetails() {
   const handleSave = async () => {
     if (!id) return
     if (!canSave) {
-      toastError('Preencha os campos obrigatórios e verifique o CNPJ')
+      toastError('Preencha os campos obrigatórios e verifique o CNPJ/CAEPF')
       return
     }
     setSaving(true)
@@ -133,6 +170,11 @@ export default function EmpresaDetails() {
         const d = onlyDigits(payload.cnpj)
         if (d.length === 0) delete payload.cnpj
         else payload.cnpj = d
+      }
+      if (typeof payload.caepf !== 'undefined') {
+        const d = payload.caepf.replace(/\D/g, '')
+        if (d.length === 0) delete payload.caepf
+        else payload.caepf = d
       }
       const updated = await updateCompany(Number(id), payload)
       setEmpresa(updated)
@@ -193,14 +235,33 @@ export default function EmpresaDetails() {
                     value={form.cnpj}
                     onChange={(e) => {
                       const masked = formatCNPJ(e.target.value)
-                      setForm(f => ({ ...f, cnpj: masked }))
+                      setForm(f => ({ ...f, cnpj: masked, caepf: '' }))
                     }}
                     placeholder="00.000.000/0000-00"
                     aria-invalid={!cnpjIsValid && !!form.cnpj}
                     className={!cnpjIsValid && !!form.cnpj ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    disabled={!!form.caepf}
                   />
                   {!cnpjIsValid && !!form.cnpj && (
                     <p className="text-destructive text-xs mt-1">CNPJ inválido</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="caepf">CAEPF (CPF Rural)</Label>
+                  <Input
+                    id="caepf"
+                    value={form.caepf}
+                    onChange={(e) => {
+                      const masked = formatCPF(e.target.value)
+                      setForm(f => ({ ...f, caepf: masked, cnpj: '' }))
+                    }}
+                    placeholder="000.000.000-00"
+                    aria-invalid={!caepfIsValid && !!form.caepf}
+                    className={!caepfIsValid && !!form.caepf ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    disabled={!!form.cnpj}
+                  />
+                  {!caepfIsValid && !!form.caepf && (
+                    <p className="text-destructive text-xs mt-1">CPF inválido</p>
                   )}
                 </div>
                 <div>
@@ -271,6 +332,7 @@ export default function EmpresaDetails() {
                     nome_fantasia: (empresa as any).nome_fantasia || (empresa as any).nome || '',
                     razao_social: (empresa as any).razao_social || '',
                     cnpj: formatCNPJ((empresa as any).cnpj || ''),
+                    caepf: formatCPF((empresa as any).caepf || ''),
                     cidade: (empresa as any).cidade || '',
                     telefone: (empresa as any).telefone || '',
                     unidade_responsavel: (empresa as any).unidade_id ?? (empresa as any).unidade_responsavel ?? null,

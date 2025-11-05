@@ -23,6 +23,7 @@ export const getAllCompanies = async (req: Request, res: Response): Promise<void
               e.nome_fantasia,
               e.razao_social,
               e.cnpj,
+              e.caepf,
               e.cidade,
               e.telefone,
               e.tecnico_responsavel,
@@ -40,6 +41,7 @@ export const getAllCompanies = async (req: Request, res: Response): Promise<void
       nome: r.nome_fantasia,
       razao_social: r.razao_social,
       cnpj: r.cnpj,
+      caepf: r.caepf,
       cidade: r.cidade,
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
@@ -69,6 +71,7 @@ export const getCompanyById = async (req: Request<{ id: string }>, res: Response
               e.nome_fantasia,
               e.razao_social,
               e.cnpj,
+              e.caepf,
               e.cidade,
               e.telefone,
               e.tecnico_responsavel,
@@ -98,6 +101,7 @@ export const getCompanyById = async (req: Request<{ id: string }>, res: Response
       nome: r.nome_fantasia,
       razao_social: r.razao_social,
       cnpj: r.cnpj,
+      caepf: r.caepf,
       cidade: r.cidade,
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
@@ -125,7 +129,7 @@ export const getCompaniesByResponsavel = async (req: Request<{ responsavel_id: s
     }
 
     const [rows] = await pool.query<CompanyRow[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE tecnico_responsavel = ?`,
+      `SELECT id, nome_fantasia, razao_social, cnpj, caepf, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE tecnico_responsavel = ?`,
       [responsavel_id]
     )
 
@@ -135,8 +139,9 @@ export const getCompaniesByResponsavel = async (req: Request<{ responsavel_id: s
       nome: r.nome_fantasia,
       razao_social: r.razao_social,
       cnpj: r.cnpj,
+      caepf: (r as any).caepf,
       cidade: r.cidade,
-      contabilidade: r.contabilidade,
+      contabilidade: (r as any).contabilidade,
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
       unidade_id: r.unidade_responsavel,
@@ -159,7 +164,7 @@ export const getCompaniesByResponsavelAndUnidade = async (req: Request<{ unidade
     }
 
     const [rows] = await pool.query<CompanyRow[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE tecnico_responsavel = ? AND unidade_responsavel = ?`,
+      `SELECT id, nome_fantasia, razao_social, cnpj, caepf, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE tecnico_responsavel = ? AND unidade_responsavel = ?`,
       [responsavel_id, unidade_id]
     )
 
@@ -168,8 +173,9 @@ export const getCompaniesByResponsavelAndUnidade = async (req: Request<{ unidade
       nome: r.nome_fantasia,
       razao_social: r.razao_social,
       cnpj: r.cnpj,
+      caepf: (r as any).caepf,
       cidade: r.cidade,
-      contabilidade: r.contabilidade,
+      contabilidade: (r as any).contabilidade,
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
       unidade_id: r.unidade_responsavel,
@@ -192,7 +198,7 @@ export const getCompaniesByUnidade = async (req: Request<{ unidade_id: string }>
     }
 
     const [rows] = await pool.query<CompanyRow[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE unidade_responsavel = ?`,
+      `SELECT id, nome_fantasia, razao_social, cnpj, caepf, cidade, contabilidade, telefone, tecnico_responsavel, unidade_responsavel, status FROM empresas WHERE unidade_responsavel = ?`,
       [unidade_id]
     )
 
@@ -201,8 +207,9 @@ export const getCompaniesByUnidade = async (req: Request<{ unidade_id: string }>
       nome: r.nome_fantasia,
       razao_social: r.razao_social,
       cnpj: r.cnpj,
+      caepf: (r as any).caepf,
       cidade: r.cidade,
-      contabilidade: r.contabilidade,
+      contabilidade: (r as any).contabilidade,
       telefone: r.telefone,
       tecnico_responsavel: r.tecnico_responsavel,
       unidade_id: r.unidade_responsavel,
@@ -221,56 +228,95 @@ export const getCompanyByCNPJ = async (req: Request<{ cnpj: string }>, res: Resp
   try {
     const { cnpj } = req.params
     if (!cnpj) {
-      res.status(400).json({ message: 'cnpj é obrigatório' })
+      res.status(400).json({ message: 'cnpj ou caepf é obrigatório' })
       return
     }
     const clean = cnpj.replace(/\D/g, '')
+    
+    // Buscar por CNPJ ou CAEPF
     const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, nome_fantasia, razao_social, cnpj, cidade FROM empresas WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '-', ''), '/', '') = ? LIMIT 1`,
-      [clean]
+      `SELECT id, nome_fantasia, razao_social, cnpj, caepf, cidade 
+       FROM empresas 
+       WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '-', ''), '/', '') = ? 
+          OR REPLACE(REPLACE(caepf, '.', ''), '-', '') = ?
+       LIMIT 1`,
+      [clean, clean]
     )
+    
     if (!rows || rows.length === 0) {
       res.status(404).json({ message: 'Empresa não encontrada' })
       return
     }
     const r: any = rows[0]
-    res.status(200).json({ id: r.id, nome: r.nome_fantasia, razao_social: r.razao_social, cnpj: r.cnpj, cidade: r.cidade })
+    res.status(200).json({ 
+      id: r.id, 
+      nome: r.nome_fantasia, 
+      razao_social: r.razao_social, 
+      cnpj: r.cnpj, 
+      caepf: r.caepf,
+      cidade: r.cidade 
+    })
   } catch (error) {
-    console.error('Erro ao buscar empresa por CNPJ:', error)
-    res.status(500).json({ message: 'Erro ao buscar empresa por CNPJ' })
+    console.error('Erro ao buscar empresa por CNPJ/CAEPF:', error)
+    res.status(500).json({ message: 'Erro ao buscar empresa por CNPJ/CAEPF' })
   }
 }
 
 // Create minimal company
 export const createCompany = async (
-  req: Request<{}, {}, { cnpj: string; razao_social: string; nome_fantasia: string; cidade?: string; telefone?: string; periodicidade?: number | null; data_renovacao?: string | null; tecnico_responsavel?: number | null; unidade_responsavel?: number | null }>,
+  req: Request<{}, {}, { cnpj?: string; caepf?: string; razao_social: string; nome_fantasia: string; cidade?: string; telefone?: string; periodicidade?: number | null; data_renovacao?: string | null; tecnico_responsavel?: number | null; unidade_responsavel?: number | null }>,
   res: Response
 ): Promise<void> => {
   try {
-    const { cnpj, razao_social, nome_fantasia, cidade, telefone, periodicidade = null, data_renovacao = null, tecnico_responsavel = null, unidade_responsavel = null } = req.body || ({} as any)
-    if (!cnpj || !razao_social || !nome_fantasia) {
-      res.status(400).json({ message: 'cnpj, razao_social e nome_fantasia são obrigatórios' })
+    const { cnpj, caepf, razao_social, nome_fantasia, cidade, telefone, periodicidade = null, data_renovacao = null, tecnico_responsavel = null, unidade_responsavel = null } = req.body || ({} as any)
+    
+    // Validar que ao menos um dos dois (CNPJ ou CAEPF) foi fornecido
+    if ((!cnpj && !caepf) || !razao_social || !nome_fantasia) {
+      res.status(400).json({ message: 'cnpj ou caepf, razao_social e nome_fantasia são obrigatórios' })
       return
     }
-    const clean = cnpj.replace(/\D/g, '')
-    // Check exists
-    const [exists] = await pool.query<RowDataPacket[]>(
-      `SELECT id FROM empresas WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '-', ''), '/', '') = ? LIMIT 1`,
-      [clean]
-    )
-    if (exists && exists.length) {
-      res.status(409).json({ message: 'Empresa já cadastrada' })
+    
+    // Validar que apenas um foi fornecido
+    if (cnpj && caepf) {
+      res.status(400).json({ message: 'Forneça apenas CNPJ ou CAEPF, não ambos' })
       return
     }
+    
+    const cleanCnpj = cnpj ? cnpj.replace(/\D/g, '') : null
+    const cleanCaepf = caepf ? caepf.replace(/\D/g, '') : null
+    
+    // Check exists by CNPJ or CAEPF
+    if (cleanCnpj) {
+      const [exists] = await pool.query<RowDataPacket[]>(
+        `SELECT id FROM empresas WHERE REPLACE(REPLACE(REPLACE(cnpj, '.', ''), '-', ''), '/', '') = ? LIMIT 1`,
+        [cleanCnpj]
+      )
+      if (exists && exists.length) {
+        res.status(409).json({ message: 'Empresa já cadastrada com este CNPJ' })
+        return
+      }
+    }
+    
+    if (cleanCaepf) {
+      const [exists] = await pool.query<RowDataPacket[]>(
+        `SELECT id FROM empresas WHERE REPLACE(REPLACE(REPLACE(caepf, '.', ''), '-', ''), '/', '') = ? LIMIT 1`,
+        [cleanCaepf]
+      )
+      if (exists && exists.length) {
+        res.status(409).json({ message: 'Empresa já cadastrada com este CAEPF' })
+        return
+      }
+    }
+    
     const [ins] = await pool.query<OkPacket>(
-      `INSERT INTO empresas (cnpj, razao_social, nome_fantasia, cidade, telefone, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
-      [clean, razao_social, nome_fantasia, cidade || null, telefone || null, periodicidade, data_renovacao || null, tecnico_responsavel, unidade_responsavel]
+      `INSERT INTO empresas (cnpj, caepf, razao_social, nome_fantasia, cidade, telefone, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ativo')`,
+      [cleanCnpj, cleanCaepf, razao_social, nome_fantasia, cidade || null, telefone || null, periodicidade, data_renovacao || null, tecnico_responsavel, unidade_responsavel]
     )
     const id = (ins as any).insertId
     // Try to generate automatic tasks (will no-op if lacks dates/periodicity)
     try { await generateAutomaticTasksForCompany(Number(id)) } catch (e) { console.warn('autoTasks(createCompany) failed:', e) }
-    res.status(201).json({ id, nome: nome_fantasia, razao_social, cnpj: clean, cidade: cidade || null, telefone: telefone || null, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel })
+    res.status(201).json({ id, nome: nome_fantasia, razao_social, cnpj: cleanCnpj, caepf: cleanCaepf, cidade: cidade || null, telefone: telefone || null, periodicidade, data_renovacao, tecnico_responsavel, unidade_responsavel })
   } catch (error) {
     console.error('Erro ao criar empresa:', error)
     res.status(500).json({ message: 'Erro ao criar empresa' })
@@ -279,7 +325,7 @@ export const createCompany = async (
 
 // Update company details (admin)
 export const updateCompany = async (
-  req: Request<{ id: string }, {}, Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null; periodicidade: number | null; data_renovacao: string | null; status: 'ativo' | 'inativo' }>>,
+  req: Request<{ id: string }, {}, Partial<{ nome_fantasia: string; razao_social: string; cnpj: string; caepf: string; cidade: string; telefone: string; tecnico_responsavel: number | null; unidade_responsavel: number | null; periodicidade: number | null; data_renovacao: string | null; status: 'ativo' | 'inativo' }>>,
   res: Response
 ): Promise<void> => {
   try {
@@ -297,6 +343,7 @@ export const updateCompany = async (
       nome_fantasia: 'nome_fantasia',
       razao_social: 'razao_social',
       cnpj: 'cnpj',
+      caepf: 'caepf',
       cidade: 'cidade',
       telefone: 'telefone',
       tecnico_responsavel: 'tecnico_responsavel',

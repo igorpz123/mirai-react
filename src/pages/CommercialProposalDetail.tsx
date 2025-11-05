@@ -9,11 +9,12 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { toastError, toastSuccess } from '@/lib/customToast'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { IconTrash } from '@tabler/icons-react'
+import { IconTrash, IconPlus, IconChevronDown } from '@tabler/icons-react'
 import { AuthContext } from '@/contexts/AuthContext'
 import { Separator } from '@radix-ui/react-separator'
 
@@ -209,14 +210,53 @@ export default function CommercialProposalDetail() {
                                     }
                                 }}
                             >Exportar Word</Button>
-                            <Button onClick={() => setOpenCourse(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Curso</Button>
-                            <Button onClick={() => setOpenChemical(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Químico</Button>
-                            <Button onClick={() => setOpenProduct(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Produto</Button>
-                            <Button onClick={() => setOpenProgram(true)} disabled={!canRemoveItems} title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}>+ Programa</Button>
+                            
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button 
+                                        disabled={!canRemoveItems}
+                                        title={!canRemoveItems ? (isApproved ? 'Proposta aprovada: não é possível adicionar itens.' : 'Apenas o responsável ou um administrador pode adicionar itens.') : undefined}
+                                    >
+                                        <IconPlus className="mr-2" size={18} />
+                                        Adicionar Item
+                                        <IconChevronDown className="ml-2" size={16} />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem 
+                                        onClick={() => setOpenProgram(true)}
+                                        className="cursor-pointer"
+                                    >
+                                        <IconPlus className="mr-2" size={16} />
+                                        Programa
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => setOpenCourse(true)}
+                                        className="cursor-pointer"
+                                    >
+                                        <IconPlus className="mr-2" size={16} />
+                                        Curso
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => setOpenChemical(true)}
+                                        className="cursor-pointer"
+                                    >
+                                        <IconPlus className="mr-2" size={16} />
+                                        Químico
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem 
+                                        onClick={() => setOpenProduct(true)}
+                                        className="cursor-pointer"
+                                    >
+                                        <IconPlus className="mr-2" size={16} />
+                                        Produto
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
 
-                    <section className="space-y-2 w-full">
+                    <section className="space-y-2 w-full mt-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <div className="text-sm text-muted-foreground">Título</div>

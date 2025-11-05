@@ -37,14 +37,55 @@ export default function CommercialProposalNew() {
   // progress value (0-100) where step 1 = 0% and last step = 100%
   const progressValue = Math.round(((step - 1) / (stepLabels.length - 1)) * 100)
 
-  // Step 1: CNPJ
+  // Step 1: CNPJ or CAEPF
+  const [documentType, setDocumentType] = React.useState<'cnpj' | 'caepf'>('cnpj')
   const [cnpj, setCnpj] = React.useState('')
+  const [caepf, setCaepf] = React.useState('')
   const cnpjDigits = React.useMemo(() => onlyDigits(cnpj), [cnpj])
   const cnpjIsValid = React.useMemo(() => validateCNPJ(cnpjDigits), [cnpjDigits])
+  
+  // CPF validation helper
+  const isValidCPF = (cpf: string): boolean => {
+    const cleanCpf = cpf.replace(/\D/g, '')
+    if (cleanCpf.length !== 11) return false
+    if (/^(\d)\1{10}$/.test(cleanCpf)) return false
+    
+    let soma = 0
+    for (let i = 0; i < 9; i++) {
+      soma += parseInt(cleanCpf.charAt(i)) * (10 - i)
+    }
+    let resto = (soma * 10) % 11
+    if (resto === 10 || resto === 11) resto = 0
+    if (resto !== parseInt(cleanCpf.charAt(9))) return false
+    
+    soma = 0
+    for (let i = 0; i < 10; i++) {
+      soma += parseInt(cleanCpf.charAt(i)) * (11 - i)
+    }
+    resto = (soma * 10) % 11
+    if (resto === 10 || resto === 11) resto = 0
+    if (resto !== parseInt(cleanCpf.charAt(10))) return false
+    
+    return true
+  }
+  
+  // CPF formatting helper
+  const formatCPF = (value: string): string => {
+    const digits = value.replace(/\D/g, '')
+    if (digits.length <= 3) return digits
+    if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`
+    if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`
+    return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`
+  }
+  
+  const caepfIsValid = React.useMemo(() => {
+    const cleaned = caepf.replace(/\D/g, '')
+    return cleaned.length === 0 || isValidCPF(caepf)
+  }, [caepf])
 
   // Step 2: Company info
   const [company, setCompany] = React.useState<Company | null>(null)
-  const [empresaForm, setEmpresaForm] = React.useState({ cnpj: '', razao_social: '', nome_fantasia: '', cidade: '' })
+  const [empresaForm, setEmpresaForm] = React.useState({ cnpj: '', caepf: '', razao_social: '', nome_fantasia: '', cidade: '' })
 
   // Items buffers (for display before creation)
   type ProgramaItem = { programa_id: number; nome?: string; quantidade: number; desconto: number; descontoIsPercent?: boolean; valor_unitario?: number; acrescimo_mensal?: number }
@@ -171,38 +212,107 @@ export default function CommercialProposalNew() {
         {step === 1 && (
           <section className="space-y-2">
             <h2 className="text-lg font-semibold">Consulta da Empresa</h2>
-            <div className="max-w-md">
-              <div className="text-sm mb-1">CNPJ</div>
-              <Input
-                value={cnpj}
-                onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
-                placeholder="00.000.000/0000-00"
-                aria-invalid={cnpj.length > 0 && !cnpjIsValid}
-                className={cnpj.length > 0 && !cnpjIsValid ? 'border-destructive focus-visible:ring-destructive' : ''}
-              />
-              {cnpj.length > 0 && !cnpjIsValid && (
-                <p className="text-destructive text-xs mt-1">CNPJ inválido</p>
+            <div className="max-w-md space-y-3">
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="documentType"
+                    checked={documentType === 'cnpj'}
+                    onChange={() => {
+                      setDocumentType('cnpj')
+                      setCaepf('')
+                    }}
+                  />
+                  <span className="text-sm font-medium">CNPJ</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="documentType"
+                    checked={documentType === 'caepf'}
+                    onChange={() => {
+                      setDocumentType('caepf')
+                      setCnpj('')
+                    }}
+                  />
+                  <span className="text-sm font-medium">CAEPF (CPF Rural)</span>
+                </label>
+              </div>
+              
+              {documentType === 'cnpj' ? (
+                <>
+                  <div>
+                    <div className="text-sm mb-1">CNPJ</div>
+                    <Input
+                      value={cnpj}
+                      onChange={(e) => setCnpj(formatCNPJ(e.target.value))}
+                      placeholder="00.000.000/0000-00"
+                      aria-invalid={cnpj.length > 0 && !cnpjIsValid}
+                      className={cnpj.length > 0 && !cnpjIsValid ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    />
+                    {cnpj.length > 0 && !cnpjIsValid && (
+                      <p className="text-destructive text-xs mt-1">CNPJ inválido</p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-sm mb-1">CAEPF (CPF)</div>
+                    <Input
+                      value={caepf}
+                      onChange={(e) => setCaepf(formatCPF(e.target.value))}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      aria-invalid={caepf.length > 0 && !caepfIsValid}
+                      className={caepf.length > 0 && !caepfIsValid ? 'border-destructive focus-visible:ring-destructive' : ''}
+                    />
+                    {caepf.length > 0 && !caepfIsValid && (
+                      <p className="text-destructive text-xs mt-1">CPF inválido</p>
+                    )}
+                  </div>
+                </>
               )}
             </div>
             <div>
-              <Button disabled={!cnpjIsValid} onClick={async () => {
-                try {
-                  const cmp = await getCompanyByCNPJ(onlyDigits(cnpj))
-                  if (cmp) {
-                    setCompany(cmp)
-                    setEmpresaForm({ cnpj: formatCNPJ(cmp.cnpj || cnpj), razao_social: cmp.razao_social || '', nome_fantasia: cmp.nome || '', cidade: cmp.cidade || '' })
-                    setCnpj(formatCNPJ(cmp.cnpj || cnpj))
-                    toastSuccess('Empresa localizada')
-                  } else {
-                    setCompany(null)
-                    setEmpresaForm({ cnpj: formatCNPJ(cnpj), razao_social: '', nome_fantasia: '', cidade: '' })
-                    toastWarning('Empresa não cadastrada, preencha os dados na próxima etapa')
+              <Button 
+                disabled={documentType === 'cnpj' ? !cnpjIsValid : !caepfIsValid} 
+                onClick={async () => {
+                  try {
+                    const document = documentType === 'cnpj' ? onlyDigits(cnpj) : caepf.replace(/\D/g, '')
+                    const cmp = await getCompanyByCNPJ(document)
+                    if (cmp) {
+                      setCompany(cmp)
+                      setEmpresaForm({ 
+                        cnpj: cmp.cnpj ? formatCNPJ(cmp.cnpj) : '', 
+                        caepf: cmp.caepf ? formatCPF(cmp.caepf) : '',
+                        razao_social: cmp.razao_social || '', 
+                        nome_fantasia: cmp.nome || '', 
+                        cidade: cmp.cidade || '' 
+                      })
+                      if (cmp.cnpj) setCnpj(formatCNPJ(cmp.cnpj))
+                      if (cmp.caepf) setCaepf(formatCPF(cmp.caepf))
+                      toastSuccess('Empresa localizada')
+                    } else {
+                      setCompany(null)
+                      setEmpresaForm({ 
+                        cnpj: documentType === 'cnpj' ? formatCNPJ(cnpj) : '', 
+                        caepf: documentType === 'caepf' ? formatCPF(caepf) : '',
+                        razao_social: '', 
+                        nome_fantasia: '', 
+                        cidade: '' 
+                      })
+                      toastWarning('Empresa não cadastrada, preencha os dados na próxima etapa')
+                    }
+                    setStep(2)
+                  } catch (e: any) {
+                    toastError(e?.message || 'Falha na consulta')
                   }
-                  setStep(2)
-                } catch (e: any) {
-                  toastError(e?.message || 'Falha na consulta do CNPJ')
-                }
-              }}>Consultar</Button>
+                }}
+              >
+                Consultar
+              </Button>
             </div>
           </section>
         )}
@@ -212,6 +322,18 @@ export default function CommercialProposalNew() {
           <section className="space-y-3">
             <h2 className="text-lg font-semibold">Informações da Empresa</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {empresaForm.cnpj && (
+                <div>
+                  <div className="text-sm mb-1">CNPJ</div>
+                  <Input value={empresaForm.cnpj} disabled className="bg-muted" />
+                </div>
+              )}
+              {empresaForm.caepf && (
+                <div>
+                  <div className="text-sm mb-1">CAEPF (CPF)</div>
+                  <Input value={empresaForm.caepf} disabled className="bg-muted" />
+                </div>
+              )}
               <div>
                 <div className="text-sm mb-1">Razão Social</div>
                 <Input value={empresaForm.razao_social} onChange={(e) => setEmpresaForm(s => ({ ...s, razao_social: e.target.value }))} />
@@ -237,13 +359,28 @@ export default function CommercialProposalNew() {
                       toastError('Unidade não definida. Tente novamente em instantes.')
                       return
                     }
-                    const created = await createCompany({
-                      cnpj: onlyDigits(empresaForm.cnpj || cnpj),
+                    
+                    // Validate that we have either CNPJ or CAEPF
+                    if (!empresaForm.cnpj && !empresaForm.caepf) {
+                      toastError('CNPJ ou CAEPF é obrigatório')
+                      return
+                    }
+                    
+                    const payload: any = {
                       razao_social: empresaForm.razao_social,
                       nome_fantasia: empresaForm.nome_fantasia,
                       cidade: empresaForm.cidade,
                       unidade_responsavel: unitId,
-                    })
+                    }
+                    
+                    if (empresaForm.cnpj) {
+                      payload.cnpj = onlyDigits(empresaForm.cnpj)
+                    }
+                    if (empresaForm.caepf) {
+                      payload.caepf = empresaForm.caepf.replace(/\D/g, '')
+                    }
+                    
+                    const created = await createCompany(payload)
                     setCompany({ ...created, nome: created.nome })
                     toastSuccess('Empresa cadastrada')
                   } catch (e: any) {
