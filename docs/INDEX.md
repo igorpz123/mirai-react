@@ -4,6 +4,20 @@ Bem-vindo à documentação do projeto Mirai React!
 
 ## 🗂️ Índice de Documentação
 
+### 🔍 Busca Global
+Sistema completo de busca rápida com atalho Ctrl+K:
+
+- **[Global Search](GLOBAL_SEARCH.md)** - Documentação completa do sistema de busca
+  - Arquitetura e implementação
+  - API endpoints e permissões
+  - Customização e otimização
+  - Troubleshooting
+
+- **[Quick Start](GLOBAL_SEARCH_QUICKSTART.md)** ⚡ - Guia rápido para usuários
+  - Como usar o atalho Ctrl+K
+  - Exemplos práticos
+  - Dicas e truques
+
 ### 🤖 Integração com IA (Google Gemini)
 Documentação completa sobre a integração com Google Gemini AI:
 

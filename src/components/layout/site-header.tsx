@@ -1,7 +1,6 @@
 import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ModeToggle } from "./mode-toggle";
-import { CommandMenu } from "../app-search";
 import { NotificationMenu } from "../notification-menu";
 
 export function SiteHeader({ title }: { title: string }) {
@@ -16,7 +15,6 @@ export function SiteHeader({ title }: { title: string }) {
         <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-2">
           <NotificationMenu />
-          <CommandMenu />
           <ModeToggle />
         </div>
       </div>
