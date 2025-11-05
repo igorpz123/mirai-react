@@ -5,7 +5,10 @@ import { aiRateLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
-// Aplicar rate limiter em todas as rotas de IA
+// Health check (sem rate limiter)
+router.get('/health', AIController.healthCheckEndpoint)
+
+// Aplicar rate limiter nas demais rotas de IA
 router.use(aiRateLimiter)
 
 // Endpoints principais

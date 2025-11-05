@@ -7,8 +7,10 @@ import {
   getTokenLogs,
   getCacheStats,
   clearCache,
-  ChatMessage
-} from '../services/aiService'
+  getUsageStats,
+  checkHealth
+} from '../services/aiService.hybrid'
+import { ChatMessage } from '../services/aiService'
 
 // O userId já vem do middleware aiRateLimiter
 function getUserId(req: Request): number {
@@ -34,8 +36,11 @@ export async function generateTextEndpoint(req: Request, res: Response) {
     const result = await generateText(userId, prompt)
     
     res.json({
-      text: result.text,
-      cached: result.cached,
+      text: result.data.text,
+      cached: result.data.cached,
+      provider: result.provider,
+      usedFallback: result.usedFallback,
+      responseTime: result.responseTime,
       timestamp: new Date().toISOString()
     })
   } catch (error: any) {
@@ -69,10 +74,13 @@ export async function analyzeImageEndpoint(req: Request, res: Response) {
     const result = await analyzeImage(userId, image, prompt)
     
     res.json({
-      description: result.description,
-      detected: result.detected,
-      confidence: result.confidence,
-      cached: result.cached,
+      description: result.data.description,
+      detected: result.data.detected,
+      confidence: result.data.confidence,
+      cached: result.data.cached,
+      provider: result.provider,
+      usedFallback: result.usedFallback,
+      responseTime: result.responseTime,
       timestamp: new Date().toISOString()
     })
   } catch (error: any) {
@@ -118,9 +126,12 @@ export async function chatEndpoint(req: Request, res: Response) {
     const result = await chatMultiTurn(userId, message, validHistory)
     
     res.json({
-      reply: result.reply,
-      history: result.history,
-      cached: result.cached,
+      reply: result.data.reply,
+      history: result.data.history,
+      cached: result.data.cached,
+      provider: result.provider,
+      usedFallback: result.usedFallback,
+      responseTime: result.responseTime,
       timestamp: new Date().toISOString()
     })
   } catch (error: any) {
@@ -146,6 +157,7 @@ export async function getStatsEndpoint(req: Request, res: Response) {
     const limit = Math.min(Number(req.query.limit) || 100, 1000)
     const logs = getTokenLogs(userId, limit)
     const cacheStats = getCacheStats()
+    const usageStats = getUsageStats()
     
     // Calcular totais
     const totalInputTokens = logs.reduce((sum, log) => sum + log.inputTokens, 0)
@@ -163,7 +175,8 @@ export async function getStatsEndpoint(req: Request, res: Response) {
         totalOutputTokens,
         totalTokens: totalInputTokens + totalOutputTokens
       },
-      cache: cacheStats
+      cache: cacheStats,
+      usage: usageStats
     })
   } catch (error: any) {
     console.error('[AIController] Erro em stats:', error)
@@ -193,10 +206,25 @@ export async function clearCacheEndpoint(req: Request, res: Response) {
   }
 }
 
+// ============================================================================
+// GET /api/ai/health - Health check dos providers
+// ============================================================================
+export async function healthCheckEndpoint(req: Request, res: Response) {
+  try {
+    const health = await checkHealth()
+    
+    res.json(health)
+  } catch (error: any) {
+    console.error('[AIController] Erro em health check:', error)
+    res.status(500).json({ message: 'Erro ao verificar saúde dos providers' })
+  }
+}
+
 export default {
   generateTextEndpoint,
   analyzeImageEndpoint,
   chatEndpoint,
   getStatsEndpoint,
-  clearCacheEndpoint
+  clearCacheEndpoint,
+  healthCheckEndpoint
 }
