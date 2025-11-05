@@ -89,6 +89,12 @@ import {
   Tabs,
   TabsContent,
 } from "@/components/ui/tabs"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
 import { TaskInfo } from "@/components/technical-task-info";
 import { toastSuccess, toastWarning, toastError } from '@/lib/customToast'
 import { formatDateBRSafe } from '@/lib/date'
@@ -369,6 +375,11 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   // Status filter state - default to 'active' to hide completed tasks
   const [selectedStatus, setSelectedStatus] = React.useState<string>('active')
 
+  // Period filter state
+  const [selectedPeriod, setSelectedPeriod] = React.useState<string>('all')
+  const [dateRange, setDateRange] = React.useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined })
+  const [datePopoverOpen, setDatePopoverOpen] = React.useState(false)
+
   // Compute available finalidades from the original tasks prop (more reliable)
   const uniqueFinalidades = React.useMemo(() => {
     const source = tasks || []
@@ -608,7 +619,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     [data]
   )
 
-  // displayedData is derived from current data and selectedView + selectedStatus
+  // displayedData is derived from current data and selectedView + selectedStatus + selectedPeriod
   const displayedData = React.useMemo(() => {
     let out = data || []
     if (selectedView !== 'outline') {
@@ -622,13 +633,72 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       // Show only tasks with the selected status
       out = out.filter(d => (d.status ?? '').toString() === selectedStatus)
     }
+    // Period filtering logic
+    if (selectedPeriod !== 'all') {
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      
+      out = out.filter(d => {
+        if (!d.prazo) return false
+        try {
+          const prazoDate = new Date(d.prazo)
+          if (isNaN(prazoDate.getTime())) return false
+          
+          const prazoDateOnly = new Date(prazoDate.getFullYear(), prazoDate.getMonth(), prazoDate.getDate())
+          
+          switch (selectedPeriod) {
+            case 'overdue':
+              // Tarefas vencidas (prazo anterior a hoje)
+              return prazoDateOnly < today
+            case 'today':
+              // Tarefas para hoje
+              return prazoDateOnly.getTime() === today.getTime()
+            case 'week':
+              // Próximos 7 dias
+              const weekEnd = new Date(today)
+              weekEnd.setDate(weekEnd.getDate() + 7)
+              return prazoDateOnly >= today && prazoDateOnly <= weekEnd
+            case 'month':
+              // Próximos 30 dias
+              const monthEnd = new Date(today)
+              monthEnd.setDate(monthEnd.getDate() + 30)
+              return prazoDateOnly >= today && prazoDateOnly <= monthEnd
+            case 'future':
+              // Tarefas futuras (mais de 30 dias)
+              const futureStart = new Date(today)
+              futureStart.setDate(futureStart.getDate() + 31)
+              return prazoDateOnly >= futureStart
+            case 'custom':
+              // Período personalizado
+              if (!dateRange.from && !dateRange.to) return true
+              
+              if (dateRange.from && dateRange.to) {
+                const startOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate())
+                const endOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate())
+                return prazoDateOnly >= startOnly && prazoDateOnly <= endOnly
+              } else if (dateRange.from) {
+                const startOnly = new Date(dateRange.from.getFullYear(), dateRange.from.getMonth(), dateRange.from.getDate())
+                return prazoDateOnly >= startOnly
+              } else if (dateRange.to) {
+                const endOnly = new Date(dateRange.to.getFullYear(), dateRange.to.getMonth(), dateRange.to.getDate())
+                return prazoDateOnly <= endOnly
+              }
+              return true
+            default:
+              return true
+          }
+        } catch {
+          return false
+        }
+      })
+    }
     // company filter (case-insensitive substring match)
     const q = (companyQuery || '').toString().trim().toLowerCase()
     if (q.length > 0) {
       out = out.filter(d => (d.empresa || '').toString().toLowerCase().includes(q))
     }
     return out
-  }, [data, selectedView, selectedStatus, companyQuery])
+  }, [data, selectedView, selectedStatus, selectedPeriod, dateRange, companyQuery])
 
   const table = useReactTable({
     data: displayedData,
@@ -773,6 +843,82 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
               ))}
             </SelectContent>
           </Select>
+
+          {/* Period filter */}
+          <Select value={selectedPeriod} onValueChange={(v) => setSelectedPeriod(v)}>
+            <SelectTrigger className="flex w-fit" size="sm" id="period-selector">
+              <SelectValue placeholder="Todos os períodos" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os períodos</SelectItem>
+              <SelectItem value="overdue">Vencidas</SelectItem>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="week">Próximos 7 dias</SelectItem>
+              <SelectItem value="month">Próximos 30 dias</SelectItem>
+              <SelectItem value="future">Futuro (30+ dias)</SelectItem>
+              <SelectItem value="custom">Período personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Custom date range picker */}
+          {selectedPeriod === 'custom' && (
+            <Popover open={datePopoverOpen} onOpenChange={setDatePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  {dateRange.from && dateRange.to
+                    ? `${formatDateBRSafe(dateRange.from.toISOString())} - ${formatDateBRSafe(dateRange.to.toISOString())}`
+                    : dateRange.from
+                    ? `A partir de ${formatDateBRSafe(dateRange.from.toISOString())}`
+                    : 'Selecionar período'}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-4" align="start">
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">Selecione o período</Label>
+                    <Calendar
+                      mode="range"
+                      selected={dateRange.from ? { from: dateRange.from, to: dateRange.to } : undefined}
+                      onSelect={(range) => {
+                        if (range) {
+                          setDateRange({ from: range.from, to: range.to })
+                        } else {
+                          setDateRange({ from: undefined, to: undefined })
+                        }
+                      }}
+                      numberOfMonths={2}
+                      initialFocus
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setDateRange({ from: undefined, to: undefined })
+                      }}
+                    >
+                      Limpar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setDatePopoverOpen(false)}
+                    >
+                      Aplicar
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <DropdownMenu>
