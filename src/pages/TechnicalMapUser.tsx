@@ -96,6 +96,7 @@ export default function TechnicalMapUser() {
   const [companyTasks, setCompanyTasks] = useState<TaskItem[]>([])
   const [companyTasksLoading, setCompanyTasksLoading] = useState(false)
   const [companyTasksError, setCompanyTasksError] = useState<string | null>(null)
+  const [showCompletedTasks, setShowCompletedTasks] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -285,7 +286,18 @@ export default function TechnicalMapUser() {
           </div>
 
           <div className="p-4">
-            <h3 className="text-lg font-semibold mb-2">Tarefas vinculadas à empresa</h3>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold">Tarefas vinculadas à empresa</h3>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showCompletedTasks}
+                  onChange={(e) => setShowCompletedTasks(e.target.checked)}
+                  className="rounded"
+                />
+                Mostrar concluídas
+              </label>
+            </div>
             {companyTasksLoading ? (
               <div>Carregando tarefas...</div>
             ) : companyTasksError ? (
@@ -305,7 +317,13 @@ export default function TechnicalMapUser() {
                     </tr>
                   </thead>
                   <tbody>
-                    {companyTasks.map((t: any) => (
+                    {companyTasks
+                      .filter((t: any) => {
+                        if (showCompletedTasks) return true
+                        const status = (t.status ?? '').toString().toLowerCase()
+                        return status !== 'concluída'
+                      })
+                      .map((t: any) => (
                       <tr key={t.id} className="hover:bg-muted/50">
                         <td className="p-2">{t.finalidade || '—'}</td>
                         <td className="p-2">{t.prazo ? formatDateBRSafe(t.prazo) : '—'}</td>

@@ -6,6 +6,7 @@ import type { ReactElement } from 'react'
 import { ChartAreaInteractive } from "@/components/technical-chart-tasks"
 import { TechnicalTaskTable } from "@/components/technical-task-table"
 import { TechnicalDashboardCards } from "@/components/technical-dashboard-cards"
+import { TechnicalLeaderboard } from "@/components/technical-leaderboard"
 import { SiteHeader } from "@/components/layout/site-header"
 import { getTaskStatsByUser } from '@/services/tasks'
 import { QuickIdSearch } from '@/components/quick-id-search'
@@ -56,7 +57,10 @@ export default function TechnicalDashboard(): ReactElement {
               <h2 className="text-lg text-foreground font-semibold">Faça o gerenciamento de suas tarefas</h2>
               <QuickIdSearch kind="task" placeholder="Nº da tarefa" />
             </div>
-            <TechnicalDashboardCards stats={stats} loading={loadingStats} error={errorStats} />
+            <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 mx-6'>
+              <TechnicalDashboardCards stats={stats} loading={loadingStats} error={errorStats} />
+              <TechnicalLeaderboard maxUsers={10} />
+            </div>
             <div className="px-4 lg:px-6">
               <ChartAreaInteractive data={completedByDay} />
             </div>

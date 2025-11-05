@@ -473,3 +473,57 @@ export async function rateTaskHistory(historicoId: number, nota: number, observa
         }
         return res.json()
     }
+
+/**
+ * Tipos para o leaderboard
+ */
+export type TimePeriod = '7days' | '15days' | '30days'
+
+export type LeaderboardEntry = {
+    position: number
+    userId: number
+    userName: string
+    userPhoto: string | null
+    cargo: string | null
+    unidade: string | null
+    completedTasks: number
+    totalTasks: number
+    completionRate: number
+}
+
+export type LeaderboardResponse = {
+    period: string
+    startDate: string
+    leaderboard: LeaderboardEntry[]
+}
+
+/**
+ * Busca o ranking de usuários por tarefas concluídas
+ */
+export async function getTasksLeaderboard(params?: {
+    period?: TimePeriod
+    unidade_id?: number
+}): Promise<LeaderboardResponse> {
+    const token = localStorage.getItem('token')
+    const queryParams = new URLSearchParams()
+    
+    if (params?.period) queryParams.append('period', params.period)
+    if (params?.unidade_id) queryParams.append('unidade_id', params.unidade_id.toString())
+    
+    const url = `${API_URL}/tarefas/leaderboard${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
+    
+    const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        }
+    })
+    
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Erro ao buscar leaderboard' }))
+        throw new Error(err.message || 'Erro ao buscar leaderboard')
+    }
+    
+    return res.json()
+}

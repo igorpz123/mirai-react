@@ -23,7 +23,8 @@ import {
   addTaskObservation,
   uploadArquivoTarefa,
   deleteArquivoTarefa,
-  deleteTask
+  deleteTask,
+  getTasksLeaderboard
 } from '../controllers/TaskController'
 import { getEventsByResponsavel, updateAgendaEvent, createAgendaEvent } from '../controllers/AgendaController'
 
@@ -31,6 +32,9 @@ const router: Router = Router()
 
 // Listar todas as tarefas
 router.get('/', getAllTasks)
+
+// Leaderboard de tarefas concluídas por período
+router.get('/leaderboard', getTasksLeaderboard)
 
 // Alias path to match frontend route if requested
 // ex: /technical/tarefa/:tarefa_id -> simply delegate to getTaskById

@@ -366,8 +366,8 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
   // Company search state
   const [companyQuery, setCompanyQuery] = React.useState<string>('')
 
-  // Status filter state
-  const [selectedStatus, setSelectedStatus] = React.useState<string>('all')
+  // Status filter state - default to 'active' to hide completed tasks
+  const [selectedStatus, setSelectedStatus] = React.useState<string>('active')
 
   // Compute available finalidades from the original tasks prop (more reliable)
   const uniqueFinalidades = React.useMemo(() => {
@@ -403,10 +403,10 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     }
   }, [uniqueFinalidades, selectedView])
 
-  // If selectedStatus becomes invalid (e.g. tasks changed), reset to 'all'
+  // If selectedStatus becomes invalid (e.g. tasks changed), reset to 'active'
   React.useEffect(() => {
-    if (selectedStatus !== 'all' && !uniqueStatuses.includes(selectedStatus)) {
-      setSelectedStatus('all')
+    if (selectedStatus !== 'all' && selectedStatus !== 'active' && !uniqueStatuses.includes(selectedStatus)) {
+      setSelectedStatus('active')
     }
   }, [uniqueStatuses, selectedStatus])
 
@@ -614,7 +614,12 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     if (selectedView !== 'outline') {
       out = out.filter(d => d.finalidade === selectedView)
     }
-    if (selectedStatus && selectedStatus !== 'all') {
+    // Status filtering logic
+    if (selectedStatus === 'active') {
+      // Hide completed tasks by default
+      out = out.filter(d => (d.status ?? '').toString().toLowerCase() !== 'concluída')
+    } else if (selectedStatus && selectedStatus !== 'all') {
+      // Show only tasks with the selected status
       out = out.filter(d => (d.status ?? '').toString() === selectedStatus)
     }
     // company filter (case-insensitive substring match)
@@ -758,9 +763,10 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
           {/* Status filter */}
           <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v)}>
             <SelectTrigger className="flex w-fit" size="sm" id="status-selector">
-              <SelectValue placeholder="Todos os status" />
+              <SelectValue placeholder="Tarefas ativas" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="active">Tarefas ativas</SelectItem>
               <SelectItem value="all">Todos os status</SelectItem>
               {uniqueStatuses.map((s) => (
                 <SelectItem key={s} value={s}>{getStatusText(s)}</SelectItem>

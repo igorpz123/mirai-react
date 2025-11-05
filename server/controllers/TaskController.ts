@@ -1540,3 +1540,87 @@ export const deleteTask = async (
     res.status(500).json({ message: 'Erro ao deletar tarefa' })
   }
 }
+
+/**
+ * GET /api/tarefas/leaderboard?period=7days|15days|30days&unidade_id=X
+ * Retorna ranking de usuários por tarefas concluídas em um período
+ * Usa historico_alteracoes para contar conclusões (mesma lógica de getCompletedTasksByDayByUsuario)
+ */
+export const getTasksLeaderboard = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { period = '30days', unidade_id } = req.query
+
+    // Calcular data de início baseado no período
+    let daysAgo = 30
+    switch (period) {
+      case '7days':
+        daysAgo = 7
+        break
+      case '15days':
+        daysAgo = 15
+        break
+      case '30days':
+      default:
+        daysAgo = 30
+        break
+    }
+
+    const startDate = new Date()
+    startDate.setDate(startDate.getDate() - daysAgo)
+    const startDateStr = startDate.toISOString().slice(0, 19).replace('T', ' ')
+
+    // Query base - conta conclusões via historico_alteracoes seguindo padrão das linhas 1027-1033
+    // JOIN com tarefas para pegar responsavel_id e filtros necessários
+    let query = `
+      SELECT 
+        u.id AS userId,
+        CONCAT(u.nome, ' ', COALESCE(u.sobrenome, '')) AS userName,
+        u.foto_url AS userPhoto,
+        c.nome AS cargo,
+        COUNT(DISTINCT h.id) AS completedTasks
+      FROM usuarios u
+      LEFT JOIN tarefas t ON u.id = t.responsavel_id
+      LEFT JOIN historico_alteracoes h ON h.tarefa_id = t.id
+        AND h.acao IN ('concluir_usuario','concluir_setor','concluir_arquivar')
+        AND h.data_alteracao >= ?
+      LEFT JOIN cargos c ON u.cargo_id = c.id
+      LEFT JOIN usuario_unidades uu ON u.id = uu.usuario_id
+    `
+
+    const params: any[] = [startDateStr]
+
+    // Filtrar por unidade se especificado
+    if (unidade_id) {
+      query += ` WHERE uu.unidade_id = ?`
+      params.push(unidade_id)
+    }
+
+    query += `
+      GROUP BY u.id, u.nome, u.sobrenome, u.foto_url, c.nome
+      HAVING completedTasks > 0
+      ORDER BY completedTasks DESC
+      LIMIT 20
+    `
+
+    const [rows] = await pool.query<RowDataPacket[]>(query, params)
+
+    // Formatar resultado
+    const leaderboard = (rows as any[]).map((row, index) => ({
+      position: index + 1,
+      userId: Number(row.userId),
+      userName: String(row.userName || 'Sem nome'),
+      userPhoto: row.userPhoto || null,
+      cargo: row.cargo || null,
+      completedTasks: Number(row.completedTasks || 0),
+    }))
+
+    res.status(200).json({
+      period,
+      startDate: startDateStr,
+      leaderboard,
+    })
+  } catch (error) {
+    console.error('Erro ao buscar leaderboard de tarefas:', error)
+    res.status(500).json({ message: 'Erro ao buscar leaderboard de tarefas' })
+  }
+}
