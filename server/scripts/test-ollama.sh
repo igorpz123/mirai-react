@@ -68,7 +68,7 @@ echo ""
 
 # Teste 4: Testar análise de imagem
 echo "4️⃣ Testando análise de imagem (llava)..."
-# Criar uma imagem base64 simples (1x1 pixel PNG vermelho)
+# Criar uma imagem base64 simples (1x1 pixel PNG vermelho para teste)
 TINY_IMAGE="iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
 
 VISION_RESPONSE=$(curl -s --max-time 30 "$OLLAMA_URL/api/generate" -d "{

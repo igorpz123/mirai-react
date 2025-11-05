@@ -58,9 +58,8 @@ async function retryWithBackoff<T>(
         throw error
       }
 
-      // Backoff exponencial: 1s, 2s, 4s
       const delay = initialDelay * Math.pow(2, attempt)
-      console.warn(`[Ollama] Tentativa ${attempt + 1} falhou. Retrying em ${delay}ms...`, {
+      console.warn(`[Ollama] Attempt ${attempt + 1} failed. Retrying in ${delay}ms...`, {
         error: error?.message,
         code: error?.code
       })
@@ -172,7 +171,7 @@ function setCachedResponse(cacheKey: string, response: string, tokens: { input: 
 }
 
 // --- Fetch com timeout ---
-async function fetchWithTimeout(url: string, options: any, timeoutMs: number): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
   
@@ -195,6 +194,7 @@ async function fetchWithTimeout(url: string, options: any, timeoutMs: number): P
 }
 
 // --- Estimar tokens (aproximação: 1 token ≈ 4 caracteres) ---
+// Note: This is a simple estimation. Actual token count may vary by model and content.
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4)
 }

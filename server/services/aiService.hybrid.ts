@@ -119,7 +119,7 @@ async function executeWithFallback<T>(
   
   try {
     // Executar Ollama com controle de concorrência
-    const data = await ollamaSemaphore.run(async () => await ollamaFn())
+    const data = await ollamaSemaphore.run(() => ollamaFn())
     const responseTime = Date.now() - startTime
     usageStats.ollamaRequests++
     usageStats.ollamaResponseTimes.push(responseTime)
