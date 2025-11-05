@@ -134,6 +134,25 @@ export default function TechnicalTaskDetail() {
     return () => { mounted = false }
   }, [selectedSetorId, unitId])
 
+  // Carregar usuários do setor da tarefa quando não houver responsável
+  React.useEffect(() => {
+    let mounted = true
+    if (!task || task.responsavel_id || !task.setor_id || !unitId) return
+    ; (async () => {
+      try {
+        setUsersForSetorLoading(true)
+        const res = await getUsersByDepartmentAndUnit(Number(task.setor_id), Number(unitId))
+        if (!mounted) return
+        setUsersForSetor(res.users || [])
+      } catch {
+        if (mounted) setUsersForSetor([])
+      } finally {
+        if (mounted) setUsersForSetorLoading(false)
+      }
+    })()
+    return () => { mounted = false }
+  }, [task?.setor_id, task?.responsavel_id, unitId])
+
   // Helper para montar URL de arquivo SEM usar hook (evita alterar contagem de hooks entre renders)
   function buildFileUrl(path: string) {
     if (!path) return '#'
@@ -229,283 +248,543 @@ export default function TechnicalTaskDetail() {
   return (
     <div className="container-main">
       <SiteHeader title="Detalhes da Tarefa" />
-      <div className='px-6 mt-4'>
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            Tarefa #{task.tarefa_id || task.id}
-            <TaskStatusBadge status={task.status} />
-          </h1>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (window.history.length > 1) {
-                navigate(-1)
-              } else {
-                navigate('/')
-              }
-            }}
-          >
-            Voltar
-          </Button>
-        </div>
-
-        {/* Ações de fluxo */}
-        <div className="mb-8 space-y-4">
-          {showStart && (
-            <Button onClick={handleStart} disabled={actionLoading} className="button-primary">
-              {actionLoading ? 'Processando...' : 'Iniciar Tarefa'}
+      <div className='px-6 mt-4 max-w-7xl mx-auto'>
+        {/* Header Premium com gradiente sutil */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Tarefa #{task.tarefa_id || task.id}
+                </h1>
+                <TaskStatusBadge status={task.status} />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {task.empresa_nome || task.empresa} • {task.unidade_nome || task.unidade}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (window.history.length > 1) {
+                  navigate(-1)
+                } else {
+                  navigate('/')
+                }
+              }}
+              className="shadow-sm hover:shadow-md transition-shadow"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="size-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Voltar
             </Button>
-          )}
-          {!showStart && showTransferSection && (
-            <div className="flex items-center gap-3">
-              <Button variant="secondary" disabled={actionLoading} onClick={() => setTransfering(v => !v)}>
-                {transfering ? 'Cancelar Transferência' : 'Transferir Tarefa'}
-              </Button>
-            </div>
-          )}
-          {transfering && showTransferSection && (
-            <div className="rounded-md border p-4 space-y-4">
-              <h3 className="font-medium text-sm">Transferir Tarefa</h3>
-              {transferError && <div className="text-sm text-destructive">{transferError}</div>}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Setor (opcional)</label>
-                  {!isMounted ? (
-                    <div className="text-xs text-muted-foreground">Preparando...</div>
-                  ) : (
-                    <Select value={selectedSetorId ? String(selectedSetorId) : ''} onValueChange={(v) => setSelectedSetorId(v === '' || v === '__none' ? null : Number(v))}>
-                      <SelectTrigger className="w-full" disabled={setoresLoading}>
-                        <SelectValue placeholder={setoresLoading ? 'Carregando...' : 'Selecionar setor'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none">-- Nenhum --</SelectItem>
-                        {!setoresLoading && setores.map(s => (
-                          <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {setoresError && <div className="text-destructive text-xs">{setoresError}</div>}
+          </div>
+
+          {/* Ações de fluxo com cards premium */}
+          {(showStart || showTransferSection) && (
+            <div className="bg-gradient-to-r from-primary/5 via-primary/3 to-transparent rounded-xl border border-primary/10 p-6 shadow-sm">
+              {showStart && (
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0">
+                    <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="size-6 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 3l14 9-14 9V3z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">Pronto para começar?</h3>
+                    <p className="text-sm text-muted-foreground">Inicie esta tarefa para registrar seu progresso</p>
+                  </div>
+                  <Button onClick={handleStart} disabled={actionLoading} className="button-primary shadow-md hover:shadow-lg transition-shadow">
+                    {actionLoading ? 'Processando...' : 'Iniciar Tarefa'}
+                  </Button>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-medium">Usuário (opcional)</label>
-                  {!isMounted ? (
-                    <div className="text-xs text-muted-foreground">Preparando...</div>
-                  ) : (
-                    <Select value={selectedUserId ? String(selectedUserId) : ''} onValueChange={(v) => setSelectedUserId(v === '' || v === '__none' ? null : Number(v))}>
-                      <SelectTrigger className="w-full" disabled={usersForSetorLoading}>
-                        <SelectValue placeholder={usersForSetorLoading ? 'Carregando...' : (usersForSetor ? 'Selecionar usuário' : 'Selecionar usuário')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none">-- Nenhum --</SelectItem>
-                        {usersForSetor && usersForSetor.map((u: any) => (
-                          <SelectItem key={u.id} value={String(u.id)}>{u.nome || u.nome_completo || u.email}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+              )}
+              {!showStart && showTransferSection && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-full bg-secondary/20 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold">Transferir Tarefa</h3>
+                        <p className="text-xs text-muted-foreground">Redirecione para outro setor ou usuário</p>
+                      </div>
+                    </div>
+                    <Button variant="secondary" disabled={actionLoading} onClick={() => setTransfering(v => !v)} className="shadow-sm">
+                      {transfering ? 'Cancelar' : 'Transferir'}
+                    </Button>
+                  </div>
+                  {transfering && (
+                    <div className="bg-card rounded-lg border p-5 space-y-4 animate-in fade-in-50 slide-in-from-top-3 duration-300">
+                      {transferError && (
+                        <div className="rounded-md bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive">
+                          {transferError}
+                        </div>
+                      )}
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="size-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            Setor <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+                          </label>
+                          {!isMounted ? (
+                            <div className="text-xs text-muted-foreground">Preparando...</div>
+                          ) : (
+                            <Select value={selectedSetorId ? String(selectedSetorId) : ''} onValueChange={(v) => setSelectedSetorId(v === '' || v === '__none' ? null : Number(v))}>
+                              <SelectTrigger className="w-full" disabled={setoresLoading}>
+                                <SelectValue placeholder={setoresLoading ? 'Carregando...' : 'Selecionar setor'} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none">-- Nenhum --</SelectItem>
+                                {!setoresLoading && setores.map(s => (
+                                  <SelectItem key={s.id} value={String(s.id)}>{s.nome}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {setoresError && <div className="text-destructive text-xs">{setoresError}</div>}
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="size-4 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            Usuário <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+                          </label>
+                          {!isMounted ? (
+                            <div className="text-xs text-muted-foreground">Preparando...</div>
+                          ) : (
+                            <Select value={selectedUserId ? String(selectedUserId) : ''} onValueChange={(v) => setSelectedUserId(v === '' || v === '__none' ? null : Number(v))}>
+                              <SelectTrigger className="w-full" disabled={usersForSetorLoading}>
+                                <SelectValue placeholder={usersForSetorLoading ? 'Carregando...' : (usersForSetor ? 'Selecionar usuário' : 'Selecionar usuário')} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none">-- Nenhum --</SelectItem>
+                                {usersForSetor && usersForSetor.map((u: any) => (
+                                  <SelectItem key={u.id} value={String(u.id)}>{u.nome || u.nome_completo || u.email}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex justify-end pt-2">
+                        <Button onClick={handleTransfer} disabled={actionLoading} className="button-primary shadow-md hover:shadow-lg transition-shadow">
+                          {actionLoading ? (
+                            <>
+                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Transferindo...
+                            </>
+                          ) : 'Confirmar Transferência'}
+                        </Button>
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="flex justify-end">
-                <Button onClick={handleTransfer} disabled={actionLoading} className="button-primary">
-                  {actionLoading ? 'Transferindo...' : 'Confirmar Transferência'}
-                </Button>
-              </div>
+              )}
             </div>
           )}
         </div>
 
-        <div className="space-y-2">
-          <div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
-            <div><strong>Unidade:</strong> {task.unidade_nome || task.unidade}</div>
-            <div><strong>Empresa:</strong> {task.empresa_nome || task.empresa}</div>
-            <div><strong>Finalidade:</strong> {task.finalidade}</div>
-          </div>
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mt-4'>
-            <div><strong>Prioridade:</strong> {task.prioridade}</div>
-            <div><strong>Prazo:</strong> {formatDateBR(task.prazo)}</div>
-            <div><strong>Setor Responsável:</strong> {task.setor_nome || task.setor}</div>
-            <div><strong>Usuário Responsável:</strong> {task.responsavel_nome || task.responsavel}</div>
+        {/* Informações da Tarefa em Cards Premium */}
+        <div className="grid gap-6 mb-8">
+          <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Informações Gerais
+              </h2>
+              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Finalidade</p>
+                  <p className="text-sm font-semibold">{task.finalidade}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prioridade</p>
+                  <p className="text-sm font-semibold capitalize">{task.prioridade}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Prazo</p>
+                  <p className="text-sm font-semibold">{formatDateBR(task.prazo)}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Setor Responsável</p>
+                  <p className="text-sm font-semibold">{task.setor_nome || task.setor}</p>
+                </div>
+
+                <div className="space-y-1 grid sm:col-span-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Usuário Responsável</p>
+                  {task.responsavel_nome || task.responsavel ? (
+                    <p className="text-sm font-semibold">{task.responsavel_nome || task.responsavel}</p>
+                  ) : (
+                    <div className="space-y-2 grid grid-cols-2">
+                      <Select 
+                        value={selectedUserId ? String(selectedUserId) : ''} 
+                        onValueChange={(v) => setSelectedUserId(v === '' ? null : Number(v))}
+                      >
+                        <SelectTrigger className="w-full max-w-xs">
+                          <SelectValue placeholder="Selecionar responsável" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {usersForSetor && usersForSetor.map((u: any) => (
+                            <SelectItem key={u.id} value={String(u.id)}>
+                              {u.nome || u.nome_completo || u.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        disabled={!selectedUserId || actionLoading}
+                        onClick={async () => {
+                          if (!id || !selectedUserId) return
+                          try {
+                            setActionLoading(true)
+                            await updateTask(Number(id), { usuarioId: selectedUserId } as any)
+                            toastSuccess('Responsável atribuído com sucesso')
+                            // Atualizar task local
+                            const updatedTask = await getTaskById(Number(id))
+                            setTask(updatedTask)
+                            // Refresh histórico
+                            const data = await getTaskHistory(Number(id))
+                            setHistory(data)
+                            setSelectedUserId(null)
+                          } catch (err: any) {
+                            alert(err?.message || 'Erro ao atribuir responsável')
+                          } finally {
+                            setActionLoading(false)
+                          }
+                        }}
+                        className="w-full max-w-xs"
+                      >
+                        {actionLoading ? 'Atribuindo...' : 'Atribuir Responsável'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mt-6'>
+        {/* Observações e Arquivos lado a lado em cards */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
           {/* Campo para adicionar observação */}
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2">Adicionar observação</h2>
-            <div className="space-y-2">
-              <Textarea
-                placeholder="Escreva uma observação sobre esta tarefa..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={1000}
-              />
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  disabled={saving || !note.trim()}
-                  onClick={async () => {
-                    if (!id || !user?.id || !note.trim()) return
-                    try {
-                      setSaving(true)
-                      await addTaskObservation(Number(id), Number(user.id), note.trim())
-                      setNote('')
-                      // refresh history
-                      setHistoryLoading(true)
-                      const data = await getTaskHistory(Number(id))
-                      setHistory(data)
-                    } catch (err: any) {
-                      console.error(err)
-                      alert(err?.message || 'Erro ao salvar observação')
-                    } finally {
-                      setSaving(false)
-                      setHistoryLoading(false)
-                    }
-                  }}
-                >
-                  {saving ? 'Salvando...' : 'Salvar observação'}
-                </Button>
+          <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Nova Observação
+              </h2>
+              <div className="space-y-3">
+                <Textarea
+                  placeholder="Escreva uma observação detalhada sobre esta tarefa..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  maxLength={1000}
+                  className="min-h-[120px] resize-none"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {note.length}/1000 caracteres
+                  </span>
+                  <Button
+                    variant="default"
+                    disabled={saving || !note.trim()}
+                    onClick={async () => {
+                      if (!id || !user?.id || !note.trim()) return
+                      try {
+                        setSaving(true)
+                        await addTaskObservation(Number(id), Number(user.id), note.trim())
+                        setNote('')
+                        setHistoryLoading(true)
+                        const data = await getTaskHistory(Number(id))
+                        setHistory(data)
+                      } catch (err: any) {
+                        console.error(err)
+                        alert(err?.message || 'Erro ao salvar observação')
+                      } finally {
+                        setSaving(false)
+                        setHistoryLoading(false)
+                      }
+                    }}
+                    className="shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    {saving ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="size-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Salvar
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Arquivos */}
-          <div className="mt-6">
-            <h2 className="text-lg font-semibold mb-2">Arquivos</h2>
-            <div className="rounded-md border p-3 bg-card/50 space-y-3">
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  disabled={uploading}
-                  onChange={async (e) => {
-                    const inputEl = e.currentTarget
-                    const file = inputEl.files?.[0]
-                    if (!file || !id) return
-                    try {
-                      setUploading(true)
-                      await uploadTaskFile(Number(id), file)
-                      const lst = await listTaskFiles(Number(id))
-                      setFiles(lst)
-                    } catch (err) {
-                      alert('Erro ao enviar arquivo')
-                    } finally {
-                      // clear input safely without touching possibly nulled event
-                      try { inputEl.value = '' } catch { }
-                      setUploading(false)
-                    }
-                  }}
-                />
-              </div>
-              {!files || files.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Nenhum arquivo enviado.</div>
-              ) : (
-                <ul className="space-y-2">
-                  {files.map((f) => (
-                    <li key={f.id} className="flex items-center justify-between gap-2">
-                      <a href={buildFileUrl(f.caminho)} className="text-primary hover:underline truncate max-w-[70%]" target="_blank" rel="noreferrer">{f.nome_arquivo}</a>
-                      <div className="flex items-center gap-2">
-                        <a href={buildFileUrl(f.caminho)} target="_blank" rel="noreferrer" className="inline-block">
-                          <button className="px-2 py-1 border rounded text-sm">Abrir</button>
-                        </a>
-                        <button
-                          className="px-2 py-1 border rounded text-sm text-red-600"
-                          onClick={async () => {
-                            if (!id) return
-                            const ok = window.confirm('Excluir este arquivo?')
-                            if (!ok) return
-                            try {
-                              await deleteTaskFile(Number(id), f.id)
-                              setFiles(prev => prev ? prev.filter(x => x.id !== f.id) : prev)
-                            } catch (err) {
-                              alert('Erro ao excluir arquivo')
-                            }
-                          }}
-                        >Excluir</button>
+          <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow">
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Arquivos Anexados
+              </h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-lg hover:bg-accent/50 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <span className="text-sm font-medium">{uploading ? 'Enviando...' : 'Selecionar arquivo'}</span>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      disabled={uploading}
+                      onChange={async (e) => {
+                        const inputEl = e.currentTarget
+                        const file = inputEl.files?.[0]
+                        if (!file || !id) return
+                        try {
+                          setUploading(true)
+                          await uploadTaskFile(Number(id), file)
+                          const lst = await listTaskFiles(Number(id))
+                          setFiles(lst)
+                        } catch (err) {
+                          alert('Erro ao enviar arquivo')
+                        } finally {
+                          try { inputEl.value = '' } catch { }
+                          setUploading(false)
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {!files || files.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="size-12 mx-auto mb-2 opacity-20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Nenhum arquivo anexado
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
+                    {files.map((f) => (
+                      <div key={f.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-accent/30 hover:bg-accent/50 transition-colors group">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="flex-shrink-0 size-10 rounded-md bg-primary/10 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <a href={buildFileUrl(f.caminho)} className="text-sm font-medium hover:text-primary truncate flex-1" target="_blank" rel="noreferrer">
+                            {f.nome_arquivo}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <a href={buildFileUrl(f.caminho)} target="_blank" rel="noreferrer">
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </Button>
+                          </a>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={async () => {
+                              if (!id) return
+                              const ok = window.confirm('Excluir este arquivo?')
+                              if (!ok) return
+                              try {
+                                await deleteTaskFile(Number(id), f.id)
+                                setFiles(prev => prev ? prev.filter(x => x.id !== f.id) : prev)
+                              } catch (err) {
+                                alert('Erro ao excluir arquivo')
+                              }
+                            }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </Button>
+                        </div>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-2">Histórico</h2>
-          {historyLoading ? (
-            <div>Carregando histórico...</div>
-          ) : history && history.length ? (
-            <div className="space-y-4">
-              {history.map((h, idx) => (
-                <div key={h.id} className={`flex items-center gap-4 py-4 ${idx > 0 ? 'border-t border-muted/40' : ''}`}>
-                  <div className="flex-shrink-0">
-                    <div className="size-12">
-                      <Avatar className="size-12">
+        {/* Histórico Premium com Timeline */}
+        <div className="rounded-xl border bg-card shadow-sm hover:shadow-md transition-shadow mb-8">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="size-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Histórico da Tarefa
+            </h2>
+            {historyLoading ? (
+              <div className="text-center py-12">
+                <svg className="animate-spin h-8 w-8 mx-auto text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p className="text-sm text-muted-foreground mt-3">Carregando histórico...</p>
+              </div>
+            ) : history && history.length ? (
+              <div className="space-y-6 relative before:absolute before:left-6 before:top-3 before:bottom-3 before:w-px before:bg-border">
+                {history.map((h) => (
+                  <div key={h.id} className="flex gap-4 relative">
+                    <div className="flex-shrink-0 relative z-10">
+                      <Avatar className="size-12 ring-4 ring-background">
                         {h.actor?.foto ? (
                           <AvatarImage src={h.actor.foto} alt={`${h.actor.nome} ${h.actor.sobrenome || ''}`} />
                         ) : (
-                          <AvatarFallback className="text-lg">{(h.actor?.nome || 'U').charAt(0)}</AvatarFallback>
+                          <AvatarFallback className="text-base font-semibold bg-primary/10 text-primary">
+                            {(h.actor?.nome || 'U').charAt(0).toUpperCase()}
+                          </AvatarFallback>
                         )}
                       </Avatar>
                     </div>
-                  </div>
 
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <p className="text-xs text-muted-foreground">{new Date(h.data_alteracao).toLocaleString('pt-BR')}</p>
-                      {/* small action icon for premium feel */}
-                      <div className="ml-2 text-muted-foreground" title={h.acao}>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="size-4 opacity-80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v6l4 2" />
-                        </svg>
+                    <div className="flex-1 pb-6">
+                      <div className="rounded-lg border bg-accent/30 p-4 hover:bg-accent/50 transition-colors">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              {new Date(h.data_alteracao).toLocaleString('pt-BR', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary">
+                              {h.acao ? h.acao.replace(/_/g, ' ') : 'sem ação'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm font-medium mb-2">
+                          {(() => {
+                            switch (h.acao) {
+                              case 'concluir_usuario':
+                                return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} concluiu a tarefa e designou para ${h.novo?.usuario_nome || 'Usuário desconhecido'}`
+                              case 'concluir_setor':
+                                return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} concluiu a tarefa e designou para o setor ${h.novo?.setor_nome || h.novo?.setor_id || ''}`
+                              case 'concluir_arquivar':
+                                return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} concluiu e arquivou a tarefa`
+                              case 'designar':
+                                return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} designou a tarefa para ${h.novo?.usuario_nome || 'Usuário desconhecido'}`
+                              case 'criar':
+                                return `${h.novo?.usuario_nome || 'Usuário desconhecido'} criou a tarefa`
+                              case 'iniciar':
+                                return `${h.novo?.usuario_nome || 'Usuário desconhecido'} iniciou a tarefa`
+                              case 'assumir_responsabilidade':
+                                return `${h.novo?.usuario_nome || 'Usuário desconhecido'} se tornou responsável pela tarefa`
+                              case 'adicionar_observacao':
+                                return `${h.novo?.usuario_nome || 'Usuário desconhecido'} adicionou uma observação`
+                              default:
+                                return `${h.actor?.nome || 'Usuário'} ${h.actor?.sobrenome || ''} - ${h.acao}`
+                            }
+                          })()}
+                        </p>
+                        {h.observacoes && (
+                          <div className="mt-2 p-3 rounded-md bg-card/50 border border-border/50">
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Observações:</p>
+                            <p className="text-sm">{h.observacoes}</p>
+                          </div>
+                        )}
+                        <div className="mt-3 flex items-center justify-between pt-3 border-t border-border/50">
+                          {h.avaliacao ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="size-4 text-yellow-500" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                </svg>
+                                <span className="text-sm font-bold">{h.avaliacao.nota ?? '—'}</span>
+                              </div>
+                              {h.avaliacao.by?.nome && (
+                                <span className="text-xs text-muted-foreground">por {h.avaliacao.by.nome}</span>
+                              )}
+                              {h.avaliacao.obs && (
+                                <span className="text-xs text-muted-foreground">• {h.avaliacao.obs}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-muted-foreground">Sem avaliação</div>
+                          )}
+                          {(user && CAN_EVALUATE_ROLES.has(Number((user as any).cargoId))) && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => { 
+                                setRatingTarget(h); 
+                                setRatingNota(h.avaliacao?.nota != null ? String(h.avaliacao.nota) : ''); 
+                                setRatingObs(h.avaliacao?.obs || ''); 
+                                setRatingError(null); 
+                                setRateOpen(true) 
+                              }}
+                              className="h-7 text-xs"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="size-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                              </svg>
+                              Avaliar
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    <p className="text-sm font-medium mt-1">
-                      {(() => {
-                        switch (h.acao) {
-                          case 'concluir_usuario':
-                            return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} concluiu a tarefa e designou para ${h.novo?.usuario_nome || 'Usuário desconhecido'}`
-                          case 'concluir_setor':
-                            return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} concluiu a tarefa e designou para o setor ${h.novo?.setor_nome || h.novo?.setor_id || ''}`
-                          case 'concluir_arquivar':
-                            return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} concluiu e arquivou a tarefa`
-                          case 'designar':
-                            return `${h.anterior?.usuario_nome || 'Usuário desconhecido'} designou a tarefa para ${h.novo?.usuario_nome || 'Usuário desconhecido'}`
-                          case 'criar':
-                            return `${h.novo?.usuario_nome || 'Usuário desconhecido'} criou a tarefa`
-                          case 'iniciar':
-                            return `${h.novo?.usuario_nome || 'Usuário desconhecido'} iniciou a tarefa`
-                          case 'assumir_responsabilidade':
-                            return `${h.novo?.usuario_nome || 'Usuário desconhecido'} se tornou responsável pela tarefa`
-                          case 'adicionar_observacao':
-                            return `${h.novo?.usuario_nome || 'Usuário desconhecido'} adicionou uma observação`
-                          default:
-                            return `${h.actor?.nome || 'Usuário'} ${h.actor?.sobrenome || ''} - ${h.acao}`
-                        }
-                      })()}
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">{h.observacoes ? `Observações: ${h.observacoes}` : 'Sem Observações'}</p>
-                    <div className="mt-2 flex items-center justify-between">
-                      {h.avaliacao ? (
-                        <div className="text-xs text-muted-foreground">
-                          Avaliação: <span className="font-medium">{h.avaliacao.nota ?? '—'}</span>
-                          {h.avaliacao.by?.nome ? ` por ${h.avaliacao.by.nome}` : ''}
-                          {h.avaliacao.obs ? ` — ${h.avaliacao.obs}` : ''}
-                        </div>
-                      ) : (
-                        <div className="text-xs text-muted-foreground">Sem avaliação</div>
-                      )}
-                      {(user && CAN_EVALUATE_ROLES.has(Number((user as any).cargoId))) && (
-                        <Button variant="outline" size="sm" onClick={() => { setRatingTarget(h); setRatingNota(h.avaliacao?.nota != null ? String(h.avaliacao.nota) : ''); setRatingObs(h.avaliacao?.obs || ''); setRatingError(null); setRateOpen(true) }}>Avaliar</Button>
-                      )}
-                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div>Nenhum histórico disponível.</div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <svg xmlns="http://www.w3.org/2000/svg" className="size-16 mx-auto mb-4 opacity-20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-sm text-muted-foreground">Nenhum histórico disponível</p>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Modal de avaliação */}
