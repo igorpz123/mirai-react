@@ -2,6 +2,7 @@ import { Separator } from "@/components/ui/separator"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { ModeToggle } from "./mode-toggle";
 import { NotificationMenu } from "../notification-menu";
+import { HelpButton } from "../help";
 
 export function SiteHeader({ title }: { title: string }) {
   return (
@@ -14,6 +15,7 @@ export function SiteHeader({ title }: { title: string }) {
         />
         <h1 className="text-base font-medium">{title}</h1>
         <div className="ml-auto flex items-center gap-2">
+          <HelpButton autoDetect variant="ghost" size="icon" />
           <NotificationMenu />
           <ModeToggle />
         </div>
