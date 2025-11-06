@@ -5,7 +5,7 @@ import pool from '../config/db'
 // Allowed item types and their queries
 const QUERY_MAP: Record<string, { sql: string; nameFieldCandidates: string[] }> = {
   produtos: { sql: 'SELECT * FROM produtos ORDER BY nome ASC LIMIT 500', nameFieldCandidates: ['nome', 'descricao', 'titulo'] },
-  cursos: { sql: 'SELECT * FROM cursos ORDER BY nome ASC LIMIT 500', nameFieldCandidates: ['nome', 'titulo'] }, // 'titulo' será filtrado se não existir
+  cursos: { sql: 'SELECT * FROM cursos WHERE (active = TRUE OR active IS NULL) ORDER BY nome ASC LIMIT 500', nameFieldCandidates: ['nome', 'titulo'] }, // 'titulo' será filtrado se não existir
   quimicos: { sql: 'SELECT * FROM tabela_quimicos ORDER BY grupo ASC LIMIT 500', nameFieldCandidates: ['nome', 'grupo', 'descricao'] },
   programas: { sql: 'SELECT * FROM programas_prevencao ORDER BY nome ASC LIMIT 500', nameFieldCandidates: ['nome', 'descricao', 'titulo'] },
 }

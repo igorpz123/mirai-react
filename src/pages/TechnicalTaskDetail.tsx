@@ -157,6 +157,17 @@ export default function TechnicalTaskDetail() {
   function buildFileUrl(path: string) {
     if (!path) return '#'
     if (/^https?:\/\//i.test(path)) return path
+    
+    // Em produção, usar o domínio atual do navegador
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      const origin = window.location.origin
+      if (path.startsWith('/uploads')) {
+        return origin + path
+      }
+      return origin + '/api' + path
+    }
+    
+    // Em desenvolvimento, usar as variáveis de ambiente ou fallback
     const rawBase = (import.meta as any).env?.VITE_API_PUBLIC_BASE || (import.meta as any).env?.VITE_API_URL || 'http://localhost:5000/api'
     const baseHttp = rawBase.startsWith('http') ? rawBase : 'http://localhost:5000/api'
     const origin = baseHttp.replace(/\/api\/?$/, '')

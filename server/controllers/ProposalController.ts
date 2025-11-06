@@ -1567,7 +1567,7 @@ export const getCoursesCatalog = async (
 ): Promise<void> => {
     try {
         const [rows] = await pool.query<RowDataPacket[]>(
-            'SELECT * FROM cursos ORDER BY nome ASC'
+            'SELECT * FROM cursos WHERE (active = TRUE OR active IS NULL) ORDER BY nome ASC'
         )
         res.status(200).json(rows || [])
     } catch (error) {

@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { IconTrash, IconPlus, IconChevronDown } from '@tabler/icons-react'
 import { AuthContext } from '@/contexts/AuthContext'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { buildFileUrl } from '@/lib/fileUrl'
 
 export default function CommercialProposalDetail() {
     const { id } = useParams<{ id: string }>()
@@ -703,7 +704,7 @@ export default function CommercialProposalDetail() {
                                             {arquivos.map((a) => (
                                                 <li key={a.id} className="flex items-center justify-between gap-3 p-2 rounded-md hover:bg-background transition-colors">
                                                     <a
-                                                        href={a.caminho}
+                                                        href={buildFileUrl(a.caminho)}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="text-sm text-primary hover:underline truncate flex-1"

@@ -62,27 +62,10 @@ echo "[remote] Extracting package..."
 tar xzf deploy.tar.gz
 echo "[remote] Installing server deps..."
 npm --prefix server install --omit=dev --no-audit --no-fund
-echo "[remote] Ensuring pm2..."
-if ! command -v pm2 >/dev/null 2>&1; then npm i -g pm2 || true; fi
-# Try to locate pm2 even if not on PATH
-PM2_BIN="$(command -v pm2 || true)"
-if [ -z "$PM2_BIN" ]; then
-  PM2_CAND="$(npm bin -g 2>/dev/null)/pm2"
-  if [ -x "$PM2_CAND" ]; then PM2_BIN="$PM2_CAND"; fi
-fi
-if [ -n "$PM2_BIN" ]; then
-  echo "[remote] Using pm2 at $PM2_BIN"
-  $PM2_BIN restart mirai || $PM2_BIN start server/dist/server.js --name mirai
-else
-  echo "[remote] pm2 not found, using nohup fallback"
-  # kill old node serving server.js if any
-  pkill -f "server/dist/server.js" || true
-  # ensure frontend served by backend in fallback
-  export SERVE_FRONT=true
-  export FRONT_DIST_PATH="{0}/dist"
-  nohup node server/dist/server.js > server.out.log 2>&1 & echo $! > server.pid
-  echo "[remote] Started node (PID $(cat server.pid))"
-fi
+echo "[remote] Restarting mirai service with systemctl..."
+sudo systemctl restart mirai
+echo "[remote] Checking service status..."
+sudo systemctl is-active mirai || sudo systemctl status mirai
 rm deploy.tar.gz
 echo "[remote] Done."
 '@ -f $RemoteDir

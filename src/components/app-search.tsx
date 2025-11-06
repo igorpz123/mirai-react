@@ -14,9 +14,10 @@ type Page = { label: string; route: string; icon?: React.ComponentType<{ classNa
 const PAGES: Page[] = [
     { label: 'Início', route: '/', icon: Home, keywords: ['dashboard', 'home'] },
         { label: 'Comercial - Dashboard', route: '/comercial/dashboard', icon: FileText, keywords: ['propostas', 'vendas'] },
-    { label: 'Comercial - Nova Proposta', route: '/comercial/proposta/nova', icon: FilePlus2, keywords: ['nova proposta', 'criar proposta'] },
+    { label: 'Comercial - Nova Proposta', route: '/comercial/proposta/nova', icon: FilePlus2, keywords: ['nova proposta', 'criar proposta', 'nova', 'criar', 'proposta'] },
         { label: 'Técnico - Dashboard', route: '/technical/dashboard', icon: ClipboardList, keywords: ['tarefas', 'técnico'] },
-    { label: 'Técnico - Agenda', route: '/technical/agenda', icon: Map, keywords: ['agenda', 'calendário'] },
+    { label: 'Técnico - Nova Tarefa', route: '/nova-tarefa', icon: BrickWall, keywords: ['nova tarefa', 'criar tarefa', 'tarefa'] },
+    { label: 'Técnico - Agenda', route: '/technical/agenda', icon: Map, keywords: ['agenda', 'calendário', 'novo evento', 'criar evento', 'evento'] },
     { label: 'Empresas', route: '/empresas', icon: Building2, keywords: ['clientes', 'companhias'] },
     { label: 'Usuários (Admin)', route: '/admin/usuarios', icon: Users, keywords: ['admin', 'gestão usuários'] },
 ]
@@ -101,37 +102,41 @@ export function CommandMenu() {
                 <CommandList>
                     <CommandEmpty>Nenhum resultado.</CommandEmpty>
 
-                    {/* Ações rápidas sugeridas */}
-                                <CommandGroup heading="Ações">
-                        <CommandItem onSelect={() => runCommand(() => navigate('/nova-tarefa'))}>
-                            <BrickWall className="mr-2 h-4 w-4" />
-                            <span>Nova Tarefa</span>
-                        </CommandItem>
-                        <CommandItem onSelect={() => runCommand(() => navigate('/comercial/proposta/nova'))}>
-                            <FilePlus2 className="mr-2 h-4 w-4" />
-                            <span>Nova Proposta</span>
-                        </CommandItem>
-                    </CommandGroup>
-
-                    <CommandSeparator />
-
-                    {/* Ir direto por número digitado (prioritário quando há ID) */}
-                    {(idOnly || tarefaId || propostaId) ? (
-                        <CommandGroup heading="Ir para número">
-                            {(idOnly || tarefaId) && (
-                                <CommandItem value={`tarefa ${idOnly ?? tarefaId} #${idOnly ?? tarefaId} ${idOnly ?? tarefaId}`} onSelect={() => runCommand(() => navigate(`/technical/tarefa/${idOnly ?? tarefaId}`))}>
-                                    <ClipboardList className="mr-2 h-4 w-4" />
-                                    <span>Ir para tarefa #{idOnly ?? tarefaId}</span>
-                                </CommandItem>
-                            )}
-                            {(idOnly || propostaId) && (
-                                <CommandItem value={`proposta ${idOnly ?? propostaId} #${idOnly ?? propostaId} ${idOnly ?? propostaId}`} onSelect={() => runCommand(() => navigate(`/comercial/proposta/${idOnly ?? propostaId}`))}>
-                                    <FileText className="mr-2 h-4 w-4" />
-                                    <span>Ir para proposta #{idOnly ?? propostaId}</span>
-                                </CommandItem>
-                            )}
+                    {/* Ações rápidas - SEMPRE mostrar primeiro quando não há número */}
+                    {!anyId && (
+                        <CommandGroup heading="Ações">
+                            <CommandItem value="Nova Tarefa nova tarefa criar tarefa tarefa" onSelect={() => runCommand(() => navigate('/nova-tarefa'))}>
+                                <BrickWall className="mr-2 h-4 w-4" />
+                                <span>Nova Tarefa</span>
+                            </CommandItem>
+                            <CommandItem value="Nova Proposta nova proposta criar proposta proposta" onSelect={() => runCommand(() => navigate('/comercial/proposta/nova'))}>
+                                <FilePlus2 className="mr-2 h-4 w-4" />
+                                <span>Nova Proposta</span>
+                            </CommandItem>
+                            <CommandItem value="Novo Evento novo evento criar evento evento agenda calendário" onSelect={() => runCommand(() => navigate('/technical/agenda'))}>
+                                <Map className="mr-2 h-4 w-4" />
+                                <span>Novo Evento (Agenda)</span>
+                            </CommandItem>
                         </CommandGroup>
-                    ) : null}
+                    )}
+
+                    {!anyId && <CommandSeparator />}
+
+                    {/* Ir direto por número digitado (APENAS quando há número) */}
+                    {anyId && (
+                        <CommandGroup heading="Ir para número">
+                            <CommandItem value={`tarefa ${anyId} #${anyId}`} onSelect={() => runCommand(() => navigate(`/technical/tarefa/${anyId}`))}>
+                                <ClipboardList className="mr-2 h-4 w-4" />
+                                <span>Ir para tarefa #{anyId}</span>
+                            </CommandItem>
+                            <CommandItem value={`proposta ${anyId} #${anyId}`} onSelect={() => runCommand(() => navigate(`/comercial/proposta/${anyId}`))}>
+                                <FileText className="mr-2 h-4 w-4" />
+                                <span>Ir para proposta #{anyId}</span>
+                            </CommandItem>
+                        </CommandGroup>
+                    )}
+
+                    {anyId && <CommandSeparator />}
 
                     {/* Páginas filtradas */}
                     <CommandGroup heading="Páginas">

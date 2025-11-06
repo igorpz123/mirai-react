@@ -235,6 +235,69 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         )}
 
         <div className="max-h-96 overflow-y-auto">
+          {/* Comandos rápidos - mostrar quando não há número na query */}
+          {(() => {
+            const hasNumber = /\d/.test(query)
+            const q = query.toLowerCase()
+            const showNewTask = !hasNumber && (q.length === 0 || q.includes('nova') || q.includes('criar') || q.includes('tarefa'))
+            const showNewProposal = !hasNumber && (q.length === 0 || q.includes('nova') || q.includes('criar') || q.includes('proposta'))
+            const showNewEvent = !hasNumber && (q.length === 0 || q.includes('novo') || q.includes('criar') || q.includes('evento') || q.includes('agenda'))
+            const showAnyCommand = showNewTask || showNewProposal || showNewEvent
+
+            return showAnyCommand ? (
+              <div className="p-2">
+                <div className="px-2 py-1 mb-1">
+                  <span className="text-xs font-medium text-muted-foreground">Ações Rápidas</span>
+                </div>
+                {showNewTask && (
+                  <button
+                    onClick={() => {
+                      navigate('/nova-tarefa')
+                      onOpenChange(false)
+                    }}
+                    className="flex items-center w-full px-3 py-2 rounded hover:bg-accent text-left text-sm"
+                  >
+                    <FileText className="h-4 w-4 text-muted-foreground mr-3" />
+                    <div>
+                      <div className="font-medium">Nova Tarefa</div>
+                      <div className="text-xs text-muted-foreground">Criar uma nova tarefa</div>
+                    </div>
+                  </button>
+                )}
+                {showNewProposal && (
+                  <button
+                    onClick={() => {
+                      navigate('/comercial/proposta/nova')
+                      onOpenChange(false)
+                    }}
+                    className="flex items-center w-full px-3 py-2 rounded hover:bg-accent text-left text-sm"
+                  >
+                    <Briefcase className="h-4 w-4 text-muted-foreground mr-3" />
+                    <div>
+                      <div className="font-medium">Nova Proposta</div>
+                      <div className="text-xs text-muted-foreground">Criar uma proposta comercial</div>
+                    </div>
+                  </button>
+                )}
+                {showNewEvent && (
+                  <button
+                    onClick={() => {
+                      navigate('/technical/agenda')
+                      onOpenChange(false)
+                    }}
+                    className="flex items-center w-full px-3 py-2 rounded hover:bg-accent text-left text-sm"
+                  >
+                    <Building2 className="h-4 w-4 text-muted-foreground mr-3" />
+                    <div>
+                      <div className="font-medium">Novo Evento</div>
+                      <div className="text-xs text-muted-foreground">Adicionar evento na agenda</div>
+                    </div>
+                  </button>
+                )}
+              </div>
+            ) : null
+          })()}
+
           {/* Histórico de buscas */}
           {query.length === 0 && searchHistory.length > 0 && (
             <div className="p-2">

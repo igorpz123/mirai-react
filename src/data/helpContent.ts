@@ -42,7 +42,7 @@ export const helpModules: Record<string, HelpModule> = {
       },
       {
         id: 'empresas-criar',
-        title: 'Criar Nova Empresa',
+        title: 'Criar Nova Empresa (Admin)',
         content: 'Para cadastrar uma nova empresa no sistema:',
         steps: [
           'Clique no botão "Nova Empresa" no canto superior direito',
@@ -62,7 +62,7 @@ export const helpModules: Record<string, HelpModule> = {
       },
       {
         id: 'empresas-editar',
-        title: 'Editar Empresa',
+        title: 'Editar Empresa (Admin)',
         content: 'Para modificar dados de uma empresa existente:',
         steps: [
           'Na lista de empresas, clique nos três pontos ao lado do nome da empresa',
@@ -79,7 +79,7 @@ export const helpModules: Record<string, HelpModule> = {
       },
       {
         id: 'empresas-tarefas-automaticas',
-        title: 'Tarefas Automáticas',
+        title: 'Tarefas Automáticas (Admin)',
         content: 'O sistema pode criar tarefas automaticamente baseado na periodicidade e data de renovação da empresa.',
         steps: [
           'Defina a periodicidade ao criar/editar a empresa',
@@ -123,7 +123,6 @@ export const helpModules: Record<string, HelpModule> = {
           'Clique no botão "Nova Tarefa"',
           'Selecione a empresa relacionada',
           'Escolha o tipo de tarefa',
-          'Defina o título e descrição',
           'Configure a data de vencimento',
           'Atribua um responsável',
           'Selecione a prioridade (baixa, média, alta)',
@@ -142,7 +141,7 @@ export const helpModules: Record<string, HelpModule> = {
         steps: [
           'Acesse a página de detalhes da tarefa',
           'Use o seletor de status no topo',
-          'Status disponíveis: Pendente, Em Andamento, Concluída, Cancelada',
+          'Status disponíveis: Pendente, Em Andamento, Concluída',
           'Adicione observações se necessário',
           'O histórico registra todas as mudanças'
         ],
@@ -195,12 +194,18 @@ export const helpModules: Record<string, HelpModule> = {
         title: 'Criar Proposta',
         content: 'Para criar uma nova proposta comercial:',
         steps: [
-          'Clique em "Nova Proposta"',
-          'Preencha título e selecione o cliente',
-          'Defina o responsável pela proposta',
-          'Adicione indicação se houver',
-          'Clique em "Criar"',
-          'Na página da proposta, adicione itens através do botão "Adicionar Item"'
+            'No menu lateral, acesse "CRM" e clique em "Criar Proposta" ou',
+          'Aperte Ctrl + K para acessar a busca global e digite Criar Proposta',
+          'Preencha o CNPJ ou CPF para consultar se a empresa já esta cadastrada no sistema',
+          'Em caso positivo, prossiga com o preenchimento da proposta',
+          'Caso a empresa não exista no sistema, preencha com os dados e informações solicitadas',
+          'Preenche com os programas, cursos, medições químicas e produtos desejados',
+          'Ao final, preencha o título da proposta, status, data da elaboração e se há alguma indicação',
+          'Clique em Finalizar para criar a proposta',
+          'Arquivos poderão ser anexados à proposta depois de criar',
+        ],
+        tips: [
+          'Sempre aperte no "+" para adicionar um item a proposta'
         ]
       },
       {
