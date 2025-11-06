@@ -90,7 +90,7 @@ export const getTaskById = async (req: Request<{ tarefa_id: string }>, res: Resp
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
   LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
-      JOIN setor str ON tsk.setor_id = str.id
+  LEFT JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.id = ?
       `,
@@ -139,7 +139,7 @@ export const getTaskByUser = async (req: Request<{ usuario_id: string }>, res: R
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
       LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
-      JOIN setor str ON tsk.setor_id = str.id
+  LEFT JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.responsavel_id = ?
         AND tsk.status <> 'Automático'
@@ -196,7 +196,7 @@ export const getTaskByResponsavel = async (req: Request<{ responsavel_id: string
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
       LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
-      JOIN setor str ON tsk.setor_id = str.id
+  LEFT JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.responsavel_id = ?
       ORDER BY tsk.prazo ASC
@@ -262,7 +262,7 @@ export const getTaskByUnidade = async (
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
       LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
-      JOIN setor str ON tsk.setor_id = str.id
+  LEFT JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.unidade_id IN (?)
         AND tsk.status <> 'Automático'
@@ -325,7 +325,7 @@ export const getTaskByUnidadeSetor = async (
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
       LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
-      JOIN setor str ON tsk.setor_id = str.id
+  LEFT JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.unidade_id IN (?)
         AND tsk.setor_id IN (?)
@@ -1086,7 +1086,7 @@ export const getTasksByEmpresa = async (req: Request<{ empresa_id: string }>, re
       JOIN tipo_tarefa tpt ON tsk.finalidade_id = tpt.id
       JOIN empresas emp ON tsk.empresa_id = emp.id
       LEFT JOIN usuarios usr_tarefa ON tsk.responsavel_id = usr_tarefa.id
-      JOIN setor str ON tsk.setor_id = str.id
+  LEFT JOIN setor str ON tsk.setor_id = str.id
       JOIN unidades und ON tsk.unidade_id = und.id
       WHERE tsk.empresa_id = ?
       ORDER BY tsk.prazo ASC

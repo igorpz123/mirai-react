@@ -224,14 +224,22 @@ export default function TechnicalTaskDetail() {
     try {
       setActionLoading(true)
       setTransferError(null)
+      
+      // Se ambos setor e usuário são null, é uma ação de concluir e arquivar
+      const isConcludeAndArchive = selectedSetorId === null && selectedUserId === null
+      
       const payload: any = {
-        status: 'pendente',
+        status: isConcludeAndArchive ? 'concluída' : 'pendente',
         setorId: selectedSetorId ?? null,
         usuarioId: selectedUserId ?? null,
       }
       await updateTask(Number(id), payload)
-      try { toastSuccess('Tarefa transferida') } catch { /* ignore */ }
-      setTask((prev: any) => prev ? { ...prev, status: 'pendente', setor_id: selectedSetorId ?? prev.setor_id, responsavel_id: selectedUserId ?? prev.responsavel_id } : prev)
+      
+      const successMessage = isConcludeAndArchive ? 'Tarefa concluída e arquivada' : 'Tarefa transferida'
+      try { toastSuccess(successMessage) } catch { /* ignore */ }
+      
+      const newStatus = isConcludeAndArchive ? 'concluída' : 'pendente'
+      setTask((prev: any) => prev ? { ...prev, status: newStatus, setor_id: selectedSetorId ?? prev.setor_id, responsavel_id: selectedUserId ?? prev.responsavel_id } : prev)
       getTaskHistory(Number(id)).then(h => setHistory(h)).catch(() => { })
       setTransfering(false)
       setSelectedSetorId(null)
