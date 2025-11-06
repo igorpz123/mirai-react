@@ -241,8 +241,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             const q = query.toLowerCase()
             const showNewTask = !hasNumber && (q.length === 0 || q.includes('nova') || q.includes('criar') || q.includes('tarefa'))
             const showNewProposal = !hasNumber && (q.length === 0 || q.includes('nova') || q.includes('criar') || q.includes('proposta'))
-            const showNewEvent = !hasNumber && (q.length === 0 || q.includes('novo') || q.includes('criar') || q.includes('evento') || q.includes('agenda'))
-            const showAnyCommand = showNewTask || showNewProposal || showNewEvent
+            // const showNewEvent = !hasNumber && (q.length === 0 || q.includes('novo') || q.includes('criar') || q.includes('evento') || q.includes('agenda'))
+            const showAnyCommand = showNewTask || showNewProposal // || showNewEvent
 
             return showAnyCommand ? (
               <div className="p-2">
@@ -279,7 +279,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                     </div>
                   </button>
                 )}
-                {showNewEvent && (
+                {/* {showNewEvent && (
                   <button
                     onClick={() => {
                       navigate('/technical/agenda')
@@ -293,7 +293,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                       <div className="text-xs text-muted-foreground">Adicionar evento na agenda</div>
                     </div>
                   </button>
-                )}
+                )} */}
               </div>
             ) : null
           })()}
