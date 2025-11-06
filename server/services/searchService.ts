@@ -120,6 +120,9 @@ async function searchTasks(query: string, userId: number, userCargoId: number, u
   const searchPattern = `%${query}%`
   
   try {
+    // Verificar se a query é um número (ID da tarefa)
+    const isNumericSearch = /^\d+$/.test(query.trim())
+    
     // Query base
     let sql = `SELECT 
         t.id,
@@ -135,15 +138,23 @@ async function searchTasks(query: string, userId: number, userCargoId: number, u
       LEFT JOIN empresas e ON t.empresa_id = e.id
       LEFT JOIN usuarios u ON t.responsavel_id = u.id
       LEFT JOIN tipo_tarefa tt ON t.finalidade_id = tt.id
-      WHERE (
-        t.id LIKE ? OR
-        e.nome_fantasia LIKE ? OR
-        e.cnpj LIKE ? OR
-        e.caepf LIKE ?
-      )
-      AND t.status != 'Automático'`
+      WHERE (`
     
-    const params: any[] = [searchPattern, searchPattern, searchPattern, searchPattern]
+    const params: any[] = []
+    
+    // Se for uma busca numérica, priorizar busca por ID
+    if (isNumericSearch) {
+      sql += `t.id = ?`
+      params.push(parseInt(query.trim()))
+    } else {
+      sql += `e.nome_fantasia LIKE ? OR
+        e.cnpj LIKE ? OR
+        e.caepf LIKE ? OR
+        tt.tipo LIKE ?`
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern)
+    }
+    
+    sql += `) AND t.status != 'Automático'`
     
     // Adicionar filtro de unidade se fornecido
     if (unitId) {
@@ -159,15 +170,19 @@ async function searchTasks(query: string, userId: number, userCargoId: number, u
       // Calcular relevância baseada em onde o termo foi encontrado
       let relevance = 0
       const lowerQuery = query.toLowerCase()
-      const titulo = (row.titulo || '').toLowerCase()
-      const descricao = (row.descricao || '').toLowerCase()
       const empresa = (row.empresa_nome || '').toLowerCase()
+      const tipo = (row.tipo_nome || '').toLowerCase()
 
-      if (titulo.includes(lowerQuery)) relevance += 100
-      if (titulo.startsWith(lowerQuery)) relevance += 50
-      if (descricao.includes(lowerQuery)) relevance += 30
-      if (empresa.includes(lowerQuery)) relevance += 20
-      if (row.cnpj && row.cnpj.includes(query)) relevance += 40
+      // Relevância máxima para busca por ID exato
+      if (isNumericSearch && row.id === parseInt(query.trim())) {
+        relevance += 1000
+      } else {
+        if (empresa.includes(lowerQuery)) relevance += 100
+        if (empresa.startsWith(lowerQuery)) relevance += 50
+        if (tipo.includes(lowerQuery)) relevance += 80
+        if (row.cnpj && row.cnpj.includes(query)) relevance += 90
+        if (row.caepf && row.caepf.includes(query)) relevance += 90
+      }
 
       // Boost para tarefas pendentes
       if (row.status === 'Pendente') relevance += 10
@@ -175,7 +190,7 @@ async function searchTasks(query: string, userId: number, userCargoId: number, u
       return {
         id: row.id,
         type: 'task' as const,
-        title: row.tipo_nome || 'Sem finalidade',
+        title: `${row.tipo_nome || 'Sem finalidade'} #${row.id}`,
         subtitle: row.empresa_nome || 'Sem empresa',
         description: undefined, // Status agora aparece apenas no badge
         metadata: {
@@ -202,6 +217,9 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
   const searchPattern = `%${query}%`
   
   try {
+    // Verificar se a query é um número (ID da proposta)
+    const isNumericSearch = /^\d+$/.test(query.trim())
+    
     let sql = `SELECT 
         p.id,
         p.titulo,
@@ -214,14 +232,23 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
       FROM propostas p
       LEFT JOIN usuarios u ON p.responsavel_id = u.id
       LEFT JOIN empresas e ON p.empresa_id = e.id
-      WHERE (
-        e.nome_fantasia LIKE ? OR
+      WHERE (`
+    
+    const params: any[] = []
+    
+    // Se for uma busca numérica, priorizar busca por ID
+    if (isNumericSearch) {
+      sql += `p.id = ?`
+      params.push(parseInt(query.trim()))
+    } else {
+      sql += `e.nome_fantasia LIKE ? OR
         e.cnpj LIKE ? OR
         e.caepf LIKE ? OR
-        p.titulo LIKE ?
-      )`
+        p.titulo LIKE ?`
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern)
+    }
     
-    const params: any[] = [searchPattern, searchPattern, searchPattern, searchPattern]
+    sql += `)`
     
     // Adicionar filtro de unidade se fornecido
     if (unitId) {
@@ -237,11 +264,18 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
       let relevance = 0
       const lowerQuery = query.toLowerCase()
       const cliente = (row.nome_cliente || '').toLowerCase()
+      const titulo = (row.titulo || '').toLowerCase()
 
-      if (cliente.includes(lowerQuery)) relevance += 100
-      if (cliente.startsWith(lowerQuery)) relevance += 50
-      if (row.cnpj && row.cnpj.includes(query)) relevance += 80
-      if (row.caepf && row.caepf.includes(query)) relevance += 80
+      // Relevância máxima para busca por ID exato
+      if (isNumericSearch && row.id === parseInt(query.trim())) {
+        relevance += 1000
+      } else {
+        if (cliente.includes(lowerQuery)) relevance += 100
+        if (cliente.startsWith(lowerQuery)) relevance += 50
+        if (titulo.includes(lowerQuery)) relevance += 80
+        if (row.cnpj && row.cnpj.includes(query)) relevance += 90
+        if (row.caepf && row.caepf.includes(query)) relevance += 90
+      }
 
       // Boost para propostas pendentes
       if (row.status && row.status.toLowerCase().includes('pendent')) relevance += 15

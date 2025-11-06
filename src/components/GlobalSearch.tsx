@@ -239,8 +239,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           {(() => {
             const hasNumber = /\d/.test(query)
             const q = query.toLowerCase()
-            const showNewTask = !hasNumber && (q.length === 0 || q.includes('nova') || q.includes('criar') || q.includes('tarefa'))
-            const showNewProposal = !hasNumber && (q.length === 0 || q.includes('nova') || q.includes('criar') || q.includes('proposta'))
+            const showNewTask = !hasNumber && (q.length === 0 || q.includes('nova tarefa') || q.includes('criar tarefa') || q.includes('tarefa'))
+            const showNewProposal = !hasNumber && (q.length === 0 || q.includes('nova proposta') || q.includes('criar proposta') || q.includes('proposta'))
             // const showNewEvent = !hasNumber && (q.length === 0 || q.includes('novo') || q.includes('criar') || q.includes('evento') || q.includes('agenda'))
             const showAnyCommand = showNewTask || showNewProposal // || showNewEvent
 
