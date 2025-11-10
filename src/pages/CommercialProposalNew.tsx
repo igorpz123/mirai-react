@@ -209,7 +209,7 @@ export default function CommercialProposalNew() {
                     const nextStepNumber = idx + 2
                     const currentStatus = getStepStatus(currentStepNumber)
                     const nextStatus = getStepStatus(nextStepNumber)
-                    
+
                     const startPos = Math.round((idx / (stepLabels.length - 1)) * 100)
                     const endPos = Math.round(((idx + 1) / (stepLabels.length - 1)) * 100)
                     const width = endPos - startPos
