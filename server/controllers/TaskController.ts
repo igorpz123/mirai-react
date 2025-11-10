@@ -212,6 +212,9 @@ export const getTaskByResponsavel = async (req: Request<{ responsavel_id: string
       tasks: (rows || []).map(row => ({
         id: row.tarefa_id,
         empresa: row.empresa_nome,
+        empresa_social: row.empresa_social,
+        empresa_cnpj: row.empresa_cnpj,
+        empresa_cidade: row.empresa_cidade,
         unidade: row.unidade_nome,
         finalidade: row.finalidade,
         status: row.status,
@@ -1104,6 +1107,9 @@ export const getTasksByEmpresa = async (req: Request<{ empresa_id: string }>, re
       tasks: (rows || []).map(row => ({
         id: row.tarefa_id,
         empresa: row.empresa_nome,
+        empresa_social: row.empresa_social,
+        empresa_cnpj: row.empresa_cnpj,
+        empresa_cidade: row.empresa_cidade,
         unidade: row.unidade_nome,
         finalidade: row.finalidade,
         status: row.status,
@@ -1445,6 +1451,9 @@ export const getRecentTasksByUsuario = async (
       tasks: (rows as any[]).map(row => ({
         id: row.tarefa_id,
         empresa: row.empresa_nome,
+        empresa_social: row.empresa_social,
+        empresa_cnpj: row.empresa_cnpj,
+        empresa_cidade: row.empresa_cidade,
         unidade: row.unidade_nome,
         finalidade: row.finalidade,
         status: row.status,

@@ -44,7 +44,7 @@ try {
   if ($StartFrom -le 4) {
     Write-Host "[4/6] Enviando pacote para o servidor" -ForegroundColor Green
     $remoteSpec = "${User}@${ServerHost}:${RemoteDir}/"
-    ExecOrFail "scp -i `"$KeyPath`" deploy.tar.gz $remoteSpec"
+    ExecOrFail "scp -i "C:\Users\igorp\.ssh\mirai-react.pem" deploy.tar.gz 35.169.222.86"
   } else {
     Write-Host "[4/6] PULADO (StartFrom=$StartFrom)" -ForegroundColor Yellow
   }
