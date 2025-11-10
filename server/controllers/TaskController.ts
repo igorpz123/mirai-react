@@ -153,6 +153,9 @@ export const getTaskByUser = async (req: Request<{ usuario_id: string }>, res: R
       tasks: rows.map(row => ({
         id: row.tarefa_id,
         empresa: row.empresa_nome,
+        empresa_social: row.empresa_social,
+        empresa_cnpj: row.empresa_cnpj,
+        empresa_cidade: row.empresa_cidade,
         unidade: row.unidade_nome,
         finalidade: row.finalidade,
         status: row.status,
@@ -276,6 +279,9 @@ export const getTaskByUnidade = async (
       tasks: rows.map(row => ({
         id: row.tarefa_id,
         empresa: row.empresa_nome,
+        empresa_social: row.empresa_social,
+        empresa_cnpj: row.empresa_cnpj,
+        empresa_cidade: row.empresa_cidade,
         unidade: row.unidade_nome,
         finalidade: row.finalidade,
         status: row.status,

@@ -94,6 +94,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card"
 import { Calendar } from "@/components/ui/calendar"
 import { TaskInfo } from "@/components/technical-task-info";
 import { toastSuccess, toastWarning, toastError } from '@/lib/customToast'
@@ -103,6 +108,9 @@ import { useAuth } from '@/contexts/AuthContext'
 interface TableTask {
   id: number
   empresa: string
+  empresaSocial?: string
+  empresaCnpj?: string
+  empresaCidade?: string
   unidade: string
   finalidade: string
   status: string
@@ -127,6 +135,9 @@ interface TechnicalTaskTableProps {
 export const schema = z.object({
   id: z.number(),
   empresa: z.string(),
+  empresaSocial: z.string().optional(),
+  empresaCnpj: z.string().optional(),
+  empresaCidade: z.string().optional(),
   unidade: z.string(),
   finalidade: z.string(),
   status: z.string(),
@@ -330,6 +341,9 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     tasks.map(task => ({
       id: typeof task.id === 'string' ? parseInt(task.id) : task.id,
       empresa: task.empresa || 'N/A',
+      empresaSocial: (task as any).empresa_social || (task as any).empresaSocial || undefined,
+      empresaCnpj: (task as any).empresa_cnpj || (task as any).empresaCnpj || undefined,
+      empresaCidade: (task as any).empresa_cidade || (task as any).empresaCidade || undefined,
       unidade: task.unidade || 'N/A',
       finalidade: task.finalidade || 'Sem finalidade',
       status: task.status || 'pending',
@@ -466,7 +480,46 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
       accessorKey: "empresa",
       header: "Empresa",
       cell: ({ row }) => {
-        return <span className="font-medium pl-2">{row.original.empresa}</span>
+        const original = row.original as TableTask
+        const hasCompanyDetails = original.empresaSocial || original.empresaCnpj || original.empresaCidade
+        
+        if (!hasCompanyDetails) {
+          return <span className="font-medium pl-2">{original.empresa}</span>
+        }
+
+        return (
+          <HoverCard openDelay={200} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <span className="font-medium pl-2 cursor-help hover:text-primary transition-colors">
+                {original.empresa}
+              </span>
+            </HoverCardTrigger>
+            <HoverCardContent className="w-80" align="start">
+              <div className="space-y-2">
+                <div className="space-y-1.5 text-sm">
+                  {original.empresaSocial && (
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground text-xs">Razão Social</span>
+                      <span className="font-medium">{original.empresaSocial}</span>
+                    </div>
+                  )}
+                  {original.empresaCnpj && (
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground text-xs">CNPJ</span>
+                      <span className="font-mono">{original.empresaCnpj}</span>
+                    </div>
+                  )}
+                  {original.empresaCidade && (
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground text-xs">Cidade</span>
+                      <span>{original.empresaCidade}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
+        )
       },
       enableHiding: false,
     },
