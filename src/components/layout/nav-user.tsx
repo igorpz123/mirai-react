@@ -2,7 +2,7 @@
 "use client"
 
 import { useNavigate } from "react-router-dom";
-import { BadgeCheck, Bell, ChevronsUpDown, LogOut } from "lucide-react";
+import { BadgeCheck, Bell, ChevronsUpDown, LogOut, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNotificationsRT } from '@/contexts/RealtimeContext'
 import {
@@ -45,6 +45,10 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
 
   const userInfo = () => {
     navigate(`/admin/usuario/${user.id}`);
+  };
+
+  const userAgenda = () => {
+    navigate(`/agenda/${user.id}`);
   };
 
   const userNotifications = () => {
@@ -101,10 +105,14 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-                <DropdownMenuItem onClick={userInfo} className="cursor-pointer">
-                  <BadgeCheck />
-                  Minha Conta
-                </DropdownMenuItem>
+              <DropdownMenuItem onClick={userInfo} className="cursor-pointer">
+                <BadgeCheck />
+                Minha Conta
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={userAgenda} className="cursor-pointer">
+                <Calendar />
+                Minha Agenda
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={userNotifications} className="cursor-pointer flex items-center gap-2">
                 <Bell />
                 <span className="flex-1">Notificações</span>
