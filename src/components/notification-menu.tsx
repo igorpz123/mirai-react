@@ -21,6 +21,7 @@ export const NotificationMenu: React.FC = () => {
         onClick={() => setOpen(o => !o)}
         className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border bg-background hover:bg-accent focus:outline-none"
         aria-label="Notificações"
+        data-tour="notifications"
       >
         <Bell className="h-4 w-4" />
         {unread > 0 && (

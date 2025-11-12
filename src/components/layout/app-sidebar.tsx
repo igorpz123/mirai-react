@@ -194,7 +194,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     })) || [];
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" {...props} data-tour="sidebar">
       <SidebarHeader>
         <UnitSwitcher
           units={units}
@@ -208,6 +208,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               size="icon"
               className="w-full h-9"
               onClick={openSearch}
+              data-tour="search"
             >
               <Search className="h-4 w-4" />
             </Button>
@@ -216,6 +217,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               variant="outline"
               className="w-full justify-start text-sm text-muted-foreground font-normal h-9"
               onClick={openSearch}
+              data-tour="search"
             >
               <Search className="mr-2 h-4 w-4" />
               <span>Buscar...</span>

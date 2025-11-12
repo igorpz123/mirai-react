@@ -374,6 +374,90 @@ Notificações push instantâneas via WebSocket.
 
 ---
 
+## 🎓 Tours Interativos
+
+Sistema completo de tours guiados usando Shepherd.js para onboarding de novos usuários.
+
+### Características
+- **7 tours interativos** cobrindo todos os módulos principais
+- **Tour automático** iniciado na primeira vez que o usuário faz login
+- **Controle de progresso** salvo em localStorage
+- **Interface premium** com tema dark/light integrado
+- **Navegação por teclado** (Esc, Enter, Tab)
+- **Responsivo** e acessível (Radix UI + Shepherd.js)
+
+### Arquivos Principais
+- `src/contexts/TourContext.tsx` - Provider e hook `useTour`
+- `src/components/tour/TourButton.tsx` - Botão dropdown com lista de tours
+- `src/components/tour/FirstTimeTour.tsx` - Inicia tour automático
+- `src/data/tours.ts` - Definições de todos os 7 tours
+- `src/lib/tourConfig.ts` - Configuração global e tipos
+- `src/styles/tour.css` - Estilos customizados do Shepherd
+
+### Tours Disponíveis
+1. **Bem-vindo ao Mirai** - Tour introdutório automático (sidebar, busca, notificações)
+2. **Dashboard** - Cards, filtros e gráficos
+3. **Tarefas** - Criar, filtrar e gerenciar tarefas
+4. **Propostas** - Criar propostas e exportar documentos
+5. **Empresas** - Cadastro, tarefas automáticas e documentos
+6. **Agenda** - Visualizações e filtros de usuários
+7. **Usuários** - Gerenciamento e permissões (admin)
+
+### Como Usar
+
+#### Usuário Final
+- Tour automático inicia após 1,5s no primeiro login
+- Clique no ícone 🎓 no header para ver todos os tours
+- Tours completados aparecem com ✓ verde
+- "Resetar todos os tours" para refazer
+
+#### Desenvolvedor
+```typescript
+// Iniciar tour programaticamente
+import { useTour } from '@/contexts/TourContext'
+
+function MeuComponente() {
+  const { startTour, hasSeenTour } = useTour()
+
+  if (!hasSeenTour('dashboard')) {
+    // Sugerir tour
+  }
+
+  return (
+    <Button onClick={() => startTour('tasks')}>
+      Ver Tour de Tarefas
+    </Button>
+  )
+}
+```
+
+#### Adicionar Novo Tour
+1. Edite `src/data/tours.ts` e adicione definição
+2. Marque elementos da UI com `data-tour="id"`
+3. Tour será automaticamente listado no dropdown
+
+### Exemplo de Tour Step
+```typescript
+{
+  id: 'step-1',
+  title: '📊 Título do Step',
+  text: '<p>Use HTML para formatar. Suporta <strong>negrito</strong>, <kbd>Ctrl+K</kbd>, etc.</p>',
+  attachTo: { element: '[data-tour="meu-elemento"]', on: 'bottom' },
+  buttons: [tourButtons.back, tourButtons.next]
+}
+```
+
+### Storage
+- Tours vistos salvos em `localStorage`: `mirai_tours_seen`
+- Array de TourIds: `["first-time", "dashboard", "tasks"]`
+- Resetar limpa o localStorage
+
+### Documentação Completa
+- **Guia Técnico Detalhado:** `docs/TOURS.md`
+- **Customização:** Ver `src/styles/tour.css` e `src/lib/tourConfig.ts`
+
+---
+
 ## 📊 Performance
 
 ### Otimizações Implementadas
@@ -400,6 +484,9 @@ Notificações push instantâneas via WebSocket.
 - [ ] Sistema de backup automático
 - [ ] Logs de auditoria completos
 - [ ] Versionamento de documentos
+
+### ✅ Recém Implementado
+- [x] **Tours Interativos** - Sistema completo de onboarding (Novembro 2025)
 
 ---
 

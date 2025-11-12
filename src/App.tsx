@@ -40,12 +40,14 @@ import NotFound from './pages/NotFound';
 import './App.css';
 import { useAuth } from './hooks/use-auth';
 import { usePermissions } from './hooks/use-permissions';
+import { FirstTimeTour } from './components/tour/FirstTimeTour';
 
 // Separa a lógica que utiliza o hook, garantindo que ela será renderizada
 // dentro do SidebarProvider.
 function AppContent() {
   return (
     <Router>
+      <FirstTimeTour />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<HomeRedirect />} />

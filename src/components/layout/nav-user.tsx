@@ -63,6 +63,7 @@ export function NavUser({ user, onSignOut }: NavUserProps) {
             <SidebarMenuButton
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              data-tour="user-menu"
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 {user.avatar ? (
