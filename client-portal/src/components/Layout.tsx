@@ -28,8 +28,12 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">O</span>
+              <div className="w-10 h-10 flex items-center justify-center">
+                <img 
+                  src="/logo.png" 
+                  alt="Oeste SST" 
+                  className="w-10 h-10 object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-lg font-bold text-gray-900 dark:text-white">

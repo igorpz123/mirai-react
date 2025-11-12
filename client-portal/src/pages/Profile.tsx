@@ -31,15 +31,25 @@ export default function Profile() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="empresa" className="flex items-center gap-2">
+                <Label htmlFor="razao-social" className="flex items-center gap-2">
                   <IconBuilding className="w-4 h-4" />
-                  Empresa
+                  Razão Social
                 </Label>
                 <Input
-                  id="empresa"
+                  id="razao-social"
                   value={user?.empresa_nome || ''}
                   disabled
-                  className="bg-gray-50 text-gray-900"
+                  className="bg-gray-50 dark:bg-gray-800"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="nome-fantasia">Nome Fantasia</Label>
+                <Input
+                  id="nome-fantasia"
+                  value={user?.empresa_nome_fantasia || ''}
+                  disabled
+                  className="bg-gray-50 dark:bg-gray-800"
                 />
               </div>
 
@@ -49,7 +59,7 @@ export default function Profile() {
                   id="cnpj"
                   value={user?.empresa_cnpj || ''}
                   disabled
-                  className="bg-gray-50 text-gray-900"
+                  className="bg-gray-50 dark:bg-gray-800"
                 />
               </div>
             </CardContent>

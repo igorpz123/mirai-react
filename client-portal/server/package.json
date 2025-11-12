@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@azure/msal-node": "^3.8.2",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "@types/node": "^24.10.1",
+    "isomorphic-fetch": "^3.0.0"
+  }
+}

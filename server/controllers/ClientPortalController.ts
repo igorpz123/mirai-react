@@ -4,15 +4,37 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/auth';
 import { RowDataPacket } from 'mysql2';
+import { getClientDocuments, downloadOneDriveFile, getOneDriveFileDownloadUrl } from '../services/oneDriveService';
 
 interface ClientUser {
   id: number;
   empresa_id: number;
   empresa_nome: string;
+  empresa_nome_fantasia: string;
   empresa_cnpj: string;
   email: string;
   nome: string;
   telefone: string | null;
+}
+
+// Funções auxiliares
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function getCategoryFromFileName(fileName: string): string {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  
+  if (['pdf', 'doc', 'docx'].includes(ext || '')) return 'Documentos';
+  if (['xlsx', 'xls', 'csv'].includes(ext || '')) return 'Planilhas';
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return 'Imagens';
+  if (['zip', 'rar', '7z'].includes(ext || '')) return 'Arquivos';
+  
+  return 'Outros';
 }
 
 // Login de cliente
@@ -36,6 +58,7 @@ export const login = async (req: Request, res: Response) => {
         cu.telefone,
         cu.password_hash,
         e.razao_social as empresa_nome,
+        e.nome_fantasia as empresa_nome_fantasia,
         e.cnpj as empresa_cnpj
       FROM client_users cu
       JOIN empresas e ON cu.empresa_id = e.id
@@ -76,6 +99,7 @@ export const login = async (req: Request, res: Response) => {
       id: user.id,
       empresa_id: user.empresa_id,
       empresa_nome: user.empresa_nome,
+      empresa_nome_fantasia: user.empresa_nome_fantasia,
       empresa_cnpj: user.empresa_cnpj,
       email: user.email,
       nome: user.nome,
@@ -119,6 +143,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         cu.nome,
         cu.telefone,
         e.razao_social as empresa_nome,
+        e.nome_fantasia as empresa_nome_fantasia,
         e.cnpj as empresa_cnpj
       FROM client_users cu
       JOIN empresas e ON cu.empresa_id = e.id
@@ -136,6 +161,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
       id: user.id,
       empresa_id: user.empresa_id,
       empresa_nome: user.empresa_nome,
+      empresa_nome_fantasia: user.empresa_nome_fantasia,
       empresa_cnpj: user.empresa_cnpj,
       email: user.email,
       nome: user.nome,
@@ -259,27 +285,37 @@ export const getDocuments = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Acesso não autorizado' });
     }
 
-    // Buscar documentos da empresa do cliente
-    // Esta query precisa ser ajustada de acordo com sua estrutura de documentos
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT 
-        id,
-        nome,
-        tipo,
-        tamanho,
-        categoria,
-        data_upload,
-        arquivo_path
-      FROM documentos_cliente
-      WHERE empresa_id = ?
-      ORDER BY data_upload DESC`,
+    // Buscar nome da empresa
+    const [empresaRows] = await pool.query<RowDataPacket[]>(
+      `SELECT razao_social, nome_fantasia FROM empresas WHERE id = ?`,
       [decoded.empresa_id]
     );
 
-    res.json(rows);
+    if (empresaRows.length === 0) {
+      return res.status(404).json({ error: 'Empresa não encontrada' });
+    }
+
+    const empresa = empresaRows[0];
+    const empresaNome = empresa.nome_fantasia || empresa.razao_social;
+
+    // Buscar documentos do OneDrive
+    const documents = await getClientDocuments(empresaNome);
+
+    // Formatar resposta
+    const formattedDocs = documents.map((doc: any) => ({
+      id: doc.id,
+      nome: doc.nome,
+      tipo: doc.tipo,
+      tamanho: formatFileSize(doc.tamanho),
+      categoria: getCategoryFromFileName(doc.nome),
+      data_upload: doc.data_modificacao,
+      onedrive_id: doc.id,
+    }));
+
+    res.json(formattedDocs);
   } catch (error) {
     console.error('Erro ao buscar documentos:', error);
-    res.status(500).json({ error: 'Erro ao buscar documentos' });
+    res.status(500).json({ error: 'Erro ao buscar documentos do OneDrive' });
   }
 };
 
@@ -300,23 +336,15 @@ export const downloadDocument = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Acesso não autorizado' });
     }
 
-    // Buscar documento (verificando se pertence à empresa do cliente)
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT * FROM documentos_cliente
-      WHERE id = ? AND empresa_id = ?`,
-      [id, decoded.empresa_id]
-    );
+    console.log('[Client Portal] Download de arquivo OneDrive:', id);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'Documento não encontrado' });
-    }
+    // Obter URL de download do OneDrive
+    const downloadUrl = await getOneDriveFileDownloadUrl(id);
 
-    const document = rows[0];
-
-    // Retornar arquivo para download
-    res.download(document.arquivo_path, document.nome);
-  } catch (error) {
+    // Redirecionar para o URL de download direto
+    res.redirect(downloadUrl);
+  } catch (error: any) {
     console.error('Erro ao baixar documento:', error);
-    res.status(500).json({ error: 'Erro ao baixar documento' });
+    res.status(500).json({ error: 'Erro ao baixar documento do OneDrive' });
   }
 };

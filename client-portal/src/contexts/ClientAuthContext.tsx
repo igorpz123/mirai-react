@@ -4,6 +4,7 @@ interface ClientUser {
   id: number
   empresa_id: number
   empresa_nome: string
+  empresa_nome_fantasia: string
   empresa_cnpj: string
   email: string
   nome: string
