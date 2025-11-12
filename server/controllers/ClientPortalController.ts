@@ -47,7 +47,7 @@ export const login = async (req: Request, res: Response) => {
 
     if (rows.length === 0) {
       console.log('[Client Portal Login] Erro: Usuário não encontrado');
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+      return res.status(401).json({ error: 'Usuário não encontrado' });
     }
 
     const user = rows[0];
@@ -55,7 +55,8 @@ export const login = async (req: Request, res: Response) => {
     // Verificar senha
     const validPassword = await bcrypt.compare(password, user.password_hash);
     if (!validPassword) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
+      console.log('[Client Portal Login] Erro: Senha inválida');
+      return res.status(401).json({ error: 'Senha incorreta' });
     }
 
     // Gerar token JWT

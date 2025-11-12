@@ -4,6 +4,7 @@ import { Button } from './ui/button'
 import { IconLogout, IconFileText, IconFiles, IconUser, IconChartBar } from '@tabler/icons-react'
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
+import { ThemeToggle } from './ThemeToggle'
 
 interface LayoutProps {
   children: ReactNode
@@ -49,6 +50,7 @@ export default function Layout({ children }: LayoutProps) {
                   {user?.empresa_nome}
                 </p>
               </div>
+              <ThemeToggle />
               <Button
                 variant="outline"
                 size="sm"
