@@ -2,28 +2,48 @@ import { Client } from '@microsoft/microsoft-graph-client';
 import { ConfidentialClientApplication } from '@azure/msal-node';
 import 'isomorphic-fetch';
 
-// Configuração do Azure AD (você precisará criar um App Registration no Azure Portal)
-const msalConfig = {
-  auth: {
-    clientId: process.env.AZURE_CLIENT_ID || '',
-    authority: `https://login.microsoftonline.com/${process.env.AZURE_TENANT_ID || 'common'}`,
-    clientSecret: process.env.AZURE_CLIENT_SECRET || '',
-  },
-};
+// Inicialização lazy do cliente MSAL (apenas quando realmente for usado)
+let msalClient: ConfidentialClientApplication | null = null;
 
-// Inicializar MSAL
-const msalClient = new ConfidentialClientApplication(msalConfig);
+function getMsalClient(): ConfidentialClientApplication {
+  if (!msalClient) {
+    // Verificar se as credenciais do Azure estão configuradas
+    const clientId = process.env.AZURE_CLIENT_ID;
+    const tenantId = process.env.AZURE_TENANT_ID;
+    const clientSecret = process.env.AZURE_CLIENT_SECRET;
+
+    if (!clientId || !tenantId || !clientSecret) {
+      throw new Error(
+        'Credenciais do Azure AD não configuradas. Configure AZURE_CLIENT_ID, AZURE_TENANT_ID e AZURE_CLIENT_SECRET no arquivo .env'
+      );
+    }
+
+    const msalConfig = {
+      auth: {
+        clientId,
+        authority: `https://login.microsoftonline.com/${tenantId}`,
+        clientSecret,
+      },
+    };
+
+    msalClient = new ConfidentialClientApplication(msalConfig);
+  }
+
+  return msalClient;
+}
 
 /**
  * Obter token de acesso usando credenciais de aplicativo
  */
 async function getAccessToken(): Promise<string> {
   try {
+    const client = getMsalClient();
+    
     const tokenRequest = {
       scopes: ['https://graph.microsoft.com/.default'],
     };
 
-    const response = await msalClient.acquireTokenByClientCredential(tokenRequest);
+    const response = await client.acquireTokenByClientCredential(tokenRequest);
     
     if (!response || !response.accessToken) {
       throw new Error('Falha ao obter token de acesso');
