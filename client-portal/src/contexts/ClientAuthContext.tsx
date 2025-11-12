@@ -36,7 +36,7 @@ export function ClientAuthProvider({ children }: { children: React.ReactNode }) 
           })
           if (response.ok) {
             const data = await response.json()
-            setUser(data.user)
+            setUser(data)
           } else {
             localStorage.removeItem('client_token')
           }

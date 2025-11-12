@@ -18,9 +18,11 @@ interface ClientUser {
 // Login de cliente
 export const login = async (req: Request, res: Response) => {
   try {
+    console.log('[Client Portal Login] Tentativa de login:', req.body.email);
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('[Client Portal Login] Erro: Campos obrigatórios faltando');
       return res.status(400).json({ error: 'E-mail e senha são obrigatórios' });
     }
 
@@ -41,7 +43,10 @@ export const login = async (req: Request, res: Response) => {
       [email]
     );
 
+    console.log('[Client Portal Login] Usuários encontrados:', rows.length);
+
     if (rows.length === 0) {
+      console.log('[Client Portal Login] Erro: Usuário não encontrado');
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
