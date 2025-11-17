@@ -46,9 +46,16 @@ export const firstTimeTour: TourDefinition = {
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
+      id: 'tutorial',
+      title: '📚 Tutoriais',
+      text: 'Clique aqui para iniciar tours específicos de cada módulo.',
+      attachTo: { element: '[data-tour="tutorial-button"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
       id: 'help',
       title: '❓ Central de Ajuda',
-      text: 'Precisa de ajuda? Clique aqui para acessar a documentação contextual ou iniciar tours específicos de cada módulo.',
+      text: 'Precisa de ajuda? Clique aqui para iniciar tours específicos de cada módulo.',
       attachTo: { element: '[data-tour="help-button"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.finish]
     }

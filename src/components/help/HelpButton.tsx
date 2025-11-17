@@ -67,6 +67,7 @@ export function HelpButton({
         onClick={() => setOpen(true)}
         className={className}
         title="Ajuda"
+        data-tour="help-button"
       >
         <IconHelp size={18} />
         {size !== 'icon' && <span className="ml-2">Ajuda</span>}

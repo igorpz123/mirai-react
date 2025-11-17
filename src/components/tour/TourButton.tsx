@@ -57,7 +57,7 @@ export function TourButton({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size} data-tour="help-button">
+        <Button variant={variant} size={size} data-tour="tutorial-button">
           <GraduationCap className="h-5 w-5" />
           {showText && <span className="ml-2">Tours Interativos</span>}
         </Button>
