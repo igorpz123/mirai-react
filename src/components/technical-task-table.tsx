@@ -838,6 +838,7 @@ export const TechnicalTaskTable: React.FC<TechnicalTaskTableProps> = ({
     <Tabs
       defaultValue="outline"
       className="w-full flex-col justify-start gap-6"
+      data-tour="technical-tasks-table"
     >
       <div className="flex items-center justify-between px-4 lg:px-6">
         <Label htmlFor="view-selector" className="sr-only">

@@ -77,23 +77,70 @@ export const dashboardTour: TourDefinition = {
     {
       id: 'dashboard-cards',
       title: '📈 Cards de Resumo',
-      text: 'Estes cards mostram métricas rápidas: tarefas pendentes, propostas em andamento, vencimentos próximos, etc.',
-      attachTo: { element: '[data-tour="stats-cards"]', on: 'bottom' },
+      text: 'Estes cards mostram métricas rápidas: tarefas em andamento, pendentes, atrasadas e concluídas.',
+      attachTo: { element: '[data-tour="stats-cards"]', on: 'right' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
-      id: 'dashboard-filters',
-      title: '🔧 Filtros',
-      text: 'Use os filtros para ajustar a visualização por período, unidade ou responsável.',
-      attachTo: { element: '[data-tour="dashboard-filters"]', on: 'bottom' },
+      id: 'dashboard-ranking',
+      title: '🏆 Ranking',
+      text: 'O ranking irá mostrar os usuários que mais concluíram tarefas em um determinado período de tempo na Unidade.',
+      attachTo: { element: '[data-tour="dashboard-ranking"]', on: 'left' },
       buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'dashboard-nav',
+      title: '🏆 Botões de Navegação',
+      text: 'Você pode alternar a visão entre a tabela de tarefas e os gráficos.',
+      attachTo: { element: '[data-tour="dashboard-nav"]', on: 'right' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'dashboard-table',
+      title: '📋 Tabela de Tarefas',
+      text: 'A tabela exibe uma lista detalhada das tarefas com filtros e opções de ordenação.',
+      attachTo: { element: '[data-tour="technical-tasks-table"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: function() {
+        return new Promise<void>((resolve) => {
+          const tasksTab = document.querySelector('[data-tour="tab-tasks"]') as HTMLButtonElement
+          if (tasksTab) {
+            // Força múltiplos eventos para garantir que o Radix UI responda
+            tasksTab.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+            tasksTab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+            tasksTab.click()
+            tasksTab.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+            tasksTab.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+            setTimeout(() => resolve(), 500)
+          } else {
+            resolve()
+          }
+        })
+      }
     },
     {
       id: 'dashboard-charts',
-      title: '📉 Gráficos',
-      text: 'Os gráficos mostram tendências ao longo do tempo e distribuição de tarefas.',
+      title: '📊 Gráficos',
+      text: 'Os gráficos mostram quantas tarefas foram concluídas por dia.',
       attachTo: { element: '[data-tour="dashboard-charts"]', on: 'top' },
-      buttons: [tourButtons.back, tourButtons.finish]
+      buttons: [tourButtons.back, tourButtons.finish],
+      beforeShowPromise: function() {
+        return new Promise<void>((resolve) => {
+          const chartTab = document.querySelector('[data-tour="tab-chart"]') as HTMLButtonElement
+          console.log('Tab Chart encontrado:', chartTab, 'Estado:', chartTab?.getAttribute('data-state'))
+          if (chartTab) {
+            // Força múltiplos eventos para garantir que o Radix UI responda
+            chartTab.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+            chartTab.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+            chartTab.click()
+            chartTab.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+            chartTab.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+            setTimeout(() => resolve(), 500)
+          } else {
+            resolve()
+          }
+        })
+      }
     }
   ]
 }

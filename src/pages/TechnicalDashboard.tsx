@@ -70,15 +70,15 @@ export default function TechnicalDashboard(): ReactElement {
             <div className="px-4 lg:px-6">
               <Tabs defaultValue="tasks" className="w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <TabsList className="grid w-[400px] grid-cols-2">
-                    <TabsTrigger value="tasks" className="gap-2">
+                  <TabsList className="grid w-[400px] grid-cols-2" data-tour="dashboard-nav">
+                    <TabsTrigger value="tasks" className="gap-2" data-tour="tab-tasks">
                       <FileText className="h-4 w-4" />
                       Tarefas
                       <Badge variant="secondary" className="ml-1 text-xs">
                         {tasks.length}
                       </Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="chart" className="gap-2">
+                    <TabsTrigger value="chart" className="gap-2" data-tour="tab-chart">
                       <TrendingUp className="h-4 w-4" />
                       Gráfico
                     </TabsTrigger>
@@ -110,7 +110,7 @@ export default function TechnicalDashboard(): ReactElement {
 
                 {/* Chart Tab */}
                 <TabsContent value="chart" className="mt-0">
-                  <Card className="shadow-md border-2">
+                  <Card className="shadow-md border-2" data-tour="dashboard-charts">
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">

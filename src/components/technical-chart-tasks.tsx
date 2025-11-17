@@ -174,7 +174,7 @@ const chartConfig = {
     return date >= startDate
   })
   return (
-    <Card className="@container/card">
+    <Card className="@container/card" data-tour="dashboard-charts">
         <CardHeader>
           <CardTitle>Tarefas Concluídas</CardTitle>
           <CardDescription>

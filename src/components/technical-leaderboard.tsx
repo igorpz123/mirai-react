@@ -61,7 +61,7 @@ export function TechnicalLeaderboard({
     const displayData = data.slice(0, maxUsers)
 
     return (
-        <Card className='max-h-[24rem] overflow-x-auto'>
+        <Card className='max-h-[24rem] overflow-x-auto' data-tour="dashboard-ranking">
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
