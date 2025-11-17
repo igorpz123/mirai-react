@@ -32,6 +32,20 @@ export const firstTimeTour: TourDefinition = {
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
+      id: 'user-menu',
+      title: '👤 Menu do Usuário',
+      text: 'Acesse suas configurações, tarefas/propostas modificadas recentemente e faça logout por aqui.',
+      attachTo: { element: '[data-tour="user-menu"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'mode',
+      title: '🌓 Alterar o Tema',
+      text: 'Aqui você pode alternar entre o tema claro e escuro do sistema.',
+      attachTo: { element: '[data-tour="mode-toggle"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
       id: 'notifications',
       title: '🔔 Notificações',
       text: 'Aqui você recebe alertas em tempo real sobre tarefas, propostas e menções importantes.',
@@ -39,10 +53,10 @@ export const firstTimeTour: TourDefinition = {
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
-      id: 'user-menu',
-      title: '👤 Menu do Usuário',
-      text: 'Acesse suas configurações, troque o tema (claro/escuro) e faça logout por aqui.',
-      attachTo: { element: '[data-tour="user-menu"]', on: 'bottom' },
+      id: 'help',
+      title: '❓ Central de Ajuda',
+      text: 'Precisa de ajuda? Clique aqui para iniciar tours específicos de cada módulo.',
+      attachTo: { element: '[data-tour="help-button"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
@@ -50,13 +64,6 @@ export const firstTimeTour: TourDefinition = {
       title: '📚 Tutoriais',
       text: 'Clique aqui para iniciar tours específicos de cada módulo.',
       attachTo: { element: '[data-tour="tutorial-button"]', on: 'bottom' },
-      buttons: [tourButtons.back, tourButtons.next]
-    },
-    {
-      id: 'help',
-      title: '❓ Central de Ajuda',
-      text: 'Precisa de ajuda? Clique aqui para iniciar tours específicos de cada módulo.',
-      attachTo: { element: '[data-tour="help-button"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.finish]
     }
   ]
@@ -101,7 +108,7 @@ export const dashboardTour: TourDefinition = {
       text: 'A tabela exibe uma lista detalhada das tarefas com filtros e opções de ordenação.',
       attachTo: { element: '[data-tour="technical-tasks-table"]', on: 'top' },
       buttons: [tourButtons.back, tourButtons.next],
-      beforeShowPromise: function() {
+      beforeShowPromise: function () {
         return new Promise<void>((resolve) => {
           const tasksTab = document.querySelector('[data-tour="tab-tasks"]') as HTMLButtonElement
           if (tasksTab) {
@@ -124,10 +131,9 @@ export const dashboardTour: TourDefinition = {
       text: 'Os gráficos mostram quantas tarefas foram concluídas por dia.',
       attachTo: { element: '[data-tour="dashboard-charts"]', on: 'top' },
       buttons: [tourButtons.back, tourButtons.finish],
-      beforeShowPromise: function() {
+      beforeShowPromise: function () {
         return new Promise<void>((resolve) => {
           const chartTab = document.querySelector('[data-tour="tab-chart"]') as HTMLButtonElement
-          console.log('Tab Chart encontrado:', chartTab, 'Estado:', chartTab?.getAttribute('data-state'))
           if (chartTab) {
             // Força múltiplos eventos para garantir que o Radix UI responda
             chartTab.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
@@ -152,10 +158,24 @@ export const tasksTour: TourDefinition = {
   description: 'Aprenda a criar e gerenciar tarefas',
   steps: [
     {
-      id: 'tasks-intro',
-      title: '✅ Gerenciamento de Tarefas',
-      text: 'Aqui você pode criar, visualizar e gerenciar todas as tarefas do sistema.',
+      id: 'tasks-options',
+      title: '✅ Visualização de Tarefas',
+      text: 'Você pode visualizar suas tarefas em duas páginas: através do Dashboard Técnico e no Fluxograma.',
       buttons: [tourButtons.skip, tourButtons.next]
+    },
+    {
+      id: 'tasks-option-dashboard',
+      title: '✅ Dashboard',
+      text: 'No dashboard você irá visualizar todas as suas tarefas, sem distinção de setores.',
+      attachTo: { element: '[data-tour="tasks-dashboard"]', on: 'right' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'tasks-option-fluxograma',
+      title: '✅ Fluxograma',
+      text: 'No fluxograma você pode visualizar suas tarefas separadas por setores.',
+      attachTo: { element: '[data-tour="tasks-fluxograma"]', on: 'right' },
+      buttons: [tourButtons.back, tourButtons.next]
     },
     {
       id: 'tasks-new',

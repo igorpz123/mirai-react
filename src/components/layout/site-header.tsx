@@ -19,7 +19,7 @@ export function SiteHeader({ title }: { title: string }) {
           <TourButton variant="ghost" size="icon" />
           <HelpButton autoDetect variant="ghost" size="icon" />
           <NotificationMenu />
-          <ModeToggle />
+          <ModeToggle data-tour="mode-toggle" />
         </div>
       </div>
     </header>
