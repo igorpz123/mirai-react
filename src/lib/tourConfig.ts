@@ -38,7 +38,7 @@ export const tourButtons = {
       // @ts-ignore - this refere-se ao Tour no contexto do Shepherd
       this.next()
     },
-    classes: 'shepherd-button-primary'
+    classes: 'shepherd-button-next'
   },
   finish: {
     text: '✓ Concluir',
@@ -46,7 +46,7 @@ export const tourButtons = {
       // @ts-ignore - this refere-se ao Tour no contexto do Shepherd
       this.complete()
     },
-    classes: 'shepherd-button-primary'
+    classes: 'button-success'
   },
   skip: {
     text: 'Pular Tour',

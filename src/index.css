@@ -54,39 +54,39 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
-  .dark {
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-  }
+.dark {
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+}
 
 h1 {
   font-size: 1.5em;
@@ -176,6 +176,7 @@ h1 {
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -193,39 +194,69 @@ html {
   overflow-y: scroll;
 }
 
-.button-success { color: var(--success); background-color: color-mix(in oklab, var(--success) 10%, transparent); cursor: pointer; }
-.button-success:hover { background-color: color-mix(in oklab, var(--success) 20%, transparent); }
+.button-success {
+  color: var(--success);
+  background-color: color-mix(in oklab, var(--success) 10%, transparent);
+  cursor: pointer;
+}
 
-.button-primary { color: var(--primary); background-color: color-mix(in oklab, var(--primary) 15%, transparent); cursor: pointer; }
-.button-primary:hover { background-color: color-mix(in oklab, var(--primary) 25%, transparent); }
+.button-success:hover {
+  background-color: color-mix(in oklab, var(--success) 20%, transparent);
+}
 
-.button-progress { color: var(--secondary); background-color: color-mix(in oklab, var(--secondary) 15%, transparent); cursor: pointer; }
-.button-progress:hover { background-color: color-mix(in oklab, var(--secondary) 25%, transparent); }
+.button-primary {
+  color: var(--primary);
+  background-color: color-mix(in oklab, var(--primary) 15%, transparent);
+  cursor: pointer;
+}
 
-.button-remove { color: var(--destructive); background-color: color-mix(in oklab, var(--destructive) 20%, transparent); cursor: pointer; }
-.button-remove:hover { background-color: color-mix(in oklab, var(--destructive) 20%, transparent); }
+.button-primary:hover {
+  background-color: color-mix(in oklab, var(--primary) 25%, transparent);
+}
+
+.button-progress {
+  color: var(--secondary);
+  background-color: color-mix(in oklab, var(--secondary) 15%, transparent);
+  cursor: pointer;
+}
+
+.button-progress:hover {
+  background-color: color-mix(in oklab, var(--secondary) 25%, transparent);
+}
+
+.button-remove {
+  color: var(--destructive);
+  background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+  cursor: pointer;
+}
+
+.button-remove:hover {
+  background-color: color-mix(in oklab, var(--destructive) 20%, transparent);
+}
 
 /* Futuristic, lightweight animated background with optional image */
 .auth-bg {
   position: relative;
   min-height: 100vh;
   /* Layer 1: gradient, Layer 2: optional image via CSS var --auth-bg-url */
-  background-image: linear-gradient(180deg, rgba(11,16,32,0.92) 0%, rgba(10,15,28,0.9) 60%, rgba(9,14,25,0.88) 100%), var(--auth-bg-url, none);
+  background-image: linear-gradient(180deg, rgba(11, 16, 32, 0.92) 0%, rgba(10, 15, 28, 0.9) 60%, rgba(9, 14, 25, 0.88) 100%), var(--auth-bg-url, none);
   background-size: auto, cover;
   background-position: center, center;
   background-repeat: no-repeat, no-repeat;
 }
+
 .auth-bg::before {
   content: "";
   position: absolute;
   inset: 0;
   background:
-    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 24px),
-    repeating-linear-gradient(90deg, rgba(255,255,255,0.03) 0 1px, transparent 1px 24px);
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 24px);
   opacity: 0.6;
   pointer-events: none;
-  mask-image: radial-gradient(120% 80% at 50% 20%, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 60%);
+  mask-image: radial-gradient(120% 80% at 50% 20%, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 60%);
 }
+
 .auth-bg::after {
   content: "";
   position: absolute;
@@ -234,7 +265,7 @@ html {
   width: 70vmin;
   height: 70vmin;
   transform: translate(-50%, -50%);
-  background: conic-gradient(from 0deg, rgba(34,211,238,0.35), rgba(139,92,246,0.35), rgba(34,211,238,0.35));
+  background: conic-gradient(from 0deg, rgba(34, 211, 238, 0.35), rgba(139, 92, 246, 0.35), rgba(34, 211, 238, 0.35));
   filter: blur(80px) saturate(120%);
   opacity: 0.28;
   border-radius: 50%;
@@ -242,29 +273,40 @@ html {
   will-change: transform;
   pointer-events: none;
 }
+
 @keyframes auth-rotate {
-  from { transform: translate(-50%, -50%) rotate(0deg); }
-  to   { transform: translate(-50%, -50%) rotate(360deg); }
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }
 
 /* Light theme variant */
 :root .auth-bg {
-  background-image: linear-gradient(180deg, rgba(248,251,255,0.92) 0%, rgba(238,244,255,0.9) 60%, rgba(234,242,255,0.88) 100%), var(--auth-bg-url, none);
+  background-image: linear-gradient(180deg, rgba(248, 251, 255, 0.92) 0%, rgba(238, 244, 255, 0.9) 60%, rgba(234, 242, 255, 0.88) 100%), var(--auth-bg-url, none);
 }
+
 :root .auth-bg::before {
   background:
-    repeating-linear-gradient(0deg, rgba(0,0,0,0.05) 0 1px, transparent 1px 24px),
-    repeating-linear-gradient(90deg, rgba(0,0,0,0.035) 0 1px, transparent 1px 24px);
+    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.035) 0 1px, transparent 1px 24px);
   opacity: 0.7;
 }
+
 :root .auth-bg::after {
-  background: conic-gradient(from 0deg, rgba(14,165,233,0.25), rgba(99,102,241,0.25), rgba(14,165,233,0.25));
+  background: conic-gradient(from 0deg, rgba(14, 165, 233, 0.25), rgba(99, 102, 241, 0.25), rgba(14, 165, 233, 0.25));
   filter: blur(70px) saturate(120%);
   opacity: 0.25;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-bg::after { animation: none; opacity: 0.18; }
+  .auth-bg::after {
+    animation: none;
+    opacity: 0.18;
+  }
 }
 
 /* Modifier: image-only (no gradient overlay, no grid/glow) */
@@ -274,7 +316,319 @@ html {
   background-position: center !important;
   background-repeat: no-repeat !important;
 }
+
 .auth-bg--image-only::before,
 .auth-bg--image-only::after {
   display: none !important;
+}
+
+
+
+/* ========================================
+   SHEPHERD.JS TOUR STYLES - TEMA MIRAI
+   ======================================== */
+
+/* Overlay escurecido */
+.shepherd-modal-overlay-container {
+  opacity: 0.75 !important;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Dark mode overlay mais escuro */
+.dark .shepherd-modal-overlay-container {
+  opacity: 0.60 !important;
+  background-color: rgba(0, 0, 0, 0);
+}
+
+/* Estilo do elemento destacado */
+.shepherd-enabled.shepherd-element {
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+/* Container do tooltip */
+.shepherd-element {
+  z-index: 10001;
+  max-width: 420px;
+  /* Prevenir tremor durante animações */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  background: white !important;
+  border: 1px solid oklch(var(--border));
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode - sombra mais intensa */
+.dark .shepherd-element {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  border-color: oklch(var(--border));
+  background: rgb(52, 52, 52) !important;
+}
+
+/* Header do step */
+.shepherd-header {
+  background: rgb(37, 37, 37) !important;
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+/* Dark mode - header mais contrastante */
+.dark .shepherd-header {
+  background: oklch(0.205 0 0) !important;
+}
+
+.shepherd-title {
+  color: white !important;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.dark .shepherd-title {
+  color: oklch(0.985 0 0) !important;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.shepherd-cancel-icon {
+  color: white !important;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.dark .shepherd-cancel-icon {
+  color: oklch(0.985 0 0) !important;
+}
+
+.shepherd-cancel-icon:hover {
+  opacity: 1;
+}
+
+/* Conteúdo do step */
+.shepherd-text {
+  padding: 1.25rem;
+  color: oklch(var(--foreground));
+  background: white !important;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+/* Dark mode - texto mais legível */
+.dark .shepherd-text {
+  color: oklch(82.032% 0.00009 271.152) !important;
+  background: oklch(0.205 0 0) !important;
+  padding-bottom: 1rem;
+}
+
+.shepherd-text p {
+  margin: 0 0 0.75rem 0;
+}
+
+.shepherd-text p:last-child {
+  margin-bottom: 0;
+}
+
+.shepherd-text kbd {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  background: oklch(var(--muted));
+  border: 1px solid oklch(var(--border));
+  border-radius: 0.25rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: oklch(var(--foreground));
+}
+
+/* Dark mode - kbd mais visível */
+.dark .shepherd-text kbd {
+  background: oklch(0.205 0 0);
+  border-color: oklch(var(--border));
+}
+
+/* Footer com botões */
+.shepherd-footer {
+  padding: 0.75rem 1.25rem 1rem 1rem !important;
+  border-top: 1px solid oklch(var(--border));
+  background: white !important;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  border-radius: 0 0 0.75rem 0.75rem;
+}
+
+/* Dark mode - footer mais contrastante */
+.dark .shepherd-footer {
+  border-top-color: oklch(var(--border));
+  background: oklch(0.205 0 0) !important;
+}
+
+/* Botões */
+
+.shepherd-button-primary {
+  background: oklch(var(--primary));
+  color: oklch(var(--primary-foreground));
+  border-color: oklch(var(--primary));
+}
+
+.shepherd-button-primary:hover {
+  background: oklch(var(--primary) / 0.9);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode - botão primário mais brilhante */
+.dark .shepherd-button-primary:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+}
+
+.shepherd-button-secondary {
+  color: var(--foreground);
+  background-color: color-mix(in oklab, var(--foreground) 5%, transparent);
+  cursor: pointer;
+}
+
+.shepherd-button-secondary:hover {
+  background-color: color-mix(in oklab, var(--foreground) 10%, transparent);
+}
+
+/* Dark mode - botão secundário */
+.dark .shepherd-button-secondary {
+  color: oklch(0.985 0 0) !important;
+  background-color: color-mix(in oklab, oklch(0.985 0 0) 10%, transparent) !important;
+  cursor: pointer;
+}
+
+.dark .shepherd-button-secondary:hover {
+   background-color: color-mix(in oklab, oklch(0.985 0 0) 15%, transparent) !important;
+}
+
+/* Botões personalizados - maior especificidade para sobrescrever shepherd-button */
+.shepherd-footer .button-progress.shepherd-button,
+.shepherd-button.button-progress {
+  padding: 0.5rem 1rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.shepherd-footer .button-success.shepherd-button,
+.shepherd-button.button-success {
+  padding: 0.5rem 1rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.dark .shepherd-button-next {
+  color: oklch(62.025% 0.205 261.323) !important;
+  background-color: color-mix(in oklab, oklch(56.588% 0.23007 261.688) 15%, transparent) !important;
+  cursor: pointer;
+}
+
+.dark .shepherd-button-next:hover {
+  background-color: color-mix(in oklab, oklch(56.588% 0.23007 261.688) 25%, transparent) !important;
+}
+
+/* Seta do tooltip */
+.shepherd-arrow:before {
+  background: white !important;
+}
+
+/* Dark mode - seta */
+.dark .shepherd-arrow:before {
+  background: rgb(52, 52, 52) !important;
+}
+
+/* Prevenir repaint durante transições */
+.shepherd-modal-overlay-container,
+.shepherd-element,
+.shepherd-modal-overlay-container.shepherd-modal-is-visible {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Estabilizar posicionamento */
+.shepherd-element[data-popper-placement] {
+  position: fixed !important;
+}
+
+/* Animações */
+.shepherd-element {
+  animation: shepherd-fade-in 0.25s ease-out;
+  /* Prevenir repaint desnecessários */
+  will-change: opacity, transform;
+}
+
+@keyframes shepherd-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Remover animação após load para prevenir tremores */
+.shepherd-element.shepherd-enabled {
+  animation: none;
+  will-change: auto;
+}
+
+/* Progress indicator (se houver múltiplos steps) */
+.shepherd-progress {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem 0;
+}
+
+.shepherd-progress-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: oklch(var(--muted));
+  transition: all 0.2s;
+}
+
+.shepherd-progress-dot.active {
+  background: oklch(var(--primary));
+  transform: scale(1.2);
+}
+
+/* Responsividade */
+@media (max-width: 640px) {
+  .shepherd-element {
+    max-width: calc(100vw - 2rem);
+    margin: 1rem;
+  }
+
+  .shepherd-text {
+    font-size: 0.875rem;
+    padding: 1rem;
+  }
+
+  .shepherd-header {
+    padding: 0.875rem;
+  }
+
+  .shepherd-title {
+    font-size: 1rem;
+  }
+
+  .shepherd-footer {
+    flex-direction: column;
+  }
+
+  .shepherd-button {
+    width: 100%;
+  }
 }

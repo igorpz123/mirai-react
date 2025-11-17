@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { ThemeProvider } from "@/components/layout/theme-provider"
 import { UnitProvider } from '@/contexts/UnitContext'
 import './index.css'
-import './styles/tour.css'
 import App from './App.tsx'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { RealtimeProvider } from '@/contexts/RealtimeContext'
