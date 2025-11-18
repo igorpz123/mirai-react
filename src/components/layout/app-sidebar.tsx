@@ -148,6 +148,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       title: "Dashboard",
       url: "/technical/dashboard",
       icon: LayoutDashboard,
+      dataTour: "tasks-dashboard",
     },
     {
       title: "Agenda",
@@ -164,6 +165,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       url: "/technical/fluxograma",
       icon: HardHat,
       isActive: true,
+      dataTour: "tasks-fluxograma",
       items: fluxogramaItems.length
         ? // attach badge counts when available
         fluxogramaItems.map((fi: any) => {

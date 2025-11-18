@@ -332,7 +332,7 @@ export default function CommercialProposalNew() {
                 Pesquise a empresa pelo CNPJ ou CAEPF para iniciar a proposta
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2 pb-4 space-y-6">
+            <CardContent className="pt-2 pb-4 space-y-6" data-tour="new-proposal-company">
               <div className="max-w-2xl mx-auto space-y-6">
                 {/* Document Type Selection */}
                 <div className="flex items-center justify-center gap-6 p-4 bg-muted rounded-lg">
@@ -497,7 +497,7 @@ export default function CommercialProposalNew() {
                 {company ? 'Empresa encontrada! Revise os dados ou edite conforme necessário' : 'Preencha os dados da nova empresa'}
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2 space-y-6">
+            <CardContent className="pt-2 space-y-6" data-tour="new-proposal-company-info">
               {company && (
                 <div className="p-4 bg-green-50 dark:bg-green-950/20 border-2 border-green-200 dark:border-green-800 rounded-lg">
                   <p className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center gap-2">
@@ -644,7 +644,7 @@ export default function CommercialProposalNew() {
                 Selecione programas, quantidade e desconto. Esta etapa é opcional - você pode pular
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2 space-y-6">
+            <CardContent className="pt-2 space-y-6" data-tour="new-proposal-programas">
               {/* Add Program Form */}
               <div className="p-5 bg-muted/30 rounded-lg border-2 border-dashed space-y-4">
                 <div className="flex items-center gap-2 mb-3">

@@ -49,6 +49,50 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Verificar se há um tour pendente no localStorage (após redirecionamento)
+  useEffect(() => {
+    let hasChecked = false // Previne múltiplas execuções
+    
+    const checkPendingTour = () => {
+      if (hasChecked) return
+      
+      const pendingTour = localStorage.getItem('pendingTour') as TourId | null
+      const timestamp = localStorage.getItem('pendingTourTimestamp')
+      
+      if (pendingTour) {
+        hasChecked = true // Marca como verificado
+        
+        // Verifica se o timestamp não é muito antigo (evita tours pendentes de dias atrás)
+        const now = Date.now()
+        const tourTime = timestamp ? parseInt(timestamp) : 0
+        const timeDiff = now - tourTime
+        
+        // Se passou mais de 30 segundos, ignora (provavelmente não é um redirect recente)
+        if (timeDiff > 30000) {
+          localStorage.removeItem('pendingTour')
+          localStorage.removeItem('pendingTourTimestamp')
+          return
+        }
+        
+        // Limpa o localStorage
+        localStorage.removeItem('pendingTour')
+        localStorage.removeItem('pendingTourTimestamp')
+        
+        // Aguarda um pouco para a página estar completamente carregada
+        setTimeout(() => {
+          startTour(pendingTour)
+        }, 1500) // Aguarda 1.5s para garantir que a página está pronta
+      }
+    }
+    
+    // Verifica ao montar
+    checkPendingTour()
+    
+    return () => {
+      // Cleanup
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Salvar tours vistos no localStorage
   const saveSeenTours = useCallback((tours: Set<TourId>) => {
     try {
@@ -77,6 +121,32 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const startTour = useCallback((tourId: TourId) => {
+    // Buscar definição do tour ANTES de fazer qualquer coisa
+    const tourDefinition = getTourById(tourId)
+    if (!tourDefinition) {
+      console.error(`Tour não encontrado: ${tourId}`)
+      return
+    }
+
+    // Verificar se o tour precisa de redirecionamento
+    // Tours que começam em páginas específicas
+    const tourRequiresPage: Record<string, string> = {
+      'detail-tasks': '/nova-tarefa',
+      'proposals': '/comercial/proposta/nova',
+      // Adicione outros tours que precisam de páginas específicas aqui
+    }
+
+    const requiredPage = tourRequiresPage[tourId]
+    if (requiredPage && window.location.pathname !== requiredPage) {
+      // Salva o tour pendente ANTES de redirecionar (usando localStorage para garantir persistência)
+      localStorage.setItem('pendingTour', tourId)
+      localStorage.setItem('pendingTourTimestamp', Date.now().toString())
+      
+      // Redireciona
+      window.location.href = requiredPage
+      return // Não continua, a página vai recarregar
+    }
+    
     // Cancelar tour ativo
     if (currentTour) {
       try {
@@ -89,36 +159,25 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     // Pequeno delay para garantir que o tour anterior foi completamente destruído
     setTimeout(() => {
-      // Buscar definição do tour
-      const tourDefinition = getTourById(tourId)
-      if (!tourDefinition) {
-        console.error(`Tour não encontrado: ${tourId}`)
-        return
-      }
 
       // Criar nova instância do Shepherd
       const tour = new Shepherd.Tour({
         ...tourDefaultOptions,
-        // Garantir que a configuração não sobrescreve handlers
         tourName: tourId
       })
 
       // Adicionar steps
-      tourDefinition.steps.forEach((step, index) => {
+      tourDefinition.steps.forEach((step) => {
         tour.addStep({
           ...step,
-          // Garantir que elementos existam antes de anexar
           when: {
             show() {
               if (step.attachTo && typeof step.attachTo === 'object' && 'element' in step.attachTo) {
                 const element = document.querySelector(step.attachTo.element as string)
                 if (!element) {
-                  console.warn(`[Step ${index}] Elemento não encontrado: ${step.attachTo.element}`)
+                  console.warn(`Elemento não encontrado: ${step.attachTo.element}`)
                 }
               }
-            },
-            hide() {
-              // Cleanup quando step é ocultado
             }
           }
         })
@@ -134,7 +193,6 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         setCurrentTour(null)
       })
 
-      // Cleanup quando tour é destruído
       tour.on('destroy', () => {
         setCurrentTour(null)
       })
@@ -147,7 +205,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
         console.error('Erro ao iniciar tour:', error)
         setCurrentTour(null)
       }
-    }, 100) // Delay de 100ms para prevenir race conditions
+    }, 100)
   }, [currentTour, markTourAsSeen])
 
   const isAnyTourActive = currentTour !== null

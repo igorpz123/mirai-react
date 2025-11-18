@@ -62,6 +62,7 @@ export const tourButtons = {
 export type TourId = 
   | 'dashboard'
   | 'tasks'
+  | 'detail-tasks'
   | 'proposals'
   | 'companies'
   | 'users'

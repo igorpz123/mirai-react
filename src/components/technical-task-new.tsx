@@ -93,7 +93,7 @@ interface SelectOption {
    const selected = companies.find(c => String(c.id) === value)
 
    return (
-     <div className="relative">
+     <div className="relative" data-tour="tasks-create-company">
        <Input
          placeholder={loading ? 'Carregando...' : 'Busque por empresa...'}
          value={selected ? selected.nome : query}
@@ -370,7 +370,7 @@ export const NewTaskForm: React.FC = () => {
               <Label htmlFor="setorResponsavel" className="mb-2">Setor</Label>
               <Select value={formData.setorResponsavel}
                 onValueChange={(value) => handleSelectChange("setorResponsavel", value)}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" data-tour="tasks-create-setor">
                   <SelectValue placeholder="Selecione um setor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -388,7 +388,7 @@ export const NewTaskForm: React.FC = () => {
               <Label htmlFor="usuarioResponsavel" className="mb-2">Responsável (opcional)</Label>
               <Select value={formData.usuarioResponsavel}
                 onValueChange={(value) => handleSelectChange("usuarioResponsavel", value)}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" data-tour="tasks-create-user">
                   <SelectValue placeholder="Selecione um usuário" />
                 </SelectTrigger>
                 <SelectContent>
@@ -406,7 +406,7 @@ export const NewTaskForm: React.FC = () => {
               <Label htmlFor="finalidade" className="mb-2">Finalidade</Label>
               <Select value={formData.finalidade}
                 onValueChange={(value) => handleSelectChange("finalidade", value)}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" data-tour="tasks-create-finalidade">
                   <SelectValue placeholder="Selecione a finalidade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -431,13 +431,14 @@ export const NewTaskForm: React.FC = () => {
                 value={formData.prazo}
                 onChange={handleChange}
                 className="w-auto"
+                data-tour="tasks-create-prazo"
               />
             </div>
             <div>
               <Label htmlFor="prioridade" className="mb-2">Prioridade</Label>
               <Select value={formData.prioridade}
                 onValueChange={(value) => handleSelectChange("prioridade", value)}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full" data-tour="tasks-create-prioridade">
                   <SelectValue placeholder="Selecione a prioridade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -462,6 +463,7 @@ export const NewTaskForm: React.FC = () => {
                 multiple
                 onChange={handleFileChange}
                 className="w-full"
+                data-tour="tasks-create-arquivos"
               />
               {selectedFiles.length > 0 ? (
                 <div className="text-sm text-muted-foreground mt-2">{selectedFiles.length} arquivo(s) selecionado(s)</div>
@@ -475,6 +477,7 @@ export const NewTaskForm: React.FC = () => {
                 value={formData.observacoes}
                 onChange={handleChange}
                 className="w-full"
+                data-tour="tasks-create-observacoes"
               />
             </div>
           </div>
@@ -493,7 +496,7 @@ export const NewTaskForm: React.FC = () => {
             {step < 3 ? (
               <Button className="button-primary" onClick={handleNext} disabled={submitting}>Próximo</Button>
             ) : (
-              <Button className="button-success" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
+              <Button className="button-success" data-tour="tasks-create-conclusao" onClick={handleSubmit} disabled={submitting}>{submitting ? 'Enviando...' : 'Enviar'}</Button>
             )}
           </div>
         </div>

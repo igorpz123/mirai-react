@@ -2,6 +2,39 @@
 import type { TourDefinition } from '@/lib/tourConfig'
 import { tourButtons } from '@/lib/tourConfig'
 
+// Helper function para aguardar elemento estar visível e renderizado
+function waitForElement(selector: string, timeout = 10000): Promise<Element> {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now()
+
+    const checkElement = () => {
+      const element = document.querySelector(selector)
+
+      if (element) {
+        // Verifica se o elemento está visível
+        const rect = element.getBoundingClientRect()
+        const isVisible = rect.width > 0 && rect.height > 0
+
+        if (isVisible) {
+          resolve(element)
+          return
+        }
+      }
+
+      // Timeout de segurança
+      if (Date.now() - startTime > timeout) {
+        reject(new Error(`Timeout: elemento ${selector} não encontrado`))
+        return
+      }
+
+      // Tenta novamente
+      setTimeout(checkElement, 100)
+    }
+
+    checkElement()
+  })
+}
+
 // Tour de primeiro acesso (overview geral do sistema)
 export const firstTimeTour: TourDefinition = {
   id: 'first-time',
@@ -155,7 +188,7 @@ export const dashboardTour: TourDefinition = {
 export const tasksTour: TourDefinition = {
   id: 'tasks',
   name: 'Tour de Tarefas',
-  description: 'Aprenda a criar e gerenciar tarefas',
+  description: 'Aprenda a criar e visualizar tarefas',
   steps: [
     {
       id: 'tasks-options',
@@ -165,14 +198,14 @@ export const tasksTour: TourDefinition = {
     },
     {
       id: 'tasks-option-dashboard',
-      title: '✅ Dashboard',
+      title: '📊 Dashboard',
       text: 'No dashboard você irá visualizar todas as suas tarefas, sem distinção de setores.',
       attachTo: { element: '[data-tour="tasks-dashboard"]', on: 'right' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
       id: 'tasks-option-fluxograma',
-      title: '✅ Fluxograma',
+      title: '🔄 Fluxograma',
       text: 'No fluxograma você pode visualizar suas tarefas separadas por setores.',
       attachTo: { element: '[data-tour="tasks-fluxograma"]', on: 'right' },
       buttons: [tourButtons.back, tourButtons.next]
@@ -180,51 +213,244 @@ export const tasksTour: TourDefinition = {
     {
       id: 'tasks-new',
       title: '➕ Nova Tarefa',
-      text: 'Clique aqui para criar uma nova tarefa. Você pode definir título, descrição, responsável, prazo e prioridade.',
-      attachTo: { element: '[data-tour="new-task"]', on: 'bottom' },
+      text: 'Clique aqui para criar uma nova tarefa ou clique Ctrl + K para abrir a busca rápida',
+      attachTo: { element: '[data-tour="search"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
-    },
-    {
-      id: 'tasks-filters',
-      title: '🔍 Filtros de Tarefas',
-      text: 'Use os filtros para encontrar tarefas por status, responsável, prioridade ou período.',
-      attachTo: { element: '[data-tour="tasks-filters"]', on: 'bottom' },
-      buttons: [tourButtons.back, tourButtons.next]
-    },
-    {
-      id: 'tasks-list',
-      title: '📋 Lista de Tarefas',
-      text: 'Clique em qualquer tarefa para ver detalhes, adicionar comentários ou anexar arquivos.',
-      attachTo: { element: '[data-tour="tasks-list"]', on: 'top' },
-      buttons: [tourButtons.back, tourButtons.finish]
     }
   ]
 }
 
+// Tour de Criação de Tarefas
+export const detailTasksTour: TourDefinition = {
+  id: 'detail-tasks',
+  name: 'Tour de Detalhes das Tarefas',
+  description: 'Aprenda a criar uma tarefa do 0',
+  steps: [
+    {
+      id: 'tasks-create',
+      title: '➕ Nova Tarefa',
+      text: 'Você aprenderá agora como criar uma nova tarefa do zero.',
+      buttons: [tourButtons.skip, tourButtons.next]
+    },
+    {
+      id: 'tasks-create-company',
+      title: '🏢 Empresa',
+      text: 'O primeiro passo é selecionar a empresa, toda tarefa é vinculada a uma empresa.',
+      attachTo: { element: '[data-tour="tasks-create-company"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: async function () {
+        try {
+          await waitForElement('[data-tour="tasks-create-company"]')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error('Erro ao aguardar elemento empresa:', err)
+        }
+      }
+    },
+    {
+      id: 'tasks-create-unity',
+      title: '🏢 Unidade',
+      text: 'Irão aparecer apenas as empresas vinculadas a unidade selecionada. Caso necessário, troque de unidade clicando aqui.',
+      attachTo: { element: '[data-tour="tour-unity"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+    },
+    {
+      id: 'tasks-create-setor',
+      title: '🏭 Setor',
+      text: 'Após, você irá selecionar o setor responsável pela tarefa.',
+      attachTo: { element: '[data-tour="tasks-create-setor"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: function () {
+        return new Promise<void>((resolve) => {
+          // Procura pelo botão "Próximo" que avança para o step 2
+          const nextButton = document.querySelector('.button-primary') as HTMLButtonElement
+          if (nextButton && nextButton.textContent?.includes('Próximo')) {
+            nextButton.click()
+            // Aguarda a renderização do próximo step
+            setTimeout(() => resolve(), 500)
+          } else {
+            resolve()
+          }
+        })
+      }
+    },
+    {
+      id: 'tasks-create-user',
+      title: '👤 Responsável',
+      text: 'Depois de selecionar o setor, você poderá selecionar um responsável. Não é obrigatório colocar um responsável.',
+      attachTo: { element: '[data-tour="tasks-create-user"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'tasks-create-finalidade',
+      title: '🎯 Finalidade',
+      text: 'Selecione a finalidade da tarefa, ou seja, seu objetivo.',
+      attachTo: { element: '[data-tour="tasks-create-finalidade"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'tasks-create-prazo',
+      title: '⏰ Prazo',
+      text: 'Selecione o prazo para a conclusão da tarefa.',
+      attachTo: { element: '[data-tour="tasks-create-prazo"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'tasks-create-prioridade',
+      title: '⚡ Prioridade',
+      text: 'Selecione a prioridade da tarefa, sendo baixa, média e alta.',
+      attachTo: { element: '[data-tour="tasks-create-prioridade"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'tasks-create-arquivos',
+      title: '📁 Arquivos',
+      text: 'Você também poderá anexar arquivos relevantes à tarefa, se necessário. Arquivos relevantes são todos aqueles que irão auxiliar no desenvolvimento da tarefa.',
+      attachTo: { element: '[data-tour="tasks-create-arquivos"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: function () {
+        return new Promise<void>((resolve) => {
+          // Procura pelo botão "Próximo" que avança para o step 3
+          const nextButton = document.querySelector('.button-primary') as HTMLButtonElement
+          if (nextButton && nextButton.textContent?.includes('Próximo')) {
+            nextButton.click()
+            // Aguarda a renderização do próximo step
+            setTimeout(() => resolve(), 500)
+          } else {
+            resolve()
+          }
+        })
+      }
+    },
+    {
+      id: 'tasks-create-observacoes',
+      title: '📝 Observações',
+      text: 'Por fim, você poderá adicionar observações adicionais sobre a tarefa.',
+      attachTo: { element: '[data-tour="tasks-create-observacoes"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'tasks-create-conclusao',
+      title: '📝 Conclusão',
+      text: 'Depois de preencher todos os campos obrigatórios, você poderá concluir a criação da tarefa que será feita automaticamente',
+      attachTo: { element: '[data-tour="tasks-create-conclusao"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.finish]
+    },
+  ]
+}
+
 // Tour de Propostas
-export const proposalsTour: TourDefinition = {
+export const newProposalsTour: TourDefinition = {
   id: 'proposals',
-  name: 'Tour de Propostas',
-  description: 'Aprenda a gerenciar propostas comerciais',
+  name: 'Tour de Nova Proposta',
+  description: 'Aprenda a criar uma nova proposta comercial',
   steps: [
     {
       id: 'proposals-intro',
       title: '💼 Propostas Comerciais',
-      text: 'Gerencie propostas, adicione itens, acompanhe valores e exporte documentos.',
+      text: 'Nesse tour você irá aprender a criar uma nova proposta comercial do 0. Para acessar a página de novas propostas, utilize o menu lateral indo em CRM > Criar Proposta ou o atalho Ctrl + K.',
       buttons: [tourButtons.skip, tourButtons.next]
     },
     {
       id: 'proposals-new',
       title: '➕ Nova Proposta',
-      text: 'Crie uma nova proposta selecionando a empresa, tipo de serviço e adicionando itens.',
-      attachTo: { element: '[data-tour="new-proposal"]', on: 'bottom' },
+      text: 'O primeiro passo será selecionar a empresa digitando seu CNPJ ou CPF, sem ponto ou traço.',
+      attachTo: { element: '[data-tour="new-proposal-company"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
-      id: 'proposals-status',
-      title: '📊 Status da Proposta',
-      text: 'Acompanhe o status: Em Elaboração, Enviada, Aprovada ou Recusada.',
-      attachTo: { element: '[data-tour="proposals-status"]', on: 'bottom' },
+      id: 'new-proposal-company-info',
+      title: '🏢 Empresa',
+      text: 'Caso a empresa já esteja cadastrada no sistema, as informações serão preenchidas automaticamente. Caso contrário, deverão ser preenchidas manualmente.',
+      attachTo: { element: '[data-tour="new-proposal-company-info"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: async function () {
+        try {
+          // Aguarda um pouco para garantir que a página está carregada
+          await new Promise(resolve => setTimeout(resolve, 300))
+          
+          // Clica no botão de step 2 diretamente
+          const step2Button = Array.from(document.querySelectorAll('button')).find(
+            btn => btn.textContent?.includes('Empresa') && btn.classList.contains('group')
+          ) as HTMLButtonElement
+          
+          if (step2Button) {
+            step2Button.click()
+            // Aguarda a transição para o step 2
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+          
+          // Aguarda o elemento estar visível
+          await waitForElement('[data-tour="new-proposal-company-info"]')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error('Erro ao aguardar elemento empresa info:', err)
+        }
+      }
+    },
+    {
+      id: 'new-proposal-programas',
+      title: 'Programas',
+      text: 'Após preencher as informações das empresas, você poderá preencher os programas relacionados à proposta, sendo os Programas de Convênio.',
+      attachTo: { element: '[data-tour="new-proposal-programas"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: async function () {
+        try {
+          // Aguarda um pouco para garantir que a página está carregada
+          await new Promise(resolve => setTimeout(resolve, 300))
+          
+          // Clica no botão de step 3 (Programas) diretamente
+          const step3Button = Array.from(document.querySelectorAll('button')).find(
+            btn => btn.textContent?.includes('Programas') && btn.classList.contains('group')
+          ) as HTMLButtonElement
+          
+          if (step3Button) {
+            step3Button.click()
+            // Aguarda a transição para o step 3
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+          
+          // Aguarda o elemento estar visível
+          await waitForElement('[data-tour="new-proposal-programas"]')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error('Erro ao aguardar elemento programas:', err)
+        }
+      }
+    },
+    {
+      id: 'new-proposal-programas-select',
+      title: 'Selecione o Programa',
+      text: 'Selecione o programa desejado para a proposta.',
+      attachTo: { element: '[data-tour="new-proposal-programas-select"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-programas-quantidade',
+      title: 'Quantidade',
+      text: 'Selecione a quantidade. A quantidade se refere a quantidade de colaboradores presentes na empresa.',
+      attachTo: { element: '[data-tour="new-proposal-programas-quantidade"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-programas-desconto',
+      title: 'Desconto',
+      text: 'Selecione o desconto aplicado ao programa. Nos programas de convênio, o desconto é aplicado sobre o valor mensal do programa. Então, o desconto total será o valor do desconto x 12 (meses).',
+      attachTo: { element: '[data-tour="new-proposal-programas-desconto"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-programas-acrescimo',
+      title: 'Acréscimo',
+      text: 'Selecione o acréscimo aplicado ao programa. Nos programas de convênio, o acréscimo é aplicado sobre o valor mensal do programa. Então, o acréscimo total será o valor do acréscimo x 12 (meses).',
+      attachTo: { element: '[data-tour="new-proposal-programas-acrescimo"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-programas-finish',
+      title: 'Adicionar Programa',
+      text: 'Por fim, clique no botão para adicionar o programa à proposta.',
+      attachTo: { element: '[data-tour="new-proposal-programas-finish"]', on: 'top' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
@@ -350,7 +576,8 @@ export const allTours: TourDefinition[] = [
   firstTimeTour,
   dashboardTour,
   tasksTour,
-  proposalsTour,
+  detailTasksTour,
+  newProposalsTour,
   companiesTour,
   agendaTour,
   usersTour

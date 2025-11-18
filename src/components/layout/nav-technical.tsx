@@ -25,6 +25,7 @@ interface NavItem {
   url: string;
   icon?: LucideIcon;
   isActive?: boolean;
+  dataTour?: string;
   items?: {
     title: string;
     url: string;
@@ -50,7 +51,7 @@ export function NavTechnical({ items }: { items: NavItem[] }) {
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title}>
+                    <SidebarMenuButton tooltip={item.title} data-tour={item.dataTour}>
                       {item.icon && <item.icon />}
                       <span>{item.title}</span>
                       <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -79,7 +80,7 @@ export function NavTechnical({ items }: { items: NavItem[] }) {
             // Render sem collapsable se não houver subitens
             return (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild tooltip={item.title} className="cursor-pointer">
+                <SidebarMenuButton asChild tooltip={item.title} className="cursor-pointer" data-tour={item.dataTour}>
                   <Link to={item.url}>
                     {item.icon && <item.icon />}
                     <span>{item.title}</span>
