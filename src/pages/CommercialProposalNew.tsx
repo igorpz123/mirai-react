@@ -335,7 +335,7 @@ export default function CommercialProposalNew() {
             <CardContent className="pt-2 pb-4 space-y-6" data-tour="new-proposal-company">
               <div className="max-w-2xl mx-auto space-y-6">
                 {/* Document Type Selection */}
-                <div className="flex items-center justify-center gap-6 p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-center gap-6 p-4 bg-muted rounded-lg" data-tour="new-proposal-company-type">
                   <Label className="text-sm font-medium text-muted-foreground">Tipo de Documento:</Label>
                   <div className="flex gap-6">
                     <label className="flex items-center gap-2 cursor-pointer group">
@@ -653,10 +653,10 @@ export default function CommercialProposalNew() {
                 </div>
 
                 <div className="grid gap-4 items-end grid-cols-1 md:grid-cols-6">
-                  <div className="md:col-span-2 space-y-2">
+                  <div className="md:col-span-2 space-y-2" data-tour="new-proposal-programas-select">
                     <Label htmlFor="select-program" className="text-sm font-semibold">Programa *</Label>
                     <Select value={selectedProgramId} onValueChange={(v) => { setSelectedProgramId(v) }}>
-                      <SelectTrigger id="select-program" className="h-11">
+                      <SelectTrigger id="select-program" className="h-11 w-full">
                         <SelectValue placeholder="Selecione um programa" />
                       </SelectTrigger>
                       <SelectContent>
@@ -664,7 +664,7 @@ export default function CommercialProposalNew() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-programas-quantidade">
                     <Label htmlFor="program-qty" className="text-sm font-semibold">Quantidade</Label>
                     <Input
                       id="program-qty"
@@ -675,7 +675,7 @@ export default function CommercialProposalNew() {
                       className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-programas-desconto">
                     <Label htmlFor="program-discount" className="text-sm font-semibold">Desconto</Label>
                     <Input
                       id="program-discount"
@@ -686,7 +686,7 @@ export default function CommercialProposalNew() {
                       placeholder="0 ou 10%"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-programas-acrescimo">
                     <Label htmlFor="program-increment" className="text-sm font-semibold">Acréscimo Mensal</Label>
                     <Input
                       id="program-increment"
@@ -700,6 +700,7 @@ export default function CommercialProposalNew() {
                   <div className="flex items-end">
                     <Button
                       className='h-11 w-11 rounded-full shadow-lg hover:shadow-xl transition-all'
+                      data-tour="new-proposal-programas-finish"
                       onClick={async () => {
                         if (!selectedProgramId) { toastWarning('Selecione um programa antes de adicionar'); return }
                         const p = programs.find(pp => pp.id === Number(selectedProgramId))
@@ -883,7 +884,7 @@ export default function CommercialProposalNew() {
                 Selecione cursos, quantidade e desconto. Esta etapa é opcional - você pode pular
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2 space-y-6">
+            <CardContent className="pt-2 space-y-6" data-tour="new-proposal-cursos">
               {/* Add Course Form */}
               <div className="p-5 bg-muted/30 rounded-lg border-2 border-dashed space-y-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -892,7 +893,7 @@ export default function CommercialProposalNew() {
                 </div>
 
                 <div className="grid gap-4 items-end grid-cols-1 md:grid-cols-5">
-                  <div className="md:col-span-2 space-y-2">
+                  <div className="md:col-span-2 space-y-2" data-tour="new-proposal-cursos-select">
                     <Label htmlFor="select-course" className="text-sm font-semibold">Curso *</Label>
                     <Select value={selectedCourseId} onValueChange={(v) => setSelectedCourseId(v)}>
                       <SelectTrigger id="select-course" className="h-11 w-full                                                                                                                    ">
@@ -903,7 +904,7 @@ export default function CommercialProposalNew() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-cursos-quantidade">
                     <Label htmlFor="course-qty" className="text-sm font-semibold">Quantidade</Label>
                     <Input
                       id="course-qty"
@@ -914,7 +915,7 @@ export default function CommercialProposalNew() {
                       className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-cursos-desconto">
                     <Label htmlFor="course-discount" className="text-sm font-semibold">Desconto</Label>
                     <Input
                       id="course-discount"
@@ -928,6 +929,7 @@ export default function CommercialProposalNew() {
                   <div className="flex items-end">
                     <Button
                       className='h-11 w-11 rounded-full shadow-lg hover:shadow-xl transition-all'
+                      data-tour="new-proposal-cursos-finish"
                       onClick={() => {
                         if (!selectedCourseId) { toastWarning('Selecione um curso antes de adicionar'); return }
                         const c = courses.find(cc => cc.id === Number(selectedCourseId))
@@ -1063,7 +1065,7 @@ export default function CommercialProposalNew() {
                 Selecione químicos (grupos), pontos e desconto. Esta etapa é opcional - você pode pular
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-6 space-y-6">
+            <CardContent className="pt-6 space-y-6" data-tour="new-proposal-quimicos">
               {/* Add Chemical Form */}
               <div className="p-5 bg-muted/30 rounded-lg border-2 border-dashed space-y-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -1072,7 +1074,7 @@ export default function CommercialProposalNew() {
                 </div>
 
                 <div className="grid gap-4 items-end grid-cols-1 md:grid-cols-5">
-                  <div className="md:col-span-2 space-y-2">
+                  <div className="md:col-span-2 space-y-2" data-tour="new-proposal-quimicos-select">
                     <Label htmlFor="select-chemical" className="text-sm font-semibold">Químico (Grupo) *</Label>
                     <Select value={selectedChemicalIdx} onValueChange={(v) => setSelectedChemicalIdx(v)}>
                       <SelectTrigger id="select-chemical" className="h-11 w-full">
@@ -1083,7 +1085,7 @@ export default function CommercialProposalNew() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-quimicos-pontos">
                     <Label htmlFor="chemical-pontos" className="text-sm font-semibold">Pontos</Label>
                     <Input
                       id="chemical-pontos"
@@ -1094,7 +1096,7 @@ export default function CommercialProposalNew() {
                       className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-quimicos-desconto">
                     <Label htmlFor="chemical-discount" className="text-sm font-semibold">Desconto</Label>
                     <Input
                       id="chemical-discount"
@@ -1108,6 +1110,7 @@ export default function CommercialProposalNew() {
                   <div className="flex items-end">
                     <Button
                       className='h-11 w-11 rounded-full shadow-lg hover:shadow-xl transition-all'
+                      data-tour="new-proposal-quimicos-finish"
                       onClick={() => {
                         if (!selectedChemicalIdx) { toastWarning('Selecione um químico antes de adicionar'); return }
                         const idx = Number(selectedChemicalIdx)
@@ -1235,7 +1238,7 @@ export default function CommercialProposalNew() {
                 Selecione produtos, quantidade e desconto. Esta etapa é opcional - você pode pular
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2 space-y-6">
+            <CardContent className="pt-2 space-y-6" data-tour="new-proposal-produtos">
               {/* Add Product Form */}
               <div className="p-5 bg-muted/30 rounded-lg border-2 border-dashed space-y-4">
                 <div className="flex items-center gap-2 mb-3">
@@ -1244,7 +1247,7 @@ export default function CommercialProposalNew() {
                 </div>
 
                 <div className="grid gap-4 items-end grid-cols-1 md:grid-cols-5">
-                  <div className="md:col-span-2 space-y-2">
+                  <div className="md:col-span-2 space-y-2" data-tour="new-proposal-produtos-select">
                     <Label htmlFor="select-product" className="text-sm font-semibold">Produto *</Label>
                     <Select value={selectedProductId} onValueChange={(v) => setSelectedProductId(v)}>
                       <SelectTrigger id="select-product" className="h-11 w-full">
@@ -1255,7 +1258,7 @@ export default function CommercialProposalNew() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-produtos-quantidade">
                     <Label htmlFor="product-qty" className="text-sm font-semibold">Quantidade</Label>
                     <Input
                       id="product-qty"
@@ -1266,7 +1269,7 @@ export default function CommercialProposalNew() {
                       className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-produtos-desconto">
                     <Label htmlFor="product-discount" className="text-sm font-semibold">Desconto</Label>
                     <Input
                       id="product-discount"
@@ -1280,6 +1283,7 @@ export default function CommercialProposalNew() {
                   <div className="flex items-end">
                     <Button
                       className='h-11 w-11 rounded-full shadow-lg hover:shadow-xl transition-all'
+                      data-tour="new-proposal-produtos-finish"
                       onClick={async () => {
                         if (!selectedProductId) { toastWarning('Selecione um produto antes de adicionar'); return }
                         const p = products.find(pp => pp.id === Number(selectedProductId))
@@ -1416,12 +1420,12 @@ export default function CommercialProposalNew() {
                 Complete os dados finais da proposta comercial
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-2 space-y-6">
+            <CardContent className="pt-2 space-y-6" data-tour="new-proposal-info">
 
               {/* Form Fields */}
               <div className="p-5 bg-muted/30 rounded-lg border-2 border-dashed space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-info-titulo">
                     <Label htmlFor="proposal-title" className="text-sm font-semibold flex items-center gap-2">
                       <IconFileText size={16} />
                       Título <span className="text-destructive">*</span>
@@ -1434,7 +1438,7 @@ export default function CommercialProposalNew() {
                       placeholder="Título da proposta"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-info-indicacao">
                     <Label htmlFor="proposal-indication" className="text-sm font-semibold">Indicação</Label>
                     <Select
                       value={form.indicacao_id ? String(form.indicacao_id) : undefined}
@@ -1449,7 +1453,7 @@ export default function CommercialProposalNew() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-info-data">
                     <Label htmlFor="proposal-date" className="text-sm font-semibold">Data da Elaboração</Label>
                     <Input
                       id="proposal-date"
@@ -1459,7 +1463,7 @@ export default function CommercialProposalNew() {
                       className="h-11"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2" data-tour="new-proposal-info-status">
                     <Label htmlFor="proposal-status" className="text-sm font-semibold">Status da Proposta</Label>
                     <Select value={form.status} onValueChange={(v) => setForm(s => ({ ...s, status: v }))}>
                       <SelectTrigger id="proposal-status" className="h-11 w-full">
@@ -1470,7 +1474,7 @@ export default function CommercialProposalNew() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-2 space-y-2">
+                  <div className="md:col-span-2 space-y-2" data-tour="new-proposal-info-obs">
                     <Label htmlFor="proposal-obs" className="text-sm font-semibold">Observações</Label>
                     <Input
                       id="proposal-obs"
@@ -1570,6 +1574,7 @@ export default function CommercialProposalNew() {
                 <Button
                   size="lg"
                   className="min-w-[200px] shadow-lg hover:shadow-xl"
+                  data-tour="new-proposal-info-finish"
                   onClick={async () => {
                     try {
                       if (!company?.id) { toastError('Cadastre/Selecione a empresa antes'); return }

@@ -18,7 +18,33 @@ export const tourDefaultOptions = {
     canClickTarget: false,
     // Adicionar pequeno delay para prevenir race conditions
     modalOverlayOpeningPadding: 4,
-    modalOverlayOpeningRadius: 4
+    modalOverlayOpeningRadius: 4,
+    // Configurações do Popper.js para melhor posicionamento
+    popperOptions: {
+      modifiers: [
+        {
+          name: 'offset',
+          options: {
+            offset: [0, 12] // 12px de distância do elemento
+          }
+        },
+        {
+          name: 'preventOverflow',
+          options: {
+            padding: 8,
+            altAxis: true,
+            tether: false
+          }
+        },
+        {
+          name: 'flip',
+          options: {
+            fallbackPlacements: ['bottom', 'top', 'right', 'left'],
+            padding: 8
+          }
+        }
+      ]
+    }
   }
 } as const
 

@@ -555,8 +555,10 @@ html {
 }
 
 /* Estabilizar posicionamento */
+/* Garantir que o Popper.js possa posicionar corretamente */
 .shepherd-element[data-popper-placement] {
-  position: fixed !important;
+  position: absolute !important;
+  z-index: 9999 !important;
 }
 
 /* Animações */

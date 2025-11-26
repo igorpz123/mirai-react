@@ -359,6 +359,13 @@ export const newProposalsTour: TourDefinition = {
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
+      id: 'new-proposal-company-type',
+      title: 'Tipo de Documento',
+      text: 'Você pode selecionar o tipo de documento que será utilizado para buscar a empresa: CNPJ ou CPF.',
+      attachTo: { element: '[data-tour="new-proposal-company-type"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
       id: 'new-proposal-company-info',
       title: '🏢 Empresa',
       text: 'Caso a empresa já esteja cadastrada no sistema, as informações serão preenchidas automaticamente. Caso contrário, deverão ser preenchidas manualmente.',
@@ -422,28 +429,28 @@ export const newProposalsTour: TourDefinition = {
       id: 'new-proposal-programas-select',
       title: 'Selecione o Programa',
       text: 'Selecione o programa desejado para a proposta.',
-      attachTo: { element: '[data-tour="new-proposal-programas-select"]', on: 'top' },
+      attachTo: { element: '[data-tour="new-proposal-programas-select"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
       id: 'new-proposal-programas-quantidade',
       title: 'Quantidade',
       text: 'Selecione a quantidade. A quantidade se refere a quantidade de colaboradores presentes na empresa.',
-      attachTo: { element: '[data-tour="new-proposal-programas-quantidade"]', on: 'top' },
+      attachTo: { element: '[data-tour="new-proposal-programas-quantidade"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
       id: 'new-proposal-programas-desconto',
       title: 'Desconto',
       text: 'Selecione o desconto aplicado ao programa. Nos programas de convênio, o desconto é aplicado sobre o valor mensal do programa. Então, o desconto total será o valor do desconto x 12 (meses).',
-      attachTo: { element: '[data-tour="new-proposal-programas-desconto"]', on: 'top' },
+      attachTo: { element: '[data-tour="new-proposal-programas-desconto"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
       id: 'new-proposal-programas-acrescimo',
       title: 'Acréscimo',
       text: 'Selecione o acréscimo aplicado ao programa. Nos programas de convênio, o acréscimo é aplicado sobre o valor mensal do programa. Então, o acréscimo total será o valor do acréscimo x 12 (meses).',
-      attachTo: { element: '[data-tour="new-proposal-programas-acrescimo"]', on: 'top' },
+      attachTo: { element: '[data-tour="new-proposal-programas-acrescimo"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
@@ -454,10 +461,222 @@ export const newProposalsTour: TourDefinition = {
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
-      id: 'proposals-export',
-      title: '📄 Exportar Proposta',
-      text: 'Exporte propostas em PDF ou Excel para enviar aos clientes.',
-      attachTo: { element: '[data-tour="export-proposal"]', on: 'left' },
+      id: 'new-proposal-cursos',
+      title: '📚 Cursos',
+      text: 'Agora você pode adicionar cursos à proposta. Este passo é opcional - você pode pular se não houver cursos.',
+      attachTo: { element: '[data-tour="new-proposal-cursos"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: async function () {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 300))
+          const step4Button = Array.from(document.querySelectorAll('button')).find(
+            btn => btn.textContent?.includes('Cursos') && btn.classList.contains('group')
+          ) as HTMLButtonElement
+          if (step4Button) {
+            step4Button.click()
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+          await waitForElement('[data-tour="new-proposal-cursos"]')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error('Erro ao aguardar elemento cursos:', err)
+        }
+      }
+    },
+    {
+      id: 'new-proposal-cursos-select',
+      title: 'Selecione o Curso',
+      text: 'Escolha o curso que deseja adicionar à proposta.',
+      attachTo: { element: '[data-tour="new-proposal-cursos-select"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-cursos-quantidade',
+      title: 'Quantidade',
+      text: 'Informe a quantidade de participantes do curso.',
+      attachTo: { element: '[data-tour="new-proposal-cursos-quantidade"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-cursos-desconto',
+      title: 'Desconto',
+      text: 'Aplique um desconto se necessário. Pode ser em valor fixo (R$) ou percentual (%).',
+      attachTo: { element: '[data-tour="new-proposal-cursos-desconto"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-cursos-finish',
+      title: 'Adicionar Curso',
+      text: 'Clique aqui para adicionar o curso à proposta.',
+      attachTo: { element: '[data-tour="new-proposal-cursos-finish"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-quimicos',
+      title: '🧪 Químicos',
+      text: 'Adicione químicos à proposta. Este passo também é opcional.',
+      attachTo: { element: '[data-tour="new-proposal-quimicos"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: async function () {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 300))
+          const step5Button = Array.from(document.querySelectorAll('button')).find(
+            btn => btn.textContent?.includes('Químicos') && btn.classList.contains('group')
+          ) as HTMLButtonElement
+          if (step5Button) {
+            step5Button.click()
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+          await waitForElement('[data-tour="new-proposal-quimicos"]')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error('Erro ao aguardar elemento químicos:', err)
+        }
+      }
+    },
+    {
+      id: 'new-proposal-quimicos-select',
+      title: 'Selecione o Químico',
+      text: 'Escolha o grupo químico que deseja incluir na proposta.',
+      attachTo: { element: '[data-tour="new-proposal-quimicos-select"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-quimicos-pontos',
+      title: 'Pontos',
+      text: 'Informe a quantidade de pontos de análise química.',
+      attachTo: { element: '[data-tour="new-proposal-quimicos-pontos"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-quimicos-desconto',
+      title: 'Desconto',
+      text: 'Aplique um desconto se necessário. Pode ser em valor fixo (R$) ou percentual (%).',
+      attachTo: { element: '[data-tour="new-proposal-quimicos-desconto"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-quimicos-finish',
+      title: 'Adicionar Químico',
+      text: 'Clique aqui para adicionar o químico à proposta.',
+      attachTo: { element: '[data-tour="new-proposal-quimicos-finish"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-produtos',
+      title: '📦 Produtos',
+      text: 'Adicione produtos à proposta. Este é o último step opcional antes de finalizar.',
+      attachTo: { element: '[data-tour="new-proposal-produtos"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: async function () {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 300))
+          const step6Button = Array.from(document.querySelectorAll('button')).find(
+            btn => btn.textContent?.includes('Produtos') && btn.classList.contains('group')
+          ) as HTMLButtonElement
+          if (step6Button) {
+            step6Button.click()
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+          await waitForElement('[data-tour="new-proposal-produtos"]')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error('Erro ao aguardar elemento produtos:', err)
+        }
+      }
+    },
+    {
+      id: 'new-proposal-produtos-select',
+      title: 'Selecione o Produto',
+      text: 'Escolha o produto que deseja adicionar à proposta.',
+      attachTo: { element: '[data-tour="new-proposal-produtos-select"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-produtos-quantidade',
+      title: 'Quantidade',
+      text: 'Informe a quantidade do produto.',
+      attachTo: { element: '[data-tour="new-proposal-produtos-quantidade"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-produtos-desconto',
+      title: 'Desconto',
+      text: 'Aplique um desconto se necessário. Pode ser em valor fixo (R$) ou percentual (%).',
+      attachTo: { element: '[data-tour="new-proposal-produtos-desconto"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-produtos-finish',
+      title: 'Adicionar Produto',
+      text: 'Clique aqui para adicionar o produto à proposta.',
+      attachTo: { element: '[data-tour="new-proposal-produtos-finish"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-info',
+      title: '📋 Informações da Proposta',
+      text: 'Agora vamos finalizar preenchendo as informações gerais da proposta.',
+      attachTo: { element: '[data-tour="new-proposal-info"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next],
+      beforeShowPromise: async function () {
+        try {
+          await new Promise(resolve => setTimeout(resolve, 300))
+          // Buscar pelo texto correto do botão: "Proposta" ao invés de "Informações"
+          const step7Button = Array.from(document.querySelectorAll('button')).find(
+            btn => btn.textContent?.includes('Proposta') && btn.classList.contains('group')
+          ) as HTMLButtonElement
+          if (step7Button) {
+            step7Button.click()
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
+          await waitForElement('[data-tour="new-proposal-info"]')
+          await new Promise(resolve => setTimeout(resolve, 200))
+        } catch (err) {
+          console.error('Erro ao aguardar elemento info:', err)
+        }
+      }
+    },
+    {
+      id: 'new-proposal-info-titulo',
+      title: 'Título da Proposta',
+      text: 'Dê um título descritivo para a proposta. Este campo é obrigatório.',
+      attachTo: { element: '[data-tour="new-proposal-info-titulo"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-info-indicacao',
+      title: 'Indicação',
+      text: 'Se a proposta veio de uma indicação, selecione o usuário responsável.',
+      attachTo: { element: '[data-tour="new-proposal-info-indicacao"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-info-data',
+      title: 'Data da Elaboração',
+      text: 'Selecione a data em que a proposta foi elaborada.',
+      attachTo: { element: '[data-tour="new-proposal-info-data"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-info-status',
+      title: 'Status da Proposta',
+      text: 'Defina o status atual da proposta (pendente, aprovada, rejeitada, etc.).',
+      attachTo: { element: '[data-tour="new-proposal-info-status"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-info-obs',
+      title: 'Observações',
+      text: 'Adicione observações adicionais sobre a proposta, se necessário.',
+      attachTo: { element: '[data-tour="new-proposal-info-obs"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'new-proposal-info-finish',
+      title: '✅ Finalizar Proposta',
+      text: 'Pronto! Clique aqui para finalizar e criar a proposta. Você será redirecionado para a página de detalhes da proposta criada.',
+      attachTo: { element: '[data-tour="new-proposal-info-finish"]', on: 'top' },
       buttons: [tourButtons.back, tourButtons.finish]
     }
   ]
