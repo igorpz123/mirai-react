@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { SiteHeader } from '@/components/layout/site-header'
 import { getCompanyById, updateCompany, getProposalsByCompany, type Company } from '@/services/companies'
 import { getTasksByCompany, type Task } from '@/services/tasks'
@@ -10,10 +10,31 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toastError, toastSuccess } from '@/lib/customToast'
 import { TechnicalTaskTable } from '@/components/technical-task-table'
 import { CommercialProposalsTable } from '@/components/commercial-proposals-table'
 import { onlyDigits, formatCNPJ, validateCNPJ } from '@/lib/utils'
+import { 
+  IconBuilding, 
+  IconPhone, 
+  IconMapPin, 
+  IconCalendar, 
+  IconUsers, 
+  IconUserCheck,
+  IconClock,
+  IconFileText,
+  IconChartBar,
+  IconArrowLeft,
+  IconDeviceFloppy,
+  IconX,
+  IconAlertCircle,
+  IconCircleCheck,
+  IconRefresh
+} from '@tabler/icons-react'
 
 // CPF formatting and validation
 function formatCPF(value: string): string {
@@ -50,6 +71,7 @@ function isValidCPF(cpf: string): boolean {
 
 export default function EmpresaDetails() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [empresa, setEmpresa] = useState<Company | null>(null)
@@ -60,6 +82,7 @@ export default function EmpresaDetails() {
   const [reactivating, setReactivating] = useState(false)
   const [futureYearsDialog, setFutureYearsDialog] = useState(false)
   const [futureYears, setFutureYears] = useState(1)
+  const [hasChanges, setHasChanges] = useState(false)
 
   const [form, setForm] = useState({
     nome_fantasia: '',
@@ -232,182 +255,458 @@ export default function EmpresaDetails() {
 
   return (
     <div className="container-main">
-      <SiteHeader title={`Empresa #${id}`} />
-      <div className="flex flex-col gap-6 py-4 md:py-6 px-4 lg:px-6 mx-6">
-        {loading && <div>Carregando...</div>}
-        {!loading && (
-          <>
-            {/* Ações rápidas */}
+      <SiteHeader title="Detalhes da Empresa" />
+      
+      <div className="flex flex-col gap-6 py-6 px-4 lg:px-6">
+        {/* Page Header with Back Button */}
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="h-9 w-9"
+          >
+            <IconArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <IconBuilding className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-semibold">
+              {empresa?.nome_fantasia || `Empresa #${id}`}
+            </h2>
             {empresa && (empresa as any).status === 'inativo' && (
-              <div className="flex items-center justify-end">
-                <Button className="success" onClick={handleReactivate} disabled={reactivating}>
-                  {reactivating ? 'Reativando...' : 'Reativar empresa'}
-                </Button>
-              </div>
+              <Badge variant="destructive">Inativa</Badge>
+            )}
+            {empresa && (empresa as any).status === 'ativo' && (
+              <Badge variant="default" className="bg-green-600">Ativa</Badge>
+            )}
+          </div>
+        </div>
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex flex-col items-center gap-3">
+              <IconRefresh className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Carregando dados da empresa...</p>
+            </div>
+          </div>
+        )}
+        
+        {!loading && empresa && (
+          <>
+            {/* Alert de Empresa Inativa */}
+            {(empresa as any).status === 'inativo' && (
+              <Card className="border-destructive bg-destructive/5">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <IconAlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-destructive mb-1">Empresa Inativa</h4>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Esta empresa está inativa no sistema. Reative-a para permitir novas operações.
+                      </p>
+                      <Button 
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleReactivate} 
+                        disabled={reactivating}
+                      >
+                        {reactivating ? (
+                          <>
+                            <IconRefresh className="h-4 w-4 mr-2 animate-spin" />
+                            Reativando...
+                          </>
+                        ) : (
+                          <>
+                            <IconCircleCheck className="h-4 w-4 mr-2" />
+                            Reativar Empresa
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Edit form */}
-            <div className="rounded-md border p-4 space-y-4">
-              <h3 className="text-lg font-semibold">Dados da Empresa</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className='lg:col-span-2'>
-                  <Label htmlFor="nome_fantasia">Nome Fantasia</Label>
-                  <Input id="nome_fantasia" value={form.nome_fantasia} onChange={(e) => setForm(f => ({ ...f, nome_fantasia: e.target.value }))} />
-                </div>
-                <div className='lg:col-span-2'>
-                  <Label htmlFor="razao_social">Razão Social</Label>
-                  <Input id="razao_social" value={form.razao_social} onChange={(e) => setForm(f => ({ ...f, razao_social: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input
-                    id="cnpj"
-                    value={form.cnpj}
-                    onChange={(e) => {
-                      const masked = formatCNPJ(e.target.value)
-                      setForm(f => ({ ...f, cnpj: masked, caepf: '' }))
-                    }}
-                    placeholder="00.000.000/0000-00"
-                    aria-invalid={!cnpjIsValid && !!form.cnpj}
-                    className={!cnpjIsValid && !!form.cnpj ? 'border-destructive focus-visible:ring-destructive' : ''}
-                    disabled={!!form.caepf}
-                  />
-                  {!cnpjIsValid && !!form.cnpj && (
-                    <p className="text-destructive text-xs mt-1">CNPJ inválido</p>
+            {/* Formulário de Dados da Empresa */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <IconFileText className="h-5 w-5" />
+                      Informações da Empresa
+                    </CardTitle>
+                    <CardDescription className="mt-1.5">
+                      Gerencie os dados cadastrais e configurações da empresa
+                    </CardDescription>
+                  </div>
+                  {hasChanges && (
+                    <Badge variant="outline" className="text-orange-600 border-orange-600">
+                      <IconAlertCircle className="h-3 w-3 mr-1" />
+                      Alterações não salvas
+                    </Badge>
                   )}
                 </div>
-                <div>
-                  <Label htmlFor="caepf">CAEPF (CPF Rural)</Label>
-                  <Input
-                    id="caepf"
-                    value={form.caepf}
-                    onChange={(e) => {
-                      const masked = formatCPF(e.target.value)
-                      setForm(f => ({ ...f, caepf: masked, cnpj: '' }))
-                    }}
-                    placeholder="000.000.000-00"
-                    aria-invalid={!caepfIsValid && !!form.caepf}
-                    className={!caepfIsValid && !!form.caepf ? 'border-destructive focus-visible:ring-destructive' : ''}
-                    disabled={!!form.cnpj}
-                  />
-                  {!caepfIsValid && !!form.caepf && (
-                    <p className="text-destructive text-xs mt-1">CPF inválido</p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="cidade">Cidade</Label>
-                  <Input id="cidade" value={form.cidade} onChange={(e) => setForm(f => ({ ...f, cidade: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" value={form.telefone} onChange={(e) => setForm(f => ({ ...f, telefone: e.target.value }))} />
-                </div>
-                <div>
-                  <Label htmlFor="periodicidade">Periodicidade (dias)</Label>
-                  <Input
-                    id="periodicidade"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    value={form.periodicidade ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setForm(f => ({ ...f, periodicidade: v === '' ? null : Number(v) }))
-                    }}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="data_renovacao">Data de renovação</Label>
-                  <Input
-                    id="data_renovacao"
-                    type="date"
-                    value={form.data_renovacao ? String(form.data_renovacao).slice(0, 10) : ''}
-                    onChange={(e) => setForm(f => ({ ...f, data_renovacao: e.target.value }))}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="unidade">Unidade Responsável</Label>
-                  <Select
-                    value={form.unidade_responsavel ? String(form.unidade_responsavel) : ''}
-                    onValueChange={(v) => setForm(f => ({ ...f, unidade_responsavel: v ? Number(v) : null, tecnico_responsavel: null }))}
-                  >
-                    <SelectTrigger id="unidade" className='w-full'><SelectValue placeholder="Selecione a unidade" /></SelectTrigger>
-                    <SelectContent>
-                      {unidades.map(u => (
-                        <SelectItem key={u.id} value={String(u.id)}>{u.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="tecnico">Técnico Responsável</Label>
-                  <Select
-                    value={form.tecnico_responsavel ? String(form.tecnico_responsavel) : ''}
-                    onValueChange={(v) => setForm(f => ({ ...f, tecnico_responsavel: v ? Number(v) : null }))}
-                    disabled={!form.unidade_responsavel || tecnicos.length === 0}
-                  >
-                    <SelectTrigger id="tecnico" className='w-full'><SelectValue placeholder={form.unidade_responsavel ? (tecnicos.length ? 'Selecione o técnico' : 'Sem usuários na unidade') : 'Escolha a unidade primeiro'} /></SelectTrigger>
-                    <SelectContent>
-                      {tecnicos.map(t => (
-                        <SelectItem key={t.id} value={String(t.id)}>{t.nome}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 justify-end">
-                <Button variant="outline" onClick={() => {
-                  if (!empresa) return
-                  setForm({
-                    nome_fantasia: (empresa as any).nome_fantasia || (empresa as any).nome || '',
-                    razao_social: (empresa as any).razao_social || '',
-                    cnpj: formatCNPJ((empresa as any).cnpj || ''),
-                    caepf: formatCPF((empresa as any).caepf || ''),
-                    cidade: (empresa as any).cidade || '',
-                    telefone: (empresa as any).telefone || '',
-                    unidade_responsavel: (empresa as any).unidade_id ?? (empresa as any).unidade_responsavel ?? null,
-                    tecnico_responsavel: (empresa as any).tecnico_responsavel ?? null,
-                    periodicidade: (empresa as any).periodicidade ?? null,
-                    data_renovacao: (empresa as any).data_renovacao ?? '',
-                  })
-                }}>Cancelar</Button>
-                <Button onClick={() => handleSave()} disabled={!canSave || saving}>{saving ? 'Salvando...' : 'Salvar'}</Button>
-              </div>
-            </div>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-6">
+                <div className="space-y-6">
+                  {/* Identificação */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                      <IconBuilding className="h-4 w-4 text-primary" />
+                      Identificação
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2 lg:col-span-1">
+                        <Label htmlFor="nome_fantasia" className="flex items-center gap-1.5">
+                          Nome Fantasia
+                          <span className="text-destructive">*</span>
+                        </Label>
+                        <Input 
+                          id="nome_fantasia" 
+                          value={form.nome_fantasia} 
+                          onChange={(e) => {
+                            setForm(f => ({ ...f, nome_fantasia: e.target.value }))
+                            setHasChanges(true)
+                          }}
+                          placeholder="Digite o nome fantasia"
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div className="md:col-span-2 lg:col-span-1">
+                        <Label htmlFor="razao_social">Razão Social</Label>
+                        <Input 
+                          id="razao_social" 
+                          value={form.razao_social} 
+                          onChange={(e) => {
+                            setForm(f => ({ ...f, razao_social: e.target.value }))
+                            setHasChanges(true)
+                          }}
+                          placeholder="Digite a razão social"
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="cnpj" className="flex items-center gap-1.5">
+                          CNPJ
+                          {!cnpjIsValid && !!form.cnpj && (
+                            <IconAlertCircle className="h-3.5 w-3.5 text-destructive" />
+                          )}
+                        </Label>
+                        <Input
+                          id="cnpj"
+                          value={form.cnpj}
+                          onChange={(e) => {
+                            const masked = formatCNPJ(e.target.value)
+                            setForm(f => ({ ...f, cnpj: masked, caepf: '' }))
+                            setHasChanges(true)
+                          }}
+                          placeholder="00.000.000/0000-00"
+                          aria-invalid={!cnpjIsValid && !!form.cnpj}
+                          className={`mt-1.5 ${!cnpjIsValid && !!form.cnpj ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                          disabled={!!form.caepf}
+                        />
+                        {!cnpjIsValid && !!form.cnpj && (
+                          <p className="text-destructive text-xs mt-1.5 flex items-center gap-1">
+                            <IconAlertCircle className="h-3 w-3" />
+                            CNPJ inválido
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label htmlFor="caepf" className="flex items-center gap-1.5">
+                          CAEPF (CPF Rural)
+                          {!caepfIsValid && !!form.caepf && (
+                            <IconAlertCircle className="h-3.5 w-3.5 text-destructive" />
+                          )}
+                        </Label>
+                        <Input
+                          id="caepf"
+                          value={form.caepf}
+                          onChange={(e) => {
+                            const masked = formatCPF(e.target.value)
+                            setForm(f => ({ ...f, caepf: masked, cnpj: '' }))
+                            setHasChanges(true)
+                          }}
+                          placeholder="000.000.000-00"
+                          aria-invalid={!caepfIsValid && !!form.caepf}
+                          className={`mt-1.5 ${!caepfIsValid && !!form.caepf ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                          disabled={!!form.cnpj}
+                        />
+                        {!caepfIsValid && !!form.caepf && (
+                          <p className="text-destructive text-xs mt-1.5 flex items-center gap-1">
+                            <IconAlertCircle className="h-3 w-3" />
+                            CPF inválido
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Related tasks */}
-            <div className="rounded-lg border">
-              <div className="px-4 pt-4 pb-2">
-                <h3 className="text-lg font-semibold">Tarefas vinculadas</h3>
-              </div>
-              <div className="pb-4">
-                <TechnicalTaskTable tasks={tasks} />
-              </div>
-            </div>
+                  <Separator />
 
-            {/* Related proposals */}
-            <div className="rounded-lg border">
-              <div className="px-4 pt-4 pb-2">
-                <h3 className="text-lg font-semibold">Propostas vinculadas</h3>
-              </div>
-              <div className="pb-4">
-                <CommercialProposalsTable proposals={proposals as any} />
-              </div>
-            </div>
+                  {/* Contato e Localização */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                      <IconMapPin className="h-4 w-4 text-primary" />
+                      Contato e Localização
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="cidade" className="flex items-center gap-1.5">
+                          <IconMapPin className="h-3.5 w-3.5" />
+                          Cidade
+                        </Label>
+                        <Input 
+                          id="cidade" 
+                          value={form.cidade} 
+                          onChange={(e) => {
+                            setForm(f => ({ ...f, cidade: e.target.value }))
+                            setHasChanges(true)
+                          }}
+                          placeholder="Digite a cidade"
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="telefone" className="flex items-center gap-1.5">
+                          <IconPhone className="h-3.5 w-3.5" />
+                          Telefone
+                        </Label>
+                        <Input 
+                          id="telefone" 
+                          value={form.telefone} 
+                          onChange={(e) => {
+                            setForm(f => ({ ...f, telefone: e.target.value }))
+                            setHasChanges(true)
+                          }}
+                          placeholder="(00) 00000-0000"
+                          className="mt-1.5"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Gestão e Responsabilidade */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                      <IconUsers className="h-4 w-4 text-primary" />
+                      Gestão e Responsabilidade
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="unidade" className="flex items-center gap-1.5">
+                          <IconBuilding className="h-3.5 w-3.5" />
+                          Unidade Responsável
+                        </Label>
+                        <Select
+                          value={form.unidade_responsavel ? String(form.unidade_responsavel) : ''}
+                          onValueChange={(v) => {
+                            setForm(f => ({ ...f, unidade_responsavel: v ? Number(v) : null, tecnico_responsavel: null }))
+                            setHasChanges(true)
+                          }}
+                        >
+                          <SelectTrigger id="unidade" className='w-full mt-1.5'>
+                            <SelectValue placeholder="Selecione a unidade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {unidades.map(u => (
+                              <SelectItem key={u.id} value={String(u.id)}>{u.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="tecnico" className="flex items-center gap-1.5">
+                          <IconUserCheck className="h-3.5 w-3.5" />
+                          Técnico Responsável
+                        </Label>
+                        <Select
+                          value={form.tecnico_responsavel ? String(form.tecnico_responsavel) : ''}
+                          onValueChange={(v) => {
+                            setForm(f => ({ ...f, tecnico_responsavel: v ? Number(v) : null }))
+                            setHasChanges(true)
+                          }}
+                          disabled={!form.unidade_responsavel || tecnicos.length === 0}
+                        >
+                          <SelectTrigger id="tecnico" className='w-full mt-1.5'>
+                            <SelectValue placeholder={
+                              form.unidade_responsavel 
+                                ? (tecnicos.length ? 'Selecione o técnico' : 'Sem usuários na unidade') 
+                                : 'Escolha a unidade primeiro'
+                            } />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {tecnicos.map(t => (
+                              <SelectItem key={t.id} value={String(t.id)}>
+                                {t.nome} {t.sobrenome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Periodicidade e Renovação */}
+                  <div>
+                    <h4 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                      <IconClock className="h-4 w-4 text-primary" />
+                      Periodicidade e Renovação
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="periodicidade" className="flex items-center gap-1.5">
+                          <IconClock className="h-3.5 w-3.5" />
+                          Periodicidade (dias)
+                        </Label>
+                        <Input
+                          id="periodicidade"
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          value={form.periodicidade ?? ''}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setForm(f => ({ ...f, periodicidade: v === '' ? null : Number(v) }))
+                            setHasChanges(true)
+                          }}
+                          placeholder="Ex: 30, 60, 90"
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="data_renovacao" className="flex items-center gap-1.5">
+                          <IconCalendar className="h-3.5 w-3.5" />
+                          Data de Renovação
+                        </Label>
+                        <Input
+                          id="data_renovacao"
+                          type="date"
+                          value={form.data_renovacao ? String(form.data_renovacao).slice(0, 10) : ''}
+                          onChange={(e) => {
+                            setForm(f => ({ ...f, data_renovacao: e.target.value }))
+                            setHasChanges(true)
+                          }}
+                          className="mt-1.5"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator className="my-6" />
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-3 justify-end">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      if (!empresa) return
+                      setForm({
+                        nome_fantasia: (empresa as any).nome_fantasia || (empresa as any).nome || '',
+                        razao_social: (empresa as any).razao_social || '',
+                        cnpj: formatCNPJ((empresa as any).cnpj || ''),
+                        caepf: formatCPF((empresa as any).caepf || ''),
+                        cidade: (empresa as any).cidade || '',
+                        telefone: (empresa as any).telefone || '',
+                        unidade_responsavel: (empresa as any).unidade_id ?? (empresa as any).unidade_responsavel ?? null,
+                        tecnico_responsavel: (empresa as any).tecnico_responsavel ?? null,
+                        periodicidade: (empresa as any).periodicidade ?? null,
+                        data_renovacao: (empresa as any).data_renovacao ?? '',
+                      })
+                      setHasChanges(false)
+                    }}
+                    disabled={!hasChanges}
+                  >
+                    <IconX className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button 
+                    onClick={() => handleSave()} 
+                    disabled={!canSave || saving || !hasChanges}
+                  >
+                    {saving ? (
+                      <>
+                        <IconRefresh className="h-4 w-4 mr-2 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      <>
+                        <IconDeviceFloppy className="h-4 w-4 mr-2" />
+                        Salvar Alterações
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabs de Tarefas e Propostas */}
+            <Card className="shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <IconChartBar className="h-5 w-5" />
+                  Tarefas e Propostas Vinculadas
+                </CardTitle>
+                <CardDescription>
+                  Visualize todas as tarefas e propostas relacionadas a esta empresa
+                </CardDescription>
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-4">
+                <Tabs defaultValue="tasks" className="w-full">
+                  <TabsList className="grid w-full max-w-md grid-cols-2">
+                    <TabsTrigger value="tasks" className="gap-2">
+                      <IconFileText className="h-4 w-4" />
+                      Tarefas
+                      <Badge variant="secondary" className="ml-1">
+                        {tasks.length}
+                      </Badge>
+                    </TabsTrigger>
+                    <TabsTrigger value="proposals" className="gap-2">
+                      <IconChartBar className="h-4 w-4" />
+                      Propostas
+                      <Badge variant="secondary" className="ml-1">
+                        {proposals.length}
+                      </Badge>
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="tasks" className="mt-4">
+                    <TechnicalTaskTable tasks={tasks} />
+                  </TabsContent>
+
+                  <TabsContent value="proposals" className="mt-4">
+                    <CommercialProposalsTable proposals={proposals as any} />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
           </>
         )}
 
         {/* Dialog de configuração de anos futuros */}
         <Dialog open={futureYearsDialog} onOpenChange={setFutureYearsDialog}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Gerar Tarefas Automáticas</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <IconCalendar className="h-5 w-5 text-primary" />
+                Gerar Tarefas Automáticas
+              </DialogTitle>
               <DialogDescription>
-                Configure quantos anos futuros deseja gerar tarefas (além do ano atual).
+                Configure quantos anos futuros deseja gerar tarefas automáticas (além do ano atual).
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
-              <Label htmlFor="futureYears">Anos futuros a gerar</Label>
+              <Label htmlFor="futureYears" className="flex items-center gap-1.5 mb-2">
+                Anos futuros a gerar
+              </Label>
               <Input
                 id="futureYears"
                 type="number"
@@ -415,17 +714,31 @@ export default function EmpresaDetails() {
                 max="5"
                 value={futureYears}
                 onChange={(e) => setFutureYears(Math.max(0, Math.min(5, Number(e.target.value))))}
-                className="mt-2"
               />
-              <p className="text-sm text-muted-foreground mt-2">
-                Será gerado para o ano atual ({new Date().getFullYear()})
-                {futureYears > 0 && ` + ${futureYears} ano${futureYears > 1 ? 's' : ''} futuro${futureYears > 1 ? 's' : ''}`}
-                {futureYears > 0 && ` (até ${new Date().getFullYear() + futureYears})`}
-              </p>
+              <Card className="mt-4 bg-muted/50 border-none">
+                <CardContent className="pt-4 pb-3">
+                  <p className="text-sm text-muted-foreground flex items-start gap-2">
+                    <IconCalendar className="h-4 w-4 mt-0.5 text-primary" />
+                    <span>
+                      Será gerado para o ano atual <strong>({new Date().getFullYear()})</strong>
+                      {futureYears > 0 && (
+                        <>
+                          {' '}+ <strong>{futureYears}</strong> ano{futureYears > 1 ? 's' : ''} futuro{futureYears > 1 ? 's' : ''}
+                          {' '}(até <strong>{new Date().getFullYear() + futureYears}</strong>)
+                        </>
+                      )}
+                    </span>
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setFutureYearsDialog(false)}>Cancelar</Button>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setFutureYearsDialog(false)}>
+                <IconX className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
               <Button onClick={confirmSaveWithFutureYears}>
+                <IconDeviceFloppy className="h-4 w-4 mr-2" />
                 Salvar e Gerar Tarefas
               </Button>
             </DialogFooter>

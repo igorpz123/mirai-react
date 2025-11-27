@@ -107,6 +107,7 @@ export const dashboardTour: TourDefinition = {
   id: 'dashboard',
   name: 'Tour do Dashboard Técnico',
   description: 'Aprenda a usar o dashboard e visualizar suas métricas',
+  requiredPermission: 'tecnico', // Apenas usuários com permissão técnico podem ver este tour
   steps: [
     {
       id: 'dashboard-intro',
@@ -196,6 +197,7 @@ export const commercialDashboardTour: TourDefinition = {
   id: 'commercial-dashboard',
   name: 'Tour do Dashboard Comercial',
   description: 'Aprenda a usar o dashboard comercial e visualizar suas métricas de vendas',
+  requiredPermission: 'comercial', // Apenas usuários com permissão comercial podem ver este tour
   steps: [
     {
       id: 'commercial-intro',
@@ -273,6 +275,7 @@ export const tasksTour: TourDefinition = {
   id: 'tasks',
   name: 'Visualizar Tarefas',
   description: 'Aprenda aonde criar e visualizar tarefas',
+  requiredPermission: 'tecnico', // Apenas usuários com permissão técnico podem ver este tour
   steps: [
     {
       id: 'tasks-options',
@@ -309,6 +312,7 @@ export const detailTasksTour: TourDefinition = {
   id: 'detail-tasks',
   name: 'Criar Tarefas',
   description: 'Aprenda a criar uma tarefa do 0',
+  requiredPermission: 'tecnico', // Apenas usuários com permissão técnico podem ver este tour
   steps: [
     {
       id: 'tasks-create',
@@ -817,77 +821,78 @@ export const companiesTour: TourDefinition = {
   ]
 }
 
-// Tour de Agenda
-export const agendaTour: TourDefinition = {
-  id: 'agenda',
-  name: 'Tour da Agenda',
-  description: 'Aprenda a usar a agenda e visualizar tarefas',
-  steps: [
-    {
-      id: 'agenda-intro',
-      title: '📅 Agenda de Tarefas',
-      text: 'Visualize suas tarefas e eventos em formato de calendário.',
-      buttons: [tourButtons.skip, tourButtons.next]
-    },
-    {
-      id: 'agenda-views',
-      title: '👁️ Visualizações',
-      text: 'Alterne entre visualização mensal, semanal e diária.',
-      attachTo: { element: '[data-tour="agenda-views"]', on: 'bottom' },
-      buttons: [tourButtons.back, tourButtons.next]
-    },
-    {
-      id: 'agenda-users',
-      title: '👥 Filtro de Usuários',
-      text: 'Visualize a agenda de outros usuários da sua equipe (se tiver permissão).',
-      attachTo: { element: '[data-tour="agenda-users"]', on: 'bottom' },
-      buttons: [tourButtons.back, tourButtons.next]
-    },
-    {
-      id: 'agenda-click',
-      title: '🖱️ Criar Eventos',
-      text: 'Clique em qualquer dia do calendário para criar uma nova tarefa ou evento.',
-      attachTo: { element: '[data-tour="calendar"]', on: 'top' },
-      buttons: [tourButtons.back, tourButtons.finish]
-    }
-  ]
-}
+// // Tour de Agenda
+// export const agendaTour: TourDefinition = {
+//   id: 'agenda',
+//   name: 'Tour da Agenda',
+//   description: 'Aprenda a usar a agenda e visualizar tarefas',
+//   steps: [
+//     {
+//       id: 'agenda-intro',
+//       title: '📅 Agenda de Tarefas',
+//       text: 'Visualize suas tarefas e eventos em formato de calendário.',
+//       buttons: [tourButtons.skip, tourButtons.next]
+//     },
+//     {
+//       id: 'agenda-views',
+//       title: '👁️ Visualizações',
+//       text: 'Alterne entre visualização mensal, semanal e diária.',
+//       attachTo: { element: '[data-tour="agenda-views"]', on: 'bottom' },
+//       buttons: [tourButtons.back, tourButtons.next]
+//     },
+//     {
+//       id: 'agenda-users',
+//       title: '👥 Filtro de Usuários',
+//       text: 'Visualize a agenda de outros usuários da sua equipe (se tiver permissão).',
+//       attachTo: { element: '[data-tour="agenda-users"]', on: 'bottom' },
+//       buttons: [tourButtons.back, tourButtons.next]
+//     },
+//     {
+//       id: 'agenda-click',
+//       title: '🖱️ Criar Eventos',
+//       text: 'Clique em qualquer dia do calendário para criar uma nova tarefa ou evento.',
+//       attachTo: { element: '[data-tour="calendar"]', on: 'top' },
+//       buttons: [tourButtons.back, tourButtons.finish]
+//     }
+//   ]
+// }
 
-// Tour de Usuários (Admin)
-export const usersTour: TourDefinition = {
-  id: 'users',
-  name: 'Tour de Usuários',
-  description: 'Aprenda a gerenciar usuários e permissões',
-  steps: [
-    {
-      id: 'users-intro',
-      title: '👥 Gerenciamento de Usuários',
-      text: 'Gerencie usuários, defina permissões e organize por unidades e setores.',
-      buttons: [tourButtons.skip, tourButtons.next]
-    },
-    {
-      id: 'users-new',
-      title: '➕ Novo Usuário',
-      text: 'Cadastre novos usuários com e-mail, cargo e permissões específicas.',
-      attachTo: { element: '[data-tour="new-user"]', on: 'bottom' },
-      buttons: [tourButtons.back, tourButtons.next]
-    },
-    {
-      id: 'users-permissions',
-      title: '🔐 Permissões',
-      text: 'Configure permissões granulares: admin, comercial, técnico, etc.',
-      attachTo: { element: '[data-tour="permissions"]', on: 'left' },
-      buttons: [tourButtons.back, tourButtons.next]
-    },
-    {
-      id: 'users-units',
-      title: '🏢 Unidades e Setores',
-      text: 'Organize usuários em unidades e setores para melhor controle de acesso.',
-      attachTo: { element: '[data-tour="units"]', on: 'left' },
-      buttons: [tourButtons.back, tourButtons.finish]
-    }
-  ]
-}
+// // Tour de Usuários (Admin)
+// export const usersTour: TourDefinition = {
+//   id: 'users',
+//   name: 'Tour de Usuários',
+//   description: 'Aprenda a gerenciar usuários e permissões',
+//   requiredPermission: 'admin', // Apenas usuários com permissão admin podem ver este tour
+//   steps: [
+//     {
+//       id: 'users-intro',
+//       title: '👥 Gerenciamento de Usuários',
+//       text: 'Gerencie usuários, defina permissões e organize por unidades e setores.',
+//       buttons: [tourButtons.skip, tourButtons.next]
+//     },
+//     {
+//       id: 'users-new',
+//       title: '➕ Novo Usuário',
+//       text: 'Cadastre novos usuários com e-mail, cargo e permissões específicas.',
+//       attachTo: { element: '[data-tour="new-user"]', on: 'bottom' },
+//       buttons: [tourButtons.back, tourButtons.next]
+//     },
+//     {
+//       id: 'users-permissions',
+//       title: '🔐 Permissões',
+//       text: 'Configure permissões granulares: admin, comercial, técnico, etc.',
+//       attachTo: { element: '[data-tour="permissions"]', on: 'left' },
+//       buttons: [tourButtons.back, tourButtons.next]
+//     },
+//     {
+//       id: 'users-units',
+//       title: '🏢 Unidades e Setores',
+//       text: 'Organize usuários em unidades e setores para melhor controle de acesso.',
+//       attachTo: { element: '[data-tour="units"]', on: 'left' },
+//       buttons: [tourButtons.back, tourButtons.finish]
+//     }
+//   ]
+// }
 
 // Exportar todos os tours
 export const allTours: TourDefinition[] = [
@@ -898,11 +903,22 @@ export const allTours: TourDefinition[] = [
   detailTasksTour,
   newProposalsTour,
   companiesTour,
-  agendaTour,
-  usersTour
+  // agendaTour,
+  // usersTour
 ]
 
 // Helper para encontrar tour por ID
 export const getTourById = (id: string): TourDefinition | undefined => {
   return allTours.find(tour => tour.id === id)
+}
+
+// Helper para filtrar tours baseado nas permissões do usuário
+export const filterToursByPermissions = (userPermissions: string[]): TourDefinition[] => {
+  return allTours.filter(tour => {
+    // Se o tour não requer permissão, está disponível para todos
+    if (!tour.requiredPermission) return true
+    
+    // Se o tour requer permissão, verifica se o usuário tem
+    return userPermissions.includes(tour.requiredPermission)
+  })
 }

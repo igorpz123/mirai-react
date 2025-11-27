@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTour } from '@/contexts/TourContext'
-import { allTours } from '@/data/tours'
+import { filterToursByPermissions } from '@/data/tours'
+import { useAuth } from '@/contexts/AuthContext'
 import type { TourId } from '@/lib/tourConfig'
 import { CheckCircle2, Circle } from 'lucide-react'
 
@@ -28,6 +29,10 @@ export function TourButton({
   autoStartTourId
 }: TourButtonProps) {
   const { startTour, hasSeenTour, resetTours } = useTour()
+  const { user } = useAuth()
+
+  // Filtra tours baseado nas permissões do usuário
+  const availableTours = filterToursByPermissions(user?.permissions || [])
 
   const handleTourClick = (tourId: TourId) => {
     startTour(tourId)
@@ -69,28 +74,34 @@ export function TourButton({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {allTours.map((tour) => {
-          const seen = hasSeenTour(tour.id)
-          return (
-            <DropdownMenuItem
-              key={tour.id}
-              onClick={() => handleTourClick(tour.id)}
-              className="flex flex-col items-start gap-1 py-3 cursor-pointer"
-            >
-              <div className="flex items-center gap-2 w-full">
-                {seen ? (
-                  <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                ) : (
-                  <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                )}
-                <span className="font-medium">{tour.name}</span>
-              </div>
-              <p className="text-xs text-muted-foreground ml-6">
-                {tour.description}
-              </p>
-            </DropdownMenuItem>
-          )
-        })}
+        {availableTours.length === 0 ? (
+          <div className="px-3 py-4 text-sm text-muted-foreground text-center">
+            Nenhum tour disponível
+          </div>
+        ) : (
+          availableTours.map((tour) => {
+            const seen = hasSeenTour(tour.id)
+            return (
+              <DropdownMenuItem
+                key={tour.id}
+                onClick={() => handleTourClick(tour.id)}
+                className="flex flex-col items-start gap-1 py-3 cursor-pointer"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  {seen ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                  ) : (
+                    <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  )}
+                  <span className="font-medium">{tour.name}</span>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">
+                  {tour.description}
+                </p>
+              </DropdownMenuItem>
+            )
+          })
+        )}
 
         <DropdownMenuSeparator />
         

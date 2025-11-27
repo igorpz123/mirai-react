@@ -101,4 +101,5 @@ export interface TourDefinition {
   name: string
   description: string
   steps: any[]
+  requiredPermission?: string // Permissão necessária para visualizar o tour
 }
