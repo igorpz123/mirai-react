@@ -95,6 +95,7 @@ Estrutura resultante:
 mirai-react/
   dist/                 # Frontend build
   server/dist/          # Backend compilado
+  server/node_modules/  # Dependências do servidor (IMPORTANTE!)
   server/uploads/       # Persistir (criar se não existir)
 ```
 
@@ -259,7 +260,7 @@ Script de atualização simples (PM2):
 cd ~/mirai-react
 git pull origin main
 npm install
-npm --prefix server install
+npm --prefix server install  # IMPORTANTE: Instalar dependências do servidor
 npm run build:full
 pm2 restart mirai
 ```
@@ -286,6 +287,7 @@ scp deploy.tar.gz ubuntu@SEU_IP:~/mirai-react/
 ```bash
 cd ~/mirai-react
 tar xzf deploy.tar.gz
+# IMPORTANTE: Instalar dependências de produção
 npm --prefix server install --omit=dev
 pm2 restart mirai || pm2 start server/dist/server.js --name mirai
 ```
@@ -314,10 +316,12 @@ echo "[4] Enviando para servidor"
 scp deploy.tar.gz ubuntu@SEU_IP:~/mirai-react/
 
 echo "[5] Aplicando no servidor"
-ssh ubuntu@SEU_IP 'cd ~/mirai-react && tar xzf deploy.tar.gz && npm --prefix server install --omit=dev && (pm2 restart mirai || pm2 start server/dist/server.js --name mirai) && rm deploy.tar.gz'
+ssh ubuntu@SEU_IP 'cd ~/mirai-react && tar xzf deploy.tar.gz && npm --prefix server install && (pm2 restart mirai || pm2 start server/dist/server.js --name mirai) && rm deploy.tar.gz'
 
 echo "Deploy concluído."
 ```
+**NOTA IMPORTANTE:** O comando `npm --prefix server install` é essencial para instalar as dependências do servidor (`node_modules`). Sem ele, o Node.js não encontrará os módulos necessários e o serviço falhará ao iniciar.
+
 Lembre de substituir `SEU_IP` e garantir chave SSH configurada.
 
 ---

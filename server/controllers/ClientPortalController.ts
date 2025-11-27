@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../config/auth';
 import { RowDataPacket } from 'mysql2';
-import { getClientDocuments, downloadOneDriveFile, getOneDriveFileDownloadUrl } from '../services/oneDriveService';
+// OneDrive removido - implementar sistema de arquivos local se necessário
 
 interface ClientUser {
   id: number;
@@ -298,24 +298,14 @@ export const getDocuments = async (req: Request, res: Response) => {
     const empresa = empresaRows[0];
     const empresaNome = empresa.nome_fantasia || empresa.razao_social;
 
-    // Buscar documentos do OneDrive
-    const documents = await getClientDocuments(empresaNome);
-
-    // Formatar resposta
-    const formattedDocs = documents.map((doc: any) => ({
-      id: doc.id,
-      nome: doc.nome,
-      tipo: doc.tipo,
-      tamanho: formatFileSize(doc.tamanho),
-      categoria: getCategoryFromFileName(doc.nome),
-      data_upload: doc.data_modificacao,
-      onedrive_id: doc.id,
-    }));
+    // TODO: Implementar sistema de arquivos local
+    // Por enquanto, retornar lista vazia
+    const formattedDocs: any[] = [];
 
     res.json(formattedDocs);
   } catch (error) {
     console.error('Erro ao buscar documentos:', error);
-    res.status(500).json({ error: 'Erro ao buscar documentos do OneDrive' });
+    res.status(500).json({ error: 'Erro ao buscar documentos' });
   }
 };
 
@@ -336,15 +326,12 @@ export const downloadDocument = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Acesso não autorizado' });
     }
 
-    console.log('[Client Portal] Download de arquivo OneDrive:', id);
+    console.log('[Client Portal] Download de arquivo solicitado:', id);
 
-    // Obter URL de download do OneDrive
-    const downloadUrl = await getOneDriveFileDownloadUrl(id);
-
-    // Redirecionar para o URL de download direto
-    res.redirect(downloadUrl);
+    // TODO: Implementar download de sistema local
+    res.status(501).json({ error: 'Sistema de documentos em desenvolvimento' });
   } catch (error: any) {
     console.error('Erro ao baixar documento:', error);
-    res.status(500).json({ error: 'Erro ao baixar documento do OneDrive' });
+    res.status(500).json({ error: 'Erro ao baixar documento' });
   }
 };
