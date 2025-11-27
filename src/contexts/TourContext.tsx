@@ -130,13 +130,42 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
 
     // Verificar se o tour precisa de redirecionamento
     // Tours que começam em páginas específicas
-    const tourRequiresPage: Record<string, string> = {
+    const tourRequiresPage: Record<string, string | ((user: any) => string)> = {
       'detail-tasks': '/nova-tarefa',
       'proposals': '/comercial/proposta/nova',
+      'dashboard': (user: any) => {
+        // Se for admin (cargoId 1, 2 ou 3), vai para admin/dashboard-technical
+        // Caso contrário, vai para technical/dashboard
+        const isAdmin = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 3
+        return isAdmin ? '/admin/dashboard-technical' : '/technical/dashboard'
+      },
+      'commercial-dashboard': (user: any) => {
+        // Se for admin (cargoId 1, 2 ou 3), vai para admin/dashboard-commercial
+        // Caso contrário, vai para commercial/dashboard
+        const isAdmin = user?.cargoId === 1 || user?.cargoId === 2 || user?.cargoId === 3
+        return isAdmin ? '/admin/dashboard-commercial' : '/commercial/dashboard'
+      },
       // Adicione outros tours que precisam de páginas específicas aqui
     }
 
-    const requiredPage = tourRequiresPage[tourId]
+    const requiredPageOrFn = tourRequiresPage[tourId]
+    let requiredPage: string | null = null
+
+    // Se for uma função, pega o usuário do localStorage e calcula a página
+    if (typeof requiredPageOrFn === 'function') {
+      try {
+        const token = localStorage.getItem('token')
+        if (token) {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          requiredPage = requiredPageOrFn(payload)
+        }
+      } catch (e) {
+        console.error('Erro ao decodificar token:', e)
+      }
+    } else if (typeof requiredPageOrFn === 'string') {
+      requiredPage = requiredPageOrFn
+    }
+
     if (requiredPage && window.location.pathname !== requiredPage) {
       // Salva o tour pendente ANTES de redirecionar (usando localStorage para garantir persistência)
       localStorage.setItem('pendingTour', tourId)

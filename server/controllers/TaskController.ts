@@ -1586,6 +1586,7 @@ export const getTasksLeaderboard = async (req: Request, res: Response): Promise<
 
     // Query base - conta conclusões via historico_alteracoes seguindo padrão das linhas 1027-1033
     // JOIN com tarefas para pegar responsavel_id e filtros necessários
+    // IMPORTANTE: Para acao='concluir_usuario', só conta se novo_valor != usuario_id (evita auto-conclusão)
     let query = `
       SELECT 
         u.id AS userId,
@@ -1598,6 +1599,10 @@ export const getTasksLeaderboard = async (req: Request, res: Response): Promise<
       LEFT JOIN historico_alteracoes h ON h.tarefa_id = t.id
         AND h.acao IN ('concluir_usuario','concluir_setor','concluir_arquivar')
         AND h.data_alteracao >= ?
+        AND (
+          h.acao != 'concluir_usuario' 
+          OR h.novo_valor != CAST(h.usuario_id AS CHAR)
+        )
       LEFT JOIN cargos c ON u.cargo_id = c.id
       LEFT JOIN usuario_unidades uu ON u.id = uu.usuario_id
     `

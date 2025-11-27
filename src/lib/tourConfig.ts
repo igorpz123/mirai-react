@@ -87,6 +87,7 @@ export const tourButtons = {
 // Tipos de tours disponíveis
 export type TourId = 
   | 'dashboard'
+  | 'commercial-dashboard'
   | 'tasks'
   | 'detail-tasks'
   | 'proposals'

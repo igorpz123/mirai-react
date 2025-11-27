@@ -31,7 +31,7 @@ export const QuickIdSearch: React.FC<QuickIdSearchProps> = ({ kind, className, p
   }, [value, kind, navigate])
 
   return (
-    <div className={`flex items-center gap-2 ${className ?? ''}`}>
+    <div className={`flex items-center gap-2 ${className ?? ''}`} data-tour="search-by-id">
       <Input
         value={value}
         onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ''))}

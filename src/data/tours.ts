@@ -105,14 +105,21 @@ export const firstTimeTour: TourDefinition = {
 // Tour do Dashboard
 export const dashboardTour: TourDefinition = {
   id: 'dashboard',
-  name: 'Tour do Dashboard',
+  name: 'Tour do Dashboard Técnico',
   description: 'Aprenda a usar o dashboard e visualizar suas métricas',
   steps: [
     {
       id: 'dashboard-intro',
       title: '📊 Dashboard',
-      text: 'O dashboard apresenta uma visão geral das suas tarefas, propostas e estatísticas importantes.',
+      text: 'O dashboard apresenta uma visão geral das suas tarefas e estatísticas importantes.',
       buttons: [tourButtons.skip, tourButtons.next]
+    },
+    {
+      id: 'dashboard-search-tasks',
+      title: 'Busca de Tarefas',
+      text: 'Use a busca para encontrar tarefas rapidamente através de seu ID.',
+      attachTo: { element: '[data-tour="search-by-id"]', on: 'right' },
+      buttons: [tourButtons.back, tourButtons.next]
     },
     {
       id: 'dashboard-cards',
@@ -130,7 +137,7 @@ export const dashboardTour: TourDefinition = {
     },
     {
       id: 'dashboard-nav',
-      title: '🏆 Botões de Navegação',
+      title: 'Botões de Navegação',
       text: 'Você pode alternar a visão entre a tabela de tarefas e os gráficos.',
       attachTo: { element: '[data-tour="dashboard-nav"]', on: 'right' },
       buttons: [tourButtons.back, tourButtons.next]
@@ -184,11 +191,88 @@ export const dashboardTour: TourDefinition = {
   ]
 }
 
+// Tour do Dashboard Comercial
+export const commercialDashboardTour: TourDefinition = {
+  id: 'commercial-dashboard',
+  name: 'Tour do Dashboard Comercial',
+  description: 'Aprenda a usar o dashboard comercial e visualizar suas métricas de vendas',
+  steps: [
+    {
+      id: 'commercial-intro',
+      title: '💼 Dashboard Comercial',
+      text: 'O dashboard comercial apresenta uma visão geral das suas propostas, estatísticas de vendas e comissões.',
+      buttons: [tourButtons.skip, tourButtons.next]
+    },
+    {
+      id: 'commercial-search',
+      title: '🔍 Busca de Propostas',
+      text: 'Use a busca para encontrar propostas rapidamente através do seu número de identificação.',
+      attachTo: { element: '[data-tour="search-by-id"]', on: 'left' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'commercial-stats',
+      title: '📈 Cards de Estatísticas',
+      text: `
+        <p class="mb-3">Estes cards mostram suas principais métricas comerciais:</p>
+        <ul class="list-disc list-inside space-y-1 mb-2">
+          <li><strong>Propostas Criadas:</strong> Total de propostas criadas no mês</li>
+          <li><strong>Propostas Aprovadas:</strong> Propostas que foram aprovadas</li>
+          <li><strong>Valor Total Aprovado:</strong> Soma dos valores aprovados</li>
+          <li><strong>Comissão:</strong> Sua comissão calculada (5% responsável + 2% indicação)</li>
+        </ul>
+        <p class="text-sm">As setas indicam a tendência em relação ao período anterior.</p>
+      `,
+      attachTo: { element: '[data-tour="commercial-stats-cards"]', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'commercial-pie',
+      title: '🍰 Gráfico de Status',
+      text: `
+        <p class="mb-2">O gráfico de pizza mostra a distribuição das suas propostas por status:</p>
+        <ul class="list-disc list-inside space-y-1">
+          <li>Pendentes</li>
+          <li>Em Análise</li>
+          <li>Em Andamento</li>
+          <li>Aprovadas</li>
+          <li>Rejeitadas</li>
+        </ul>
+      `,
+      attachTo: { element: '[data-tour="commercial-pie-chart"]', on: 'right' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'commercial-summary',
+      title: '📊 Cards de Resumo',
+      text: 'Estes cards complementam o gráfico, mostrando a quantidade de propostas pendentes, em análise e em andamento com barras de progresso visuais.',
+      attachTo: { element: '[data-tour="commercial-summary-cards"]', on: 'left' },
+      buttons: [tourButtons.back, tourButtons.next]
+    },
+    {
+      id: 'commercial-table',
+      title: '📋 Tabela de Propostas',
+      text: `
+        <p class="mb-3">A tabela exibe todas as suas propostas com informações detalhadas:</p>
+        <ul class="list-disc list-inside space-y-1 mb-2">
+          <li>Filtros por status e responsável</li>
+          <li>Busca por empresa, título ou número</li>
+          <li>Ações rápidas: recalcular, atualizar status, excluir</li>
+          <li>Link direto para visualização completa</li>
+        </ul>
+        <p class="text-sm">💡 <strong>Dica:</strong> Clique no menu de ações (três pontos) para gerenciar cada proposta.</p>
+      `,
+      attachTo: { element: '[data-tour="commercial-proposals-table"]', on: 'top' },
+      buttons: [tourButtons.back, tourButtons.finish]
+    }
+  ]
+}
+
 // Tour de Tarefas
 export const tasksTour: TourDefinition = {
   id: 'tasks',
-  name: 'Tour de Tarefas',
-  description: 'Aprenda a criar e visualizar tarefas',
+  name: 'Visualizar Tarefas',
+  description: 'Aprenda aonde criar e visualizar tarefas',
   steps: [
     {
       id: 'tasks-options',
@@ -223,7 +307,7 @@ export const tasksTour: TourDefinition = {
 // Tour de Criação de Tarefas
 export const detailTasksTour: TourDefinition = {
   id: 'detail-tasks',
-  name: 'Tour de Detalhes das Tarefas',
+  name: 'Criar Tarefas',
   description: 'Aprenda a criar uma tarefa do 0',
   steps: [
     {
@@ -342,7 +426,7 @@ export const detailTasksTour: TourDefinition = {
 // Tour de Propostas
 export const newProposalsTour: TourDefinition = {
   id: 'proposals',
-  name: 'Tour de Nova Proposta',
+  name: 'Criar Nova Proposta',
   description: 'Aprenda a criar uma nova proposta comercial',
   steps: [
     {
@@ -350,6 +434,23 @@ export const newProposalsTour: TourDefinition = {
       title: '💼 Propostas Comerciais',
       text: 'Nesse tour você irá aprender a criar uma nova proposta comercial do 0. Para acessar a página de novas propostas, utilize o menu lateral indo em CRM > Criar Proposta ou o atalho Ctrl + K.',
       buttons: [tourButtons.skip, tourButtons.next]
+    },
+    {
+      id: 'proposals-progress',
+      title: '📊 Barra de Progresso',
+      text: `
+        <p class="mb-3">A barra de progresso mostra visualmente em qual etapa você está e quais já foram concluídas.</p>
+        <p class="mb-2"><strong>Indicadores de Status:</strong></p>
+        <ul class="list-disc list-inside space-y-1 mb-3">
+          <li><span class="text-green-600 font-semibold">Verde</span>: Etapa concluída com sucesso</li>
+          <li><span class="text-red-600 font-semibold">Vermelho</span>: Algo pendente ou inválido nesta etapa</li>
+          <li><span class="text-primary font-semibold">Azul/Destacado</span>: Etapa atual</li>
+          <li><span class="text-muted-foreground">Cinza</span>: Etapa ainda não iniciada</li>
+        </ul>
+        <p class="text-sm">💡 <strong>Dica:</strong> Você pode clicar em qualquer etapa para navegar diretamente para ela!</p>
+      `,
+      attachTo: { element: '.border-2.shadow-lg', on: 'bottom' },
+      buttons: [tourButtons.back, tourButtons.next]
     },
     {
       id: 'proposals-new',
@@ -375,18 +476,18 @@ export const newProposalsTour: TourDefinition = {
         try {
           // Aguarda um pouco para garantir que a página está carregada
           await new Promise(resolve => setTimeout(resolve, 300))
-          
+
           // Clica no botão de step 2 diretamente
           const step2Button = Array.from(document.querySelectorAll('button')).find(
             btn => btn.textContent?.includes('Empresa') && btn.classList.contains('group')
           ) as HTMLButtonElement
-          
+
           if (step2Button) {
             step2Button.click()
             // Aguarda a transição para o step 2
             await new Promise(resolve => setTimeout(resolve, 500))
           }
-          
+
           // Aguarda o elemento estar visível
           await waitForElement('[data-tour="new-proposal-company-info"]')
           await new Promise(resolve => setTimeout(resolve, 200))
@@ -405,18 +506,18 @@ export const newProposalsTour: TourDefinition = {
         try {
           // Aguarda um pouco para garantir que a página está carregada
           await new Promise(resolve => setTimeout(resolve, 300))
-          
+
           // Clica no botão de step 3 (Programas) diretamente
           const step3Button = Array.from(document.querySelectorAll('button')).find(
             btn => btn.textContent?.includes('Programas') && btn.classList.contains('group')
           ) as HTMLButtonElement
-          
+
           if (step3Button) {
             step3Button.click()
             // Aguarda a transição para o step 3
             await new Promise(resolve => setTimeout(resolve, 500))
           }
-          
+
           // Aguarda o elemento estar visível
           await waitForElement('[data-tour="new-proposal-programas"]')
           await new Promise(resolve => setTimeout(resolve, 200))
@@ -685,34 +786,32 @@ export const newProposalsTour: TourDefinition = {
 // Tour de Empresas
 export const companiesTour: TourDefinition = {
   id: 'companies',
-  name: 'Tour de Empresas',
-  description: 'Aprenda a gerenciar empresas e clientes',
+  name: 'Pesquisar Empresas',
+  description: 'Aprenda a como encontrar uma empresa',
   steps: [
     {
       id: 'companies-intro',
-      title: '🏢 Gerenciamento de Empresas',
-      text: 'Cadastre empresas, gerencie dados, documentos e histórico de interações.',
+      title: '🏢 Pesquisa de Empresas',
+      text: 'Aprenda a como pesquisar e encontrar uma empresa no sistema.',
       buttons: [tourButtons.skip, tourButtons.next]
     },
     {
-      id: 'companies-new',
-      title: '➕ Nova Empresa',
-      text: 'Adicione uma nova empresa com dados básicos, endereço e contatos.',
-      attachTo: { element: '[data-tour="new-company"]', on: 'bottom' },
+      id: 'companies-search',
+      title: '🔍 Busca',
+      text: 'Use <kbd>Ctrl+K</kbd> para fazer buscas rápida.',
+      attachTo: { element: '[data-tour="search"]', on: 'bottom' },
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
-      id: 'companies-auto-tasks',
-      title: '🤖 Tarefas Automáticas',
-      text: 'Configure tarefas automáticas que serão geradas periodicamente (ex: renovação de licenças).',
-      attachTo: { element: '[data-tour="auto-tasks"]', on: 'left' },
+      id: 'companies-search-bar',
+      title: 'Como pesquisar',
+      text: 'Você poderá pesquisar uma empresa pelo nome fantasia, razão social ou CNPJ.',
       buttons: [tourButtons.back, tourButtons.next]
     },
     {
-      id: 'companies-documents',
-      title: '📁 Documentos',
-      text: 'Anexe documentos importantes como contratos, licenças e laudos técnicos.',
-      attachTo: { element: '[data-tour="documents"]', on: 'left' },
+      id: 'companies-info',
+      title: '📁 Acessar Informações',
+      text: 'A empresa deverá aparecer com a etiqueta Empresas no resultado da busca. Clique em cima para acessar suas informações completas.',
       buttons: [tourButtons.back, tourButtons.finish]
     }
   ]
@@ -794,6 +893,7 @@ export const usersTour: TourDefinition = {
 export const allTours: TourDefinition[] = [
   firstTimeTour,
   dashboardTour,
+  commercialDashboardTour,
   tasksTour,
   detailTasksTour,
   newProposalsTour,

@@ -365,7 +365,7 @@ export const updateUser = async (
 ): Promise<void> => {
   try {
     const { id } = req.params
-    const { nome, sobrenome, email, cargo_id, foto_url } = req.body as Partial<UserRecord> & { foto_url?: string }
+    const { nome, sobrenome, email, cargo_id, foto_url, senha } = req.body as Partial<UserRecord> & { foto_url?: string; senha?: string }
 
     const fields: string[] = []
     const values: any[] = []
@@ -374,6 +374,14 @@ export const updateUser = async (
     if (typeof email === 'string') { fields.push('email = ?'); values.push(email) }
     if (typeof cargo_id !== 'undefined') { fields.push('cargo_id = ?'); values.push(cargo_id) }
     if (typeof foto_url === 'string') { fields.push('foto_url = ?'); values.push(foto_url) }
+    
+    // Se senha foi fornecida, fazer hash antes de atualizar
+    if (typeof senha === 'string' && senha.trim() !== '') {
+      const saltRounds = 10
+      const hash = await bcrypt.hash(senha, saltRounds)
+      fields.push('senha = ?')
+      values.push(hash)
+    }
 
     if (fields.length === 0) {
       res.status(400).json({ message: 'Nenhum campo para atualizar' })

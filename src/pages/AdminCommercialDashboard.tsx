@@ -118,16 +118,18 @@ export default function AdminCommercialDashboard(): ReactElement {
         <div className="@container/main flex flex-1 flex-col gap-2">
           <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
             <div className="px-4 lg:px-6 flex items-center justify-end">
-              <QuickIdSearch kind="proposal" placeholder="Nº da proposta" />
+              <QuickIdSearch kind="proposal" placeholder="Nº da proposta" data-tour="search-proposals" />
             </div>
             {/* Give cards a unique key on Admin page to avoid sharing state/cached values with user dashboard */}
-            <ComercialDashboardCards key={`admin-commercial-cards-${unitId ?? 'no-unit'}`} stats={stats} loading={loading} />
+            <div data-tour="commercial-stats-cards">
+              <ComercialDashboardCards key={`admin-commercial-cards-${unitId ?? 'no-unit'}`} stats={stats} loading={loading} />
+            </div>
             <div className="px-4 lg:px-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="md:col-span-1">
+                <div className="md:col-span-1" data-tour="commercial-pie-chart">
                   <ProposalStatusPie proposals={proposals} />
                 </div>
-                <div>
+                <div data-tour="commercial-summary-cards">
                   <div className="gap-6">
                     {/* summary stat cards */}
                     {(() => {
@@ -176,9 +178,10 @@ export default function AdminCommercialDashboard(): ReactElement {
                 </div>
               </div>
             </div>
-            <CommercialProposalsTable
-              proposals={proposals}
-              onProposalsPatched={(patches) => {
+            <div data-tour="commercial-proposals-table">
+              <CommercialProposalsTable
+                proposals={proposals}
+                onProposalsPatched={(patches) => {
                 // Apply patches locally to update chart/cards instantly
                 setProposals(prev => prev.map(p => {
                   const patch = patches.find(pt => String(pt.id) === String(p.id))
@@ -190,7 +193,8 @@ export default function AdminCommercialDashboard(): ReactElement {
                 setProposals(prev => prev.filter(p => String(p.id) !== String(id)))
                 setRefreshTick(x => x + 1)
               }}
-            />
+              />
+            </div>
           </div>
         </div>
       </div>
