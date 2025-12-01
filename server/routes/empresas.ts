@@ -1,7 +1,20 @@
 import { Router } from 'express'
+import { auditMiddleware } from '../middleware/audit'
+import { extractUserId } from '../middleware/permissions'
 import { getCompaniesByResponsavel, getCompaniesByResponsavelAndUnidade, getCompaniesByUnidade, getCompanyByCNPJ, createCompany, getAllCompanies, getCompanyById, updateCompany, generateAutoTasksForUnit, getJobStatus } from '../controllers/CompanyController'
 
 const router = Router()
+
+// Extrair userId de todas as requisições para popular req.user
+router.use(extractUserId);
+
+// Aplicar auditoria automática em rotas de modificação (POST, PUT, PATCH, DELETE)
+router.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return auditMiddleware('company')(req, res, next);
+  }
+  next();
+});
 
 router.get('/responsavel/:responsavel_id', getCompaniesByResponsavel)
 router.get('/unidade/:unidade_id/responsavel/:responsavel_id', getCompaniesByResponsavelAndUnidade)

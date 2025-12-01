@@ -1,8 +1,21 @@
 import { Router } from 'express'
 import { uploadProposta } from '../middleware/upload'
+import { auditMiddleware, auditUpload, auditExport } from '../middleware/audit'
+import { extractUserId } from '../middleware/permissions'
 import { getProposalsByUnidade, getProposalsByUser, getProposalStats, deleteProposal, getProposalById, getCursosByProposal, getQuimicosByProposal, getProdutosByProposal, getCoursesCatalog, getChemicalsCatalog, getProductsCatalog, getProductPriceRule, addCourseToProposal, addChemicalToProposal, addProductToProposal, updateProposalStatus, getProposalHistory, createProposal, getProgramsCatalog, getProgramPriceRule, getProgramasByProposal, addProgramToProposal, deleteCourseFromProposal, deleteChemicalFromProposal, deleteProductFromProposal, deleteProgramFromProposal, addProposalObservation, getArquivosByProposta, uploadArquivoProposta, deleteArquivoProposta, exportProposalDocx, getRecentProposalsByUser, getProposalsByEmpresa, updateProposalPayment } from '../controllers/ProposalController'
 
 const router = Router()
+
+// Extrair userId de todas as requisições para popular req.user
+router.use(extractUserId);
+
+// Aplicar auditoria automática em rotas de modificação (POST, PUT, PATCH, DELETE)
+router.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return auditMiddleware('proposal')(req, res, next);
+  }
+  next();
+});
 
 // Compat: existing frontend calls /propostas?userId=
 router.get('/', getProposalsByUser)
@@ -45,10 +58,10 @@ router.patch('/:id/pagamento', updateProposalPayment)
 router.post('/:id/observacoes', addProposalObservation)
 // Files for proposals
 router.get('/:id/arquivos', getArquivosByProposta)
-router.post('/:id/arquivos', uploadProposta.single('file'), uploadArquivoProposta)
+router.post('/:id/arquivos', uploadProposta.single('file'), auditUpload('proposal'), uploadArquivoProposta)
 router.delete('/:id/arquivos/:arquivo_id', deleteArquivoProposta)
 // Export DOCX
-router.get('/:id/export/docx', exportProposalDocx)
+router.get('/:id/export/docx', auditExport('proposal'), exportProposalDocx)
 // Proposal history
 router.get('/:id/historico', getProposalHistory)
 router.delete('/:id', deleteProposal)

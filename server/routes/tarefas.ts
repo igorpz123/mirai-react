@@ -1,6 +1,8 @@
 // src/routes/tarefas.ts
 import { Router } from 'express'
 import { uploadTarefa } from '../middleware/upload'
+import { auditMiddleware, auditUpload } from '../middleware/audit'
+import { extractUserId } from '../middleware/permissions'
 import {
   getAllTasks,
   getTaskById,
@@ -29,6 +31,17 @@ import {
 import { getEventsByResponsavel, updateAgendaEvent, createAgendaEvent } from '../controllers/AgendaController'
 
 const router: Router = Router()
+
+// Extrair userId de todas as requisições para popular req.user
+router.use(extractUserId);
+
+// Aplicar auditoria automática em rotas de modificação (POST, PUT, PATCH, DELETE)
+router.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return auditMiddleware('task')(req, res, next);
+  }
+  next();
+});
 
 // Listar todas as tarefas
 router.get('/', getAllTasks)
@@ -84,7 +97,7 @@ router.get('/arquivos/:tarefa_id', getArquivosByTarefa)
 // Rota simétrica (mais intuitiva e compatível com o front): /tarefas/:tarefa_id/arquivos
 router.get('/:tarefa_id/arquivos', getArquivosByTarefa)
 // Upload de arquivo para tarefa
-router.post('/:tarefa_id/arquivos', uploadTarefa.single('file'), uploadArquivoTarefa)
+router.post('/:tarefa_id/arquivos', uploadTarefa.single('file'), auditUpload('task'), uploadArquivoTarefa)
 // Remover arquivo de tarefa
 router.delete('/:tarefa_id/arquivos/:arquivo_id', deleteArquivoTarefa)
 

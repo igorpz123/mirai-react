@@ -30,6 +30,7 @@ import AdminChangelog from './pages/AdminChangelog';
 import AdminReportsPage from './pages/AdminReports';
 import AdminPermissions from './pages/AdminPermissions';
 import AdminAgenda from './pages/AdminAgenda';
+import Auditoria from './pages/Auditoria';
 import Empresas from './pages/Empresas';
 import EmpresaDetails from './pages/EmpresaDetails';
 import LivroRegistrosPage from './pages/LivroRegistros';
@@ -69,6 +70,7 @@ function AppContent() {
           <Route path="admin/permissoes" element={<AdminRoute><AdminPermissions /></AdminRoute>} />
           <Route path="admin/agenda" element={<AdminRoute><AdminAgenda /></AdminRoute>} />
           <Route path="admin/relatorios" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
+          <Route path="admin/auditoria" element={<AdminRoute><Auditoria /></AdminRoute>} />
           {/* Changelog visível para todos os usuários autenticados */}
           <Route path="changelog" element={<AdminChangelog />} />
           {/* Rota antiga mantida como alias para compatibilidade */}

@@ -1,5 +1,7 @@
 // src/routes/usuarios.ts
 import { Router } from 'express'
+import { auditMiddleware, auditUpload } from '../middleware/audit'
+import { extractUserId } from '../middleware/permissions'
 import {
   getAllUsers,
   getUserById,
@@ -20,6 +22,17 @@ import { removeUserSetor, removeUserUnidade } from '../controllers/UserControlle
 import { getUserNotas, getUserNotasResumo } from '../controllers/UserController'
 
 const router: Router = Router()
+
+// Extrair userId de todas as requisições para popular req.user
+router.use(extractUserId);
+
+// Aplicar auditoria automática em rotas de modificação (POST, PUT, PATCH, DELETE)
+router.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return auditMiddleware('user')(req, res, next);
+  }
+  next();
+});
 
 // Listar todos os usuários
 router.get('/', getAllUsers)

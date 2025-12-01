@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import * as authService from '../services/authService';
 import jwt from 'jsonwebtoken';
 import authConfig from '../config/auth';
+import { auditService } from '../services/auditService';
 
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
@@ -13,8 +14,40 @@ export async function login(req: Request, res: Response) {
 
   try {
     const { token, user } = await authService.authenticateUser(email, password);
+    
+    // Registrar login bem-sucedido
+    await auditService.log({
+      userId: user.id,
+      userName: `${user.nome} ${user.sobrenome}`,
+      userEmail: user.email,
+      action: 'LOGIN',
+      entityType: 'auth',
+      description: `${user.nome} ${user.sobrenome} fez login no sistema`,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      userAgent: req.get('user-agent'),
+      requestMethod: req.method,
+      requestPath: req.originalUrl,
+      status: 'success',
+    });
+    
     return res.json({ token, user }); // Retorna o token e as informações do usuário
   } catch (err: any) {
+    // Registrar tentativa de login falha
+    await auditService.log({
+      userId: 0,
+      userName: 'Sistema',
+      userEmail: email,
+      action: 'LOGIN',
+      entityType: 'auth',
+      description: `Tentativa de login falhou para ${email}`,
+      ipAddress: req.ip || req.socket.remoteAddress,
+      userAgent: req.get('user-agent'),
+      requestMethod: req.method,
+      requestPath: req.originalUrl,
+      status: 'failure',
+      errorMessage: err.message,
+    });
+    
     return res.status(401).json({ message: err.message });
   }
 }

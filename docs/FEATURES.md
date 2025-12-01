@@ -298,6 +298,105 @@ import { MultiSelect } from '@/components/ui/multi-select'
 
 ---
 
+## 🔒 Logs de Auditoria Completos
+
+Sistema completo de rastreamento de todas as ações realizadas no sistema com filtragem avançada e exportação.
+
+### Características
+- **Rastreamento automático** de todas as ações (CREATE, UPDATE, DELETE, LOGIN, etc.)
+- **Filtros avançados** por usuário, ação, entidade, data, status
+- **Histórico completo** com before/after de mudanças
+- **Exportação para CSV** com dados formatados
+- **Estatísticas e analytics** de uso do sistema
+- **Informações de requisição** (IP, user agent, método, path)
+- **Interface premium** com busca em tempo real e paginação
+
+### Arquivos Principais
+- `server/services/auditService.ts` - Serviço de auditoria com todas as funções
+- `server/controllers/AuditController.ts` - API endpoints
+- `server/middleware/audit.ts` - Middleware para registro automático
+- `server/routes/auditoria.ts` - Rotas protegidas (admin apenas)
+- `src/pages/Auditoria.tsx` - Interface React com filtros
+- `server/migrations/create_audit_logs.sql` - Schema do banco
+
+### Tipos de Ação Rastreados
+- **CREATE** - Criação de registros
+- **UPDATE** - Atualização de dados
+- **DELETE** - Remoção de registros
+- **READ** - Visualização (opcional)
+- **LOGIN/LOGOUT** - Autenticação
+- **EXPORT/IMPORT** - Transferência de dados
+- **PERMISSION_CHANGE** - Alterações de permissões
+- **UPLOAD/DOWNLOAD** - Manipulação de arquivos
+- **APPROVE/REJECT** - Aprovações/Rejeições
+
+### Como Usar
+
+#### Registro Manual em Controllers
+```typescript
+import { auditService } from '../services/auditService';
+
+// Em qualquer controller
+await auditService.logFromRequest(req, 'UPDATE', 'task', 
+  'Tarefa atualizada com sucesso',
+  {
+    entityId: taskId,
+    changes: { status: { before: 'pendente', after: 'concluida' } },
+    metadata: { priority: 'alta' }
+  }
+);
+```
+
+#### Middleware Automático (✅ JÁ IMPLEMENTADO)
+```typescript
+import { auditMiddleware } from '../middleware/audit';
+
+// Registra automaticamente baseado no método HTTP
+router.use((req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    return auditMiddleware('task')(req, res, next);
+  }
+  next();
+});
+```
+
+**Módulos com Auditoria Automática Ativa:**
+- ✅ **Tarefas** - Todas as operações CREATE, UPDATE, DELETE + uploads
+- ✅ **Propostas** - Todas as operações + uploads + exports DOCX
+- ✅ **Empresas** - Todas as operações CREATE, UPDATE, DELETE
+- ✅ **Usuários** - Todas as operações CREATE, UPDATE, DELETE
+- ✅ **Permissões** - Mudanças em permissões de cargos
+- ✅ **Login/Logout** - Autenticação (sucesso e falha)
+- ✅ **Exportações** - Logs de auditoria e propostas
+
+### API Endpoints (Admin Apenas)
+- `GET /api/auditoria` - Listar logs com filtros
+- `GET /api/auditoria/:id` - Buscar log específico
+- `GET /api/auditoria/stats` - Estatísticas gerais
+- `GET /api/auditoria/history/:entityType/:entityId` - Histórico de entidade
+- `GET /api/auditoria/export/csv` - Exportar para CSV
+- `POST /api/auditoria/archive` - Arquivar logs antigos
+
+### Filtros Disponíveis
+- Busca livre (descrição, nome, email)
+- Tipo de ação, entidade, status
+- Período (data início e fim)
+- Usuário específico
+- Paginação (50 registros/página)
+
+### Estatísticas
+- Total de logs e taxa de sucesso
+- Distribuição por ação e entidade
+- Top 10 usuários mais ativos
+- Atividade por data (últimos 30 dias)
+
+### Documentação Detalhada
+- **Schema SQL:** `server/migrations/create_audit_logs.sql`
+- **Serviço:** `server/services/auditService.ts`
+- **Middleware:** `server/middleware/audit.ts`
+
+---
+
 ## 🛠️ Utilitários de Backend
 
 ### Error Handler (`server/utils/errorHandler.ts`)
@@ -487,6 +586,7 @@ function MeuComponente() {
 
 ### ✅ Recém Implementado
 - [x] **Tours Interativos** - Sistema completo de onboarding (Novembro 2025)
+- [x] **Logs de Auditoria Completos** - Rastreamento de todas as ações do sistema (Dezembro 2025)
 
 ---
 

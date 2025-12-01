@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import * as PermissionController from '../controllers/PermissionController'
 import { extractUserId, requireAdmin } from '../middleware/permissions'
+import { auditPermissionChange } from '../middleware/audit'
 
 const router = Router()
 
@@ -28,13 +29,13 @@ router.get('/cargos', extractUserId, requireAdmin, PermissionController.getAllCa
 router.get('/cargo/:cargoId', extractUserId, requireAdmin, PermissionController.getCargoPermissions)
 
 // PUT /api/permissoes/cargo/:cargoId - Atualizar permissões de um cargo
-router.put('/cargo/:cargoId', extractUserId, requireAdmin, PermissionController.updateCargoPermissions)
+router.put('/cargo/:cargoId', extractUserId, requireAdmin, auditPermissionChange, PermissionController.updateCargoPermissions)
 
 // POST /api/permissoes/cargo/:cargoId/add - Adicionar permissão a um cargo
-router.post('/cargo/:cargoId/add', extractUserId, requireAdmin, PermissionController.addPermissionToCargo)
+router.post('/cargo/:cargoId/add', extractUserId, requireAdmin, auditPermissionChange, PermissionController.addPermissionToCargo)
 
 // DELETE /api/permissoes/cargo/:cargoId/:permission - Remover permissão de um cargo
-router.delete('/cargo/:cargoId/:permission', extractUserId, requireAdmin, PermissionController.removePermissionFromCargo)
+router.delete('/cargo/:cargoId/:permission', extractUserId, requireAdmin, auditPermissionChange, PermissionController.removePermissionFromCargo)
 
 // DELETE /api/permissoes/cache - Limpar cache de permissões
 router.delete('/cache', extractUserId, requireAdmin, PermissionController.clearCache)

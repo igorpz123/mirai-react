@@ -19,6 +19,7 @@ import permissoesRoutes from './permissoes'
 import agendaUsersRoutes from './agendaUsers'
 import searchRoutes from './search'
 import clientPortalRoutes from './client-portal'
+import auditoriaRoutes from './auditoria'
 
 const router = Router()
 
@@ -42,5 +43,6 @@ router.use('/permissoes', permissoesRoutes)
 router.use('/agenda-users', agendaUsersRoutes)
 router.use('/search', searchRoutes)
 router.use('/client-portal', clientPortalRoutes)
+router.use('/auditoria', auditoriaRoutes)
 
 export default router
