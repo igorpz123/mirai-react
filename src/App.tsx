@@ -31,6 +31,8 @@ import AdminReportsPage from './pages/AdminReports';
 import AdminPermissions from './pages/AdminPermissions';
 import AdminAgenda from './pages/AdminAgenda';
 import Auditoria from './pages/Auditoria';
+import DocumentTemplates from './pages/DocumentTemplates';
+import Documents from './pages/Documents';
 import Empresas from './pages/Empresas';
 import EmpresaDetails from './pages/EmpresaDetails';
 import LivroRegistrosPage from './pages/LivroRegistros';
@@ -71,6 +73,8 @@ function AppContent() {
           <Route path="admin/agenda" element={<AdminRoute><AdminAgenda /></AdminRoute>} />
           <Route path="admin/relatorios" element={<AdminRoute><AdminReportsPage /></AdminRoute>} />
           <Route path="admin/auditoria" element={<AdminRoute><Auditoria /></AdminRoute>} />
+          <Route path="admin/documentos/templates" element={<AdminRoute><DocumentTemplates /></AdminRoute>} />
+          <Route path="admin/documentos" element={<AdminRoute><Documents /></AdminRoute>} />
           {/* Changelog visível para todos os usuários autenticados */}
           <Route path="changelog" element={<AdminChangelog />} />
           {/* Rota antiga mantida como alias para compatibilidade */}

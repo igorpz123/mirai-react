@@ -14,7 +14,7 @@ import { toastError, toastSuccess } from '@/lib/customToast'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { IconTrash, IconPlus, IconChevronDown } from '@tabler/icons-react'
+import { IconTrash, IconPlus, IconChevronDown, IconFileText } from '@tabler/icons-react'
 import { AuthContext } from '@/contexts/AuthContext'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { buildFileUrl } from '@/lib/fileUrl'
@@ -219,6 +219,35 @@ export default function CommercialProposalDetail() {
                                     }
                                 }}
                             >Exportar Word</Button>
+
+                            {/* Botão para gerar contrato (só aparece se tiver programas) */}
+                            {programas && programas.length > 0 && (
+                                <Button
+                                    variant="secondary"
+                                    onClick={async () => {
+                                        try {
+                                            if (!id) return
+                                            const res = await fetch(`/api/documentos/documents/proposta/${id}`, {
+                                                method: 'POST',
+                                                headers: {
+                                                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                                }
+                                            })
+                                            if (!res.ok) throw new Error(await res.text())
+                                            toastSuccess('Contrato gerado com sucesso!')
+                                            // Redirecionar para página de documentos
+                                            setTimeout(() => {
+                                                navigate('/admin/documentos')
+                                            }, 1500)
+                                        } catch (err: any) {
+                                            toastError(err?.message || 'Falha ao gerar contrato')
+                                        }
+                                    }}
+                                >
+                                    <IconFileText className="mr-2" size={18} />
+                                    Gerar Contrato
+                                </Button>
+                            )}
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

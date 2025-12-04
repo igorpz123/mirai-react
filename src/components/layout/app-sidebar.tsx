@@ -71,6 +71,8 @@ const navAdminData = [
       { title: "Agenda", url: "/admin/agenda" },
       { title: "Empresas", url: "/empresas" },
       { title: "Auditoria", url: "/admin/auditoria" },
+      { title: "Templates", url: "/admin/documentos/templates" },
+      { title: "Documentos", url: "/admin/documentos" },
     ]
   },
   { title: "Changelog", url: "/changelog", icon: SquarePen },
