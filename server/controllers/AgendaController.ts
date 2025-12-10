@@ -104,7 +104,7 @@ export const createAgendaEvent = async (
 
     // Normalize values
     const titulo = String(title).trim()
-    const desc = (description != null ? String(description) : null)
+    const desc = (description != null && String(description).trim() !== '') ? String(description).trim() : ''
     const colorStr = (color != null && String(color).trim() !== '') ? String(color).trim() : null
     const tarefaIdVal = (tarefa_id == null || tarefa_id === '' as any) ? null : Number(tarefa_id)
 
@@ -238,5 +238,74 @@ export const updateAgendaEvent = async (
   } catch (err) {
     console.error('Erro ao atualizar evento da agenda:', err)
     res.status(500).json({ message: 'Erro ao atualizar evento' })
+  }
+}
+
+export const deleteAgendaEvent = async (
+  req: Request<{ id: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params
+
+    if (!id) {
+      res.status(400).json({ message: 'ID do evento é obrigatório' })
+      return
+    }
+
+    // Extract actor from JWT
+    let actorId: number | null = null
+    const authHeader = req.headers && (req.headers.authorization as string | undefined)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.split(' ')[1]
+        const payload = jwt.verify(token, authConfig.jwtSecret as string) as any
+        actorId = payload?.userId ?? payload?.id ?? null
+      } catch (e) {
+        // ignore
+      }
+    }
+
+    if (!actorId) {
+      res.status(401).json({ message: 'Não autorizado' })
+      return
+    }
+
+    // Load event owner
+    const [rowsEvt] = await pool.query<RowDataPacket[]>(
+      `SELECT id, usuario_id FROM agenda_events WHERE id = ? LIMIT 1`,
+      [id]
+    )
+    if (!(rowsEvt as any[]).length) {
+      res.status(404).json({ message: 'Evento não encontrado' })
+      return
+    }
+    const ownerId = Number((rowsEvt as any[])[0].usuario_id)
+
+    // Check if actor is owner or admin (cargo_id = 1)
+    let isAdmin = false
+    try {
+      const [rowsUser] = await pool.query<RowDataPacket[]>(`SELECT cargo_id FROM usuarios WHERE id = ? LIMIT 1`, [actorId])
+      const cargoId = Number((rowsUser as any[])[0]?.cargo_id || 0)
+      isAdmin = cargoId === 1
+    } catch {}
+    if (!isAdmin && Number(actorId) !== ownerId) {
+      res.status(403).json({ message: 'Sem permissão para deletar este evento' })
+      return
+    }
+
+    const [result] = await pool.query<OkPacket>(
+      `DELETE FROM agenda_events WHERE id = ?`,
+      [id]
+    )
+    if (!result.affectedRows) {
+      res.status(404).json({ message: 'Evento não encontrado' })
+      return
+    }
+
+    res.status(200).json({ message: 'Evento deletado com sucesso' })
+  } catch (err) {
+    console.error('Erro ao deletar evento da agenda:', err)
+    res.status(500).json({ message: 'Erro ao deletar evento' })
   }
 }

@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import EditEventDialog from '@/components/agenda/edit-event-dialog'
 
 export default function TechnicalCalendar(
   { events, currentMonth, onMonthChange }: { events: AgendaEvent[]; currentMonth?: Date; onMonthChange?: (d: Date) => void }
@@ -24,6 +25,8 @@ export default function TechnicalCalendar(
   const [editOpen, setEditOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null)
+  const [selectedAgendaEvent, setSelectedAgendaEvent] = useState<AgendaEvent | null>(null)
+  const [viewDialogOpen, setViewDialogOpen] = useState(false)
   const [formDate, setFormDate] = useState('') // YYYY-MM-DD
   const [formStart, setFormStart] = useState('') // HH:MM
   const [formEnd, setFormEnd] = useState('') // HH:MM (optional)
@@ -146,23 +149,40 @@ export default function TechnicalCalendar(
           }
         }}
         eventClick={(info: any) => {
-          // Open pretty modal for editing date and time
-          const ev = info.event
-          const start: Date | null = ev.start ? new Date(ev.start) : null
-          const end: Date | null = ev.end ? new Date(ev.end) : null
-          if (!start) return
-          setSelectedEvent(ev)
-          setFormDate(toYMDLocal(start))
-          setFormStart(toHMLocal(start))
-          setFormEnd(end ? toHMLocal(end) : '')
-          setFormTitle(String(ev.title || ''))
-          const desc = ev.extendedProps?.description ?? ''
-          setFormDesc(typeof desc === 'string' ? desc : '')
-          setOrigDurationMs(end ? (end.getTime() - start.getTime()) : 0)
-          setFormError(null)
-          setEditOpen(true)
+          // Find the original AgendaEvent from events array
+          const eventId = Number(info.event.id)
+          const agendaEvent = events.find(e => e.id === eventId)
+          if (agendaEvent) {
+            setSelectedAgendaEvent(agendaEvent)
+            setViewDialogOpen(true)
+          }
         }}
       />
+
+      {/* View/Delete Dialog */}
+      {selectedAgendaEvent && (
+        <EditEventDialog
+          event={selectedAgendaEvent}
+          open={viewDialogOpen}
+          onOpenChange={setViewDialogOpen}
+          onDeleted={async () => {
+            // Refresh calendar by notifying parent
+            if (onMonthChange && calendarRef.current) {
+              const api = calendarRef.current.getApi()
+              const currentDate = api.getDate()
+              onMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))
+            }
+          }}
+          onUpdated={async () => {
+            // Refresh calendar by notifying parent
+            if (onMonthChange && calendarRef.current) {
+              const api = calendarRef.current.getApi()
+              const currentDate = api.getDate()
+              onMonthChange(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))
+            }
+          }}
+        />
+      )}
 
       {/* Edit modal */}
       <Dialog open={editOpen} onOpenChange={(v) => { if (!editing) setEditOpen(v) }}>

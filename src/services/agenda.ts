@@ -99,3 +99,18 @@ export async function createAgendaEvent(payload: CreateAgendaEventPayload): Prom
   }
   return { message: data.message || 'Evento criado', event }
 }
+
+export async function deleteAgendaEvent(eventId: number): Promise<{ message: string }> {
+  const token = localStorage.getItem('token')
+  const res = await fetch(`${API_URL}/tarefas/agenda/evento/${eventId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    throw new Error(data?.message || 'Erro ao deletar evento')
+  }
+  return { message: data.message || 'Evento deletado' }
+}

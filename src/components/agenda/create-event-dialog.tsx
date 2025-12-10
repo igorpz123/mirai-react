@@ -77,13 +77,14 @@ function CreateEventDialogImpl({ usuarioId, onCreated, triggerClassName }: Creat
 
     try {
       setCreating(true)
+      const tarefaIdNum = tarefaId.trim() ? Number(tarefaId.trim()) : null
       await createAgendaEvent({
         title: title.trim(),
         description: description.trim() || undefined,
         color,
         start: toSqlLocal(start),
         end: end ? toSqlLocal(end) : undefined,
-        tarefa_id: tarefaId.trim() ? Number(tarefaId) : null,
+        tarefa_id: (tarefaIdNum && !isNaN(tarefaIdNum)) ? tarefaIdNum : null,
         usuario_id: usuarioId,
       })
       // reset minimal fields and close
@@ -109,18 +110,18 @@ function CreateEventDialogImpl({ usuarioId, onCreated, triggerClassName }: Creat
         </DialogHeader>
         <div className="grid gap-3 py-2">
           <div className="grid gap-1">
-            <Label htmlFor="ev-title">Título</Label>
-            <Input id="ev-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Visita técnica" />
+            <Label htmlFor="ev-title">Título *</Label>
+            <Input id="ev-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex: Visita técnica" required />
           </div>
           <div className="grid gap-1">
-            <Label htmlFor="ev-desc">Descrição (opcional)</Label>
+            <Label htmlFor="ev-desc">Observações (opcional)</Label>
             <Textarea id="ev-desc" value={description} onChange={e => setDescription(e.target.value)} placeholder="Detalhes do evento" />
           </div>
           <div className="grid grid-cols-2 gap-3 items-end">
             <div className="grid gap-1">
-              <Label htmlFor="ev-color">Cor</Label>
+              <Label htmlFor="ev-color">Cor *</Label>
               <div className="flex items-center gap-3">
-                <input id="ev-color" type="color" value={colorHex} onChange={e => setColorHex(e.target.value)} className="h-9 w-12 rounded-md border-input border bg-transparent p-1" />
+                <input id="ev-color" type="color" value={colorHex} onChange={e => setColorHex(e.target.value)} className="h-9 w-12 rounded-md border-input border bg-transparent p-1" required />
                 <span className="text-xs text-muted-foreground">{colorHex}</span>
               </div>
             </div>
@@ -131,14 +132,14 @@ function CreateEventDialogImpl({ usuarioId, onCreated, triggerClassName }: Creat
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-1">
-              <Label>Início</Label>
+              <Label>Início *</Label>
               <div className="grid grid-cols-2 gap-2">
-                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} required />
+                <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required />
               </div>
             </div>
             <div className="grid gap-1">
-              <Label>Fim (opcional)</Label>
+              <Label>Fim *</Label>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                 <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />

@@ -28,7 +28,7 @@ import {
   deleteTask,
   getTasksLeaderboard
 } from '../controllers/TaskController'
-import { getEventsByResponsavel, updateAgendaEvent, createAgendaEvent } from '../controllers/AgendaController'
+import { getEventsByResponsavel, updateAgendaEvent, createAgendaEvent, deleteAgendaEvent } from '../controllers/AgendaController'
 
 const router: Router = Router()
 
@@ -71,6 +71,8 @@ router.get('/agenda/responsavel/:responsavel_id', getEventsByResponsavel)
 router.post('/agenda/evento', createAgendaEvent)
 // Atualizar horário/data de um evento da agenda
 router.put('/agenda/evento/:id', updateAgendaEvent)
+// Deletar evento da agenda
+router.delete('/agenda/evento/:id', deleteAgendaEvent)
 
 // Coletar tarefas por unidade
 router.get('/unidade/:unidade_id', getTaskByUnidade)
