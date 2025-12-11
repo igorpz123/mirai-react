@@ -222,6 +222,7 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
     
     let sql = `SELECT 
         p.id,
+        p.numero_referencia,
         p.titulo,
         e.nome_fantasia AS nome_cliente,
         e.cnpj,
@@ -244,8 +245,9 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
       sql += `e.nome_fantasia LIKE ? OR
         e.cnpj LIKE ? OR
         e.caepf LIKE ? OR
-        p.titulo LIKE ?`
-      params.push(searchPattern, searchPattern, searchPattern, searchPattern)
+        p.titulo LIKE ? OR
+        p.numero_referencia LIKE ?`
+      params.push(searchPattern, searchPattern, searchPattern, searchPattern, searchPattern)
     }
     
     sql += `)`
@@ -265,11 +267,14 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
       const lowerQuery = query.toLowerCase()
       const cliente = (row.nome_cliente || '').toLowerCase()
       const titulo = (row.titulo || '').toLowerCase()
+      const numeroRef = (row.numero_referencia || '').toLowerCase()
 
-      // Relevância máxima para busca por ID exato
+      // Relevância máxima para busca por ID exato ou número de referência
       if (isNumericSearch && row.id === parseInt(query.trim())) {
         relevance += 1000
       } else {
+        if (numeroRef.includes(lowerQuery)) relevance += 150
+        if (numeroRef === lowerQuery) relevance += 200
         if (cliente.includes(lowerQuery)) relevance += 100
         if (cliente.startsWith(lowerQuery)) relevance += 50
         if (titulo.includes(lowerQuery)) relevance += 80
@@ -284,7 +289,7 @@ async function searchProposals(query: string, userId: number, userCargoId: numbe
         id: row.id,
         type: 'proposal' as const,
         title: row.nome_cliente || 'Sem nome',
-        subtitle: row.titulo ? `${row.titulo}` : `Proposta #${row.id}`,
+        subtitle: row.numero_referencia ? `${row.numero_referencia}${row.titulo ? ' • ' + row.titulo : ''}` : (row.titulo || `Proposta #${row.id}`),
         description: row.cnpj || undefined,
         metadata: {
           status: row.status,

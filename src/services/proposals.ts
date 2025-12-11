@@ -2,6 +2,7 @@ import api from './api'
 
 export type Proposal = {
   id: number
+  numero_referencia?: string
   cliente: string
   valor?: number
   valor_total?: number

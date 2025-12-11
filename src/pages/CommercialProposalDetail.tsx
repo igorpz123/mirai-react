@@ -14,7 +14,7 @@ import { toastError, toastSuccess } from '@/lib/customToast'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { IconTrash, IconPlus, IconChevronDown, IconFileText } from '@tabler/icons-react'
+import { IconTrash, IconPlus, IconChevronDown } from '@tabler/icons-react'
 import { AuthContext } from '@/contexts/AuthContext'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { buildFileUrl } from '@/lib/fileUrl'
@@ -189,7 +189,7 @@ export default function CommercialProposalDetail() {
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                         <div>
                             <h1 className="text-3xl font-bold flex items-center gap-3 mb-2">
-                                Proposta #{proposal.id}
+                                Proposta {proposal.numero_referencia || `#${proposal.id}`}
                             </h1>
                             <div className="flex items-center gap-2">
                                 <ProposalStatusBadge status={proposal.status} />
@@ -221,7 +221,7 @@ export default function CommercialProposalDetail() {
                             >Exportar Word</Button>
 
                             {/* Botão para gerar contrato (só aparece se tiver programas) */}
-                            {programas && programas.length > 0 && (
+                            {/* {programas && programas.length > 0 && (
                                 <Button
                                     variant="secondary"
                                     onClick={async () => {
@@ -247,7 +247,7 @@ export default function CommercialProposalDetail() {
                                     <IconFileText className="mr-2" size={18} />
                                     Gerar Contrato
                                 </Button>
-                            )}
+                            )} */}
 
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

@@ -15,6 +15,7 @@ import Docxtemplater from 'docxtemplater'
 
 type ProposalRow = RowDataPacket & {
     id: number
+    numero_referencia?: string | null
     cliente: string
     valor: number | null
     status: string
@@ -40,7 +41,18 @@ export const getProposalsByUser = async (
         const [rows] = await pool.query<RowDataPacket[]>(
             `
             SELECT 
-                p.*, 
+                p.id,
+                p.numero_referencia,
+                p.titulo,
+                p.empresa_id,
+                p.unidade_id,
+                p.responsavel_id,
+                p.indicacao_id,
+                p.status,
+                p.payment_method,
+                p.payment_installments,
+                p.data,
+                p.data_alteracao,
                 usr_responsavel.nome AS responsavel_nome, 
                 usr_responsavel.sobrenome AS responsavel_sobrenome, 
                 usr_indicacao.nome AS indicacao_nome, 
@@ -103,6 +115,7 @@ export const getProposalsByUser = async (
             const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
             return {
                 id: r.id,
+                numero_referencia: r.numero_referencia ?? undefined,
                 cliente: empresaNome || '-',
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,
@@ -151,7 +164,18 @@ export const getProposalsByUnidade = async (
     const [rows] = await pool.query<RowDataPacket[]>(
             `
       SELECT 
-                p.*, 
+                p.id,
+                p.numero_referencia,
+                p.titulo,
+                p.empresa_id,
+                p.unidade_id,
+                p.responsavel_id,
+                p.indicacao_id,
+                p.status,
+                p.payment_method,
+                p.payment_installments,
+                p.data,
+                p.data_alteracao,
                 usr_responsavel.nome AS responsavel_nome, 
                 usr_responsavel.sobrenome AS responsavel_sobrenome, 
                 usr_indicacao.nome AS indicacao_nome, 
@@ -213,6 +237,7 @@ export const getProposalsByUnidade = async (
             const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
             return {
                 id: r.id,
+                numero_referencia: r.numero_referencia ?? undefined,
                 cliente: empresaNome || '-',
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,
@@ -586,7 +611,18 @@ export const getProposalsByEmpresa = async (
         const [rows] = await pool.query<RowDataPacket[]>(
             `
             SELECT 
-                p.*, 
+                p.id,
+                p.numero_referencia,
+                p.titulo,
+                p.empresa_id,
+                p.unidade_id,
+                p.responsavel_id,
+                p.indicacao_id,
+                p.status,
+                p.payment_method,
+                p.payment_installments,
+                p.data,
+                p.data_alteracao,
                 usr_responsavel.nome AS responsavel_nome, 
                 usr_responsavel.sobrenome AS responsavel_sobrenome, 
                 e.nome_fantasia AS empresa_nome,
@@ -626,6 +662,7 @@ export const getProposalsByEmpresa = async (
             const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
             return {
                 id: r.id,
+                numero_referencia: r.numero_referencia ?? undefined,
                 cliente: empresaNome || '-',
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,
@@ -664,7 +701,18 @@ export const exportProposalDocx = async (
         const [rows] = await pool.query<RowDataPacket[]>(
             `
             SELECT 
-                p.*, 
+                p.id,
+                p.numero_referencia,
+                p.titulo,
+                p.empresa_id,
+                p.unidade_id,
+                p.responsavel_id,
+                p.indicacao_id,
+                p.status,
+                p.payment_method,
+                p.payment_installments,
+                p.data,
+                p.data_alteracao,
                 usr_responsavel.nome AS responsavel_nome, 
                 usr_responsavel.sobrenome AS responsavel_sobrenome, 
                 usr_indicacao.nome AS indicacao_nome, 
@@ -723,6 +771,7 @@ export const exportProposalDocx = async (
         const resp = [r.responsavel_nome, r.responsavel_sobrenome].filter(Boolean).join(' ').trim()
         const indic = [r.indicacao_nome, r.indicacao_sobrenome].filter(Boolean).join(' ').trim()
         const dataStr = r.data ? new Date(r.data).toLocaleDateString('pt-BR') : ''
+        const numeroReferencia = r.numero_referencia || `#${id}`
         const empresaData = {
             cnpj: r.empresa_cnpj || '',
             cnpj_fmt: formatCNPJ(r.empresa_cnpj || ''),
@@ -841,7 +890,8 @@ export const exportProposalDocx = async (
             })
             const templateData = {
                 proposta: {
-                    id,
+                    id: numeroReferencia,
+                    numero_referencia: numeroReferencia,
                     titulo: r.titulo || '',
                     cliente,
                     status: String(r.status || ''),
@@ -857,7 +907,8 @@ export const exportProposalDocx = async (
                 quimicos_block: quimicosBlock,
                 produtos_block: produtosBlock,
                 // Flat aliases for convenience (allow using {cliente}, {data}, {empresa_cnpj}, ...)
-                id,
+                id: numeroReferencia,
+                numero_referencia: numeroReferencia,
                 titulo: r.titulo || '',
                 cliente,
                 status: String(r.status || ''),
@@ -1018,10 +1069,33 @@ export const createProposal = async (
         let newId: number | null = null
         try {
             await conn.beginTransaction()
+            
+            // Gerar número de referência sequencial por ano
+            const currentYear = dataElab.getFullYear()
+            const [maxResult] = await conn.query<any[]>(
+                `SELECT numero_referencia 
+                 FROM propostas 
+                 WHERE YEAR(data) = ? 
+                 ORDER BY numero_referencia DESC 
+                 LIMIT 1`,
+                [currentYear]
+            )
+            
+            let nextNumber = 1
+            if (maxResult && maxResult.length > 0 && maxResult[0].numero_referencia) {
+                // Extrair o número antes da barra (NNNN/YYYY)
+                const match = maxResult[0].numero_referencia.match(/^(\d+)\//)
+                if (match) {
+                    nextNumber = parseInt(match[1], 10) + 1
+                }
+            }
+            
+            const numeroReferencia = `${String(nextNumber).padStart(4, '0')}/${currentYear}`
+            
             const [ins] = await conn.query<OkPacket>(
-                `INSERT INTO propostas (titulo, empresa_id, unidade_id, responsavel_id, indicacao_id, status, data)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                [titulo || null, empresa_id, unidade_id, respId, (indicacao_id ?? null), normalizedStatus, dataElab]
+                `INSERT INTO propostas (titulo, empresa_id, unidade_id, responsavel_id, indicacao_id, status, data, numero_referencia)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [titulo || null, empresa_id, unidade_id, respId, (indicacao_id ?? null), normalizedStatus, dataElab, numeroReferencia]
             )
             newId = (ins as any).insertId
 
@@ -1383,7 +1457,18 @@ export const getProposalById = async (
         const [rows] = await pool.query<RowDataPacket[]>(
             `
             SELECT 
-                p.*, 
+                p.id,
+                p.numero_referencia,
+                p.titulo,
+                p.empresa_id,
+                p.unidade_id,
+                p.responsavel_id,
+                p.indicacao_id,
+                p.status,
+                p.payment_method,
+                p.payment_installments,
+                p.data,
+                p.data_alteracao,
                 usr_responsavel.nome AS responsavel_nome, 
                 usr_responsavel.sobrenome AS responsavel_sobrenome, 
                 usr_indicacao.nome AS indicacao_nome, 
@@ -1436,6 +1521,7 @@ export const getProposalById = async (
 
         const proposal = {
             id: r.id,
+            numero_referencia: r.numero_referencia ?? undefined,
             cliente: empresaNome || '-',
             valor: r.valor ?? undefined,
             valor_total: valorTotal,
@@ -2406,6 +2492,7 @@ export const getRecentProposalsByUser = async (
             const valorTotal = (r.valor_total != null ? Number(r.valor_total) : undefined) ?? (totalItens || undefined)
             return {
                 id: r.id,
+                numero_referencia: r.numero_referencia ?? undefined,
                 cliente: empresaNome || '-',
                 valor: r.valor ?? undefined,
                 valor_total: valorTotal,

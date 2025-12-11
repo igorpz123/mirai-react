@@ -129,7 +129,7 @@ function EditEventDialogImpl({ event, open, onOpenChange, onDeleted, onUpdated }
               <DialogTitle>Editar Evento</DialogTitle>
               <DialogDescription>Alterar informações do evento da agenda</DialogDescription>
             </div>
-            <Button  
+            <Button
               size="icon"
               disabled={deleting || editing} 
               onClick={handleDelete}
