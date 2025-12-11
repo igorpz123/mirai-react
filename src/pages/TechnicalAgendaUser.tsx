@@ -123,17 +123,23 @@ export default function TechnicalAgendaUser() {
 
   // (removed monthsWithCounts - we now use input type=month and allow free navigation)
 
-  // filter tasks by selectedMonth
+  // filter tasks by selectedMonth and setor técnico (Visita)
   const tasksForMonth = useMemo(() => {
     const filtered = tasks.filter(t => {
+      // Filtrar apenas tarefas do setor técnico (Visita)
+      const setorLower = (t.setor || '').toLowerCase()
+      if (!setorLower.includes('visita')) {
+        return false
+      }
+      
       if (!t.prazo) return false
       const d = parseLocalDate(t.prazo as any)
       if (!d) return false
       return d.getFullYear() === selectedMonth.getFullYear() && d.getMonth() === selectedMonth.getMonth()
     })
     if (filtered.length === 0) {
-      const sample = tasks.slice(0,3).map(t => t.prazo)
-      console.debug('[AgendaUser] Nenhuma tarefa no mês filtrado', { selectedMonth: selectedMonth.toISOString(), samplePrazos: sample })
+      const sample = tasks.slice(0,3).map(t => ({ prazo: t.prazo, setor: t.setor }))
+      console.debug('[AgendaUser] Nenhuma tarefa no mês filtrado ou setor técnico', { selectedMonth: selectedMonth.toISOString(), sampleTasks: sample })
     }
     return filtered
   }, [tasks, selectedMonth])
